@@ -18,31 +18,21 @@
 package cmd
 
 import (
-	"log"
-	"strconv"
-
 	"github.com/spf13/cobra"
 )
 
-// setVolumeCmd represents the set command
-var setVolumeCmd = &cobra.Command{
-	Use:   "set",
-	Short: "Set a specific volume",
+// displayCmd represents the display command
+var displayCmd = &cobra.Command{
+	Use:   "display",
+	Short: "Control display",
 	Long:  ``,
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		channelFlag := cmd.Flag("channel")
-		channel := channelFlag.Value.String()
-		volume, err := strconv.Atoi(args[0])
-		if err != nil {
-			log.Fatal(err)
-		}
-		setVolume(channel, volume+1)
-	},
+	//Run: func(cmd *cobra.Command, args []string) {
+	//	fmt.Println("display called")
+	//},
 }
 
 func init() {
-	volumeCmd.AddCommand(setVolumeCmd)
+	rootCmd.AddCommand(displayCmd)
 
 	// Here you will define your flags and configuration settings.
 

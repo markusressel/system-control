@@ -21,21 +21,29 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// incCmd represents the inc command
-var incCmd = &cobra.Command{
-	Use:   "inc",
-	Short: "Increment audio volume",
+// decBrightnessCmd represents the dec command
+var decBrightnessCmd = &cobra.Command{
+	Use:   "dec",
+	Short: "Decrease display brightness",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		channelFlag := cmd.Flag("channel")
-		channel := channelFlag.Value.String()
-		volume := getVolume(channel)
-		setVolume(channel, volume+1)
+		b := getBrightness()
+		var change int
+		if b < 10 {
+			change = 1
+		} else if b < 20 {
+			change = 2
+		} else if b < 40 {
+			change = 4
+		} else {
+			change = 8
+		}
+		adjustBrightness(-change)
 	},
 }
 
 func init() {
-	volumeCmd.AddCommand(incCmd)
+	brightnessCmd.AddCommand(decBrightnessCmd)
 
 	// Here you will define your flags and configuration settings.
 

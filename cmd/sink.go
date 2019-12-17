@@ -18,7 +18,7 @@
 package cmd
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/spf13/cobra"
 )
@@ -29,7 +29,11 @@ var sinkCmd = &cobra.Command{
 	Short: "A brief description of your command",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("sink called")
+		result, err := execCommand("pacmd", "list-sinks")
+		if err != nil {
+			log.Fatal(err)
+		}
+		print(result)
 	},
 }
 

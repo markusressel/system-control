@@ -18,31 +18,24 @@
 package cmd
 
 import (
-	"log"
-	"strconv"
+	"fmt"
 
 	"github.com/spf13/cobra"
 )
 
-// setVolumeCmd represents the set command
-var setVolumeCmd = &cobra.Command{
-	Use:   "set",
-	Short: "Set a specific volume",
+// brightnessCmd represents the brightness command
+var brightnessCmd = &cobra.Command{
+	Use:   "brightness",
+	Short: "Show current display brightness",
 	Long:  ``,
-	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		channelFlag := cmd.Flag("channel")
-		channel := channelFlag.Value.String()
-		volume, err := strconv.Atoi(args[0])
-		if err != nil {
-			log.Fatal(err)
-		}
-		setVolume(channel, volume+1)
+		b := getBrightness()
+		fmt.Println(b)
 	},
 }
 
 func init() {
-	volumeCmd.AddCommand(setVolumeCmd)
+	displayCmd.AddCommand(brightnessCmd)
 
 	// Here you will define your flags and configuration settings.
 

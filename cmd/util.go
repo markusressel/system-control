@@ -129,6 +129,36 @@ func switchSink(index int) {
 	}
 }
 
+func getBrightness() int {
+	env := []string{"DISPLAY:=0"}
+	result, err := execCommandEnv(env, true, "xbacklight")
+	if err != nil {
+		log.Fatal(err)
+	}
+	b, err := strconv.Atoi(result)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return b
+}
+
+// Adjusts the brightness of the display
+func adjustBrightness(change int) {
+	env := []string{"DISPLAY:=0"}
+	var command string
+	if change >= 0 {
+		command = "-inc"
+	} else {
+		command = "-dec"
+		change = -change
+	}
+	_, err := execCommandEnv(env, true, "xbacklight", command, strconv.Itoa(change), "-steps", "1", "-time", "0")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+}
+
 // Executes a shell command with the given arguments
 // and returns its stdout as a []byte.
 // If an error occurs the content of stderr is printed

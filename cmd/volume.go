@@ -30,7 +30,7 @@ var volumeCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 		volume := getVolume(channel)
-		fmt.Print(volume)
+		fmt.Println(volume)
 	},
 }
 

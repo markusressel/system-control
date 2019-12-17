@@ -72,18 +72,8 @@ system-control hotspot off -n "MyHotspot"
 
 ```shell script
 system-control display brightness set 100
-```
-
-```shell script
 system-control display brightness inc
-```
-
-```shell script
-system-control display brightness set on
-```
-
-```shell script
-system-control display brightness set off
+system-control display brightness dec
 ```
 
 ### Audio
@@ -91,28 +81,21 @@ system-control display brightness set off
 #### Volume
 
 ```shell script
-system-control audio volume
-```
-
-```shell script
-system-control audio volume inc
-system-control audio volume dec
-```
-
-```shell script
-system-control audio volume set 100 --channel Master
-```
-
-```shell script
 system-control audio mute
 system-control audio unmute
 system-control audio toggle-mute
+```
+
+```shell script
+system-control audio volume
+system-control audio volume inc
+system-control audio volume dec
+system-control audio volume set 100 --channel Master
 ```
 
 #### Sink
 
 ```shell script
 system-control audio sink
-system-control audio sink set "headphone"
 system-control audio sink switch "headphone"
 ```

@@ -21,6 +21,7 @@ import (
 	"bytes"
 	. "fmt"
 	"log"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -131,7 +132,7 @@ func switchSink(index int) {
 // Executes a shell command with the given arguments
 // and returns its stdout as a []byte.
 // If an error occurs the content of stderr is printed
-// and an error is returned
+// and an error is returned.
 func execCommand(command string, args ...string) (string, error) {
 	cmd := exec.Command(command, args...)
 
@@ -143,6 +144,38 @@ func execCommand(command string, args ...string) (string, error) {
 	if err != nil {
 		Println(err.Error())
 		Println(string(stderr.Bytes()))
+		return "", err
+	}
+
+	return string(stdout.Bytes()), nil
+}
+
+// Like execCommand but with the possibility to add environment variables
+// to the executed process.
+func execCommandEnv(env []string, attach bool, command string, args ...string) (string, error) {
+	cmd := exec.Command(command, args...)
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, env...)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	var err error
+	if attach {
+		err = cmd.Run()
+	} else {
+		err = cmd.Start()
+		if err != nil {
+			Println(err.Error())
+			return "", err
+		}
+		err = cmd.Process.Release()
+	}
+
+	if err != nil {
+		Println(err.Error())
+		Println(string(stderr.Bytes()))
+		log.Fatal(stderr)
 		return "", err
 	}
 

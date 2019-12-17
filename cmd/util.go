@@ -33,9 +33,9 @@ func isMuted(channel string) bool {
 		log.Fatal(err)
 	}
 
-	r := regexp.MustCompile("[(on|off)]")
+	r := regexp.MustCompile("\\[(on|off)\\]")
 	match := r.FindString(string(result))
-	return match == "on"
+	return match == "[off]"
 }
 
 func setMuted(channel string, muted bool) {

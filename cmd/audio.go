@@ -29,10 +29,18 @@ var audioCmd = &cobra.Command{
 	//Run: func(cmd *cobra.Command, args []string) {
 	//	fmt.Println("audio called")
 	//},
+	TraverseChildren: true,
 }
 
 func init() {
 	rootCmd.AddCommand(audioCmd)
+
+	audioCmd.PersistentFlags().StringVarP(
+		&Channel,
+		"channel", "c",
+		"Master",
+		"Audio Channel",
+	)
 
 	// Here you will define your flags and configuration settings.
 

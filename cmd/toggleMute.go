@@ -23,7 +23,7 @@ import (
 
 // toggleMuteCmd represents the toggleMute command
 var toggleMuteCmd = &cobra.Command{
-	Use:   "toggleMute",
+	Use:   "toggle-mute",
 	Short: "A brief description of your command",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {

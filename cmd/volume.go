@@ -32,20 +32,12 @@ var volumeCmd = &cobra.Command{
 		volume := getVolume(channel)
 		fmt.Print(volume)
 	},
-	TraverseChildren: true,
 }
 
 var Channel string
 
 func init() {
 	audioCmd.AddCommand(volumeCmd)
-
-	volumeCmd.PersistentFlags().StringVarP(
-		&Channel,
-		"channel", "c",
-		"Master",
-		"Audio Channel",
-	)
 
 	// Here you will define your flags and configuration settings.
 

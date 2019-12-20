@@ -58,6 +58,8 @@ system-control lock
 
 #### Hotspot
 
+TODO:
+
 ```shell script
 system-control hotspot on -n "MyHotspot"
 ```
@@ -70,6 +72,9 @@ system-control hotspot off -n "MyHotspot"
 
 #### Brightness
 
+**Requirements:**
+* `xbacklight`
+
 ```shell script
 system-control display brightness set 100
 system-control display brightness inc
@@ -77,6 +82,10 @@ system-control display brightness dec
 ```
 
 ### Audio
+
+**Requirements:**
+* `pacmd`
+* `amixer`
 
 #### Volume
 

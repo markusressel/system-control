@@ -135,14 +135,26 @@ func getBrightness() int {
 	if err != nil {
 		log.Fatal(err)
 	}
-	b, err := strconv.Atoi(result)
+	result = strings.TrimSpace(result)
+	b, err := strconv.ParseFloat(result, 64)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return b
+	bi := int(b)
+	return bi
 }
 
-// Adjusts the brightness of the display
+// Sets a specific brightness of main the display
+func setBrightness(percentage int) {
+	env := []string{"DISPLAY:=0"}
+	command := "-set"
+	_, err := execCommandEnv(env, true, "xbacklight", command, strconv.Itoa(percentage), "-steps", "1", "-time", "0")
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+// Adjusts the brightness of the main display
 func adjustBrightness(change int) {
 	env := []string{"DISPLAY:=0"}
 	var command string
@@ -156,7 +168,6 @@ func adjustBrightness(change int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 }
 
 // Executes a shell command with the given arguments

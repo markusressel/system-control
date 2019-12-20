@@ -24,7 +24,7 @@ import (
 // displayCmd represents the display command
 var displayCmd = &cobra.Command{
 	Use:   "display",
-	Short: "Control display",
+	Short: "Control Display",
 	Long:  ``,
 	//Run: func(cmd *cobra.Command, args []string) {
 	//	fmt.Println("display called")

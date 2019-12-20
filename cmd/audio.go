@@ -24,7 +24,7 @@ import (
 // audioCmd represents the audio command
 var audioCmd = &cobra.Command{
 	Use:   "audio",
-	Short: "A brief description of your command",
+	Short: "Control System Audio",
 	Long:  ``,
 	//Run: func(cmd *cobra.Command, args []string) {
 	//	fmt.Println("audio called")

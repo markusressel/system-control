@@ -170,6 +170,22 @@ func adjustBrightness(change int) {
 	}
 }
 
+func findOpenWindows() []string {
+	result, err := execCommand("wmctrl", "-l")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	r := regexp.MustCompile("(0x[0-9a-f]+) +(\\d+) +(" + hostname + "|N/A) +(.*)")
+	matches := r.FindAllString(string(result), -1)
+	return matches
+}
+
 // Executes a shell command with the given arguments
 // and returns its stdout as a []byte.
 // If an error occurs the content of stderr is printed

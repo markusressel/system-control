@@ -20,12 +20,19 @@ package cmd
 import (
 	"bytes"
 	. "fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+)
+
+const (
+	DisplayBacklightPath = "/sys/class/backlight"
+	MaxBrightness        = "max_brightness"
+	Brightness           = "brightness"
 )
 
 func isMuted(channel string) bool {
@@ -77,10 +84,15 @@ func setVolume(channel string, volume int) {
 }
 
 func findSink(text string) int {
+	// ignore case
+	text = strings.ToLower(text)
+
 	result, err := execCommand("pacmd", "list-sinks")
 	if err != nil {
 		log.Fatal(err)
 	}
+	// we dont need case information
+	result = strings.ToLower(result)
 
 	// find the wanted text
 	i := strings.Index(result, text)
@@ -89,13 +101,14 @@ func findSink(text string) int {
 	}
 
 	substring := result[0 : i+len(text)]
-	ri := regexp.MustCompile("index: \\d+")
+	// search bottom-up for the first "index" line before the matched text line
+	ri := regexp.MustCompile("(?i)index: \\d+")
 	matches := ri.FindAllString(substring, -1)
 	match := matches[len(matches)-1]
 
-	rd := regexp.MustCompile("\\d+")
+	// extract the index number
+	rd := regexp.MustCompile("(?i)\\d+")
 	sinkIndex := rd.FindString(match)
-
 	index, err := strconv.Atoi(sinkIndex)
 	if err != nil {
 		log.Fatal(err)
@@ -129,33 +142,92 @@ func switchSink(index int) {
 	}
 }
 
+func readIntFromFile(path string) (int64, error) {
+	fileBuffer, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	value := string(fileBuffer)
+	return strconv.ParseInt(value, 0, 64)
+}
+
+func writeIntToFile(value int, path string) error {
+	fileStat, err := os.Stat(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return ioutil.WriteFile(path, []byte(strconv.Itoa(value)), fileStat.Mode())
+}
+
 func getBrightness() int {
-	env := []string{"DISPLAY:=0"}
-	result, err := execCommandEnv(env, true, "xbacklight")
+	files, err := ioutil.ReadDir(DisplayBacklightPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	result = strings.TrimSpace(result)
-	b, err := strconv.ParseFloat(result, 64)
+
+	var backlightName string
+	if len(files) <= 1 {
+		backlightName = files[0].Name()
+	} else {
+		// TODO: select first? select by user input?
+	}
+
+	maxBrightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + MaxBrightness
+	brightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
+
+	maxBrightness, err := readIntFromFile(maxBrightnessPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	bi := int(b)
-	return bi
+	brightness, err := readIntFromFile(brightnessPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
+	return percentage
 }
 
 // Sets a specific brightness of main the display
 func setBrightness(percentage int) {
-	env := []string{"DISPLAY:=0"}
-	command := "-set"
-	_, err := execCommandEnv(env, true, "xbacklight", command, strconv.Itoa(percentage), "-steps", "1", "-time", "0")
+	files, err := ioutil.ReadDir(DisplayBacklightPath)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	var backlightName string
+	if len(files) <= 1 {
+		backlightName = files[0].Name()
+	} else {
+		// TODO: select first? select by user input?
+	}
+
+	maxBrightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + MaxBrightness
+	brightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
+
+	maxBrightness, err := readIntFromFile(maxBrightnessPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	targetValue := int((float32(percentage) / 100.0) * float32(maxBrightness))
+	err = writeIntToFile(targetValue, brightnessPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//env := []string{"DISPLAY:=0"}
+	//command := "-set"
+	//_, err := execCommandEnv(env, true, "xbacklight", command, strconv.Itoa(percentage), "-steps", "1", "-time", "0")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 }
 
 // Adjusts the brightness of the main display
 func adjustBrightness(change int) {
+	// TODO: adjust to write directly to /sys/...
+
 	env := []string{"DISPLAY:=0"}
 	var command string
 	if change >= 0 {
@@ -191,6 +263,7 @@ func findOpenWindows() []string {
 // If an error occurs the content of stderr is printed
 // and an error is returned.
 func execCommand(command string, args ...string) (string, error) {
+	log.Printf("Executing command: %s %s", command, args)
 	cmd := exec.Command(command, args...)
 
 	var stdout, stderr bytes.Buffer
@@ -210,6 +283,7 @@ func execCommand(command string, args ...string) (string, error) {
 // Like execCommand but with the possibility to add environment variables
 // to the executed process.
 func execCommandEnv(env []string, attach bool, command string, args ...string) (string, error) {
+	log.Printf("Executing command: %s %s", command, args)
 	cmd := exec.Command(command, args...)
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, env...)

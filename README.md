@@ -30,9 +30,11 @@ Because of those downsides I started to use Python scripts, but python also has 
 * If you don't want to write a massive one-file script there are still lots of files to manage
 
 To fix the dependency and file management you could use any packaging tool. But since this would
-not address the performance concerns I had, I decided to give golang a try. The performance aspect is
-crucial for me, because some of these commands get executed on a regular basis through [Polybar](https://github.com/polybar/polybar)
-and other applications.
+not address the performance concerns I had, I decided to give golang a try. Go allows me to build
+a single binary file that includes everything necessary and provides the best possible performance
+(without using bash). The performance aspect is crucial for my usage, because some of these commands
+ get executed on a regular basis through [Polybar](https://github.com/polybar/polybar) and other 
+ applications.
 
 ## System
 

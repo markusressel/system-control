@@ -30,7 +30,8 @@ var incVolumeCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 		volume := getVolume(channel)
-		setVolume(channel, volume+1)
+		change := calculateAppropriateVolumeChange(volume, true)
+		setVolume(channel, volume+change)
 	},
 }
 

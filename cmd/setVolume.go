@@ -37,7 +37,7 @@ var setVolumeCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		setVolume(channel, volume+1)
+		setVolume(channel, volume)
 	},
 }
 

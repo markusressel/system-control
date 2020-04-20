@@ -60,7 +60,7 @@ system-control lock
 
 #### Hotspot
 
-TODO:
+TODO: not yet implemented
 
 ```shell script
 system-control hotspot on -n "MyHotspot"
@@ -75,7 +75,7 @@ system-control hotspot off -n "MyHotspot"
 #### Brightness
 
 **Requirements:**
-* `xbacklight`
+* `xbacklight` (soon to be removed)
 
 ```shell script
 system-control display brightness set 100
@@ -108,5 +108,7 @@ system-control audio volume set 100 --channel Master
 
 ```shell script
 system-control audio sink
-system-control audio sink switch "headphone"
+system-control audio sink switch "Built-in"
+system-control audio sink switch "X-Fi"
+system-control audio sink switch "NVIDIA"
 ```

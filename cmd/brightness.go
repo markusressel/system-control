@@ -29,8 +29,12 @@ var brightnessCmd = &cobra.Command{
 	Short: "Show current display brightness",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		b := getBrightness()
-		fmt.Println(b)
+		brightness := getBrightness()
+		maxBrightness := getMaxBrightness()
+
+		percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
+
+		fmt.Println(percentage)
 	},
 }
 

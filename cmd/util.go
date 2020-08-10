@@ -206,6 +206,7 @@ func readIntFromFile(path string) (int64, error) {
 		log.Fatal(err)
 	}
 	value := string(fileBuffer)
+	value = strings.TrimSpace(value)
 	return strconv.ParseInt(value, 0, 64)
 }
 
@@ -217,33 +218,24 @@ func writeIntToFile(value int, path string) error {
 	return ioutil.WriteFile(path, []byte(strconv.Itoa(value)), fileStat.Mode())
 }
 
-func getBrightness() int {
-	files, err := ioutil.ReadDir(DisplayBacklightPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var backlightName string
-	if len(files) <= 1 {
-		backlightName = files[0].Name()
-	} else {
-		// TODO: select first? select by user input?
-	}
-
+func getMaxBrightness() int {
+	backlightName := findBacklight()
 	maxBrightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + MaxBrightness
-	brightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
-
 	maxBrightness, err := readIntFromFile(maxBrightnessPath)
 	if err != nil {
 		log.Fatal(err)
 	}
+	return int(maxBrightness)
+}
+
+func getBrightness() int {
+	backlightName := findBacklight()
+	brightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
 	brightness, err := readIntFromFile(brightnessPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
-	return percentage
+	return int(brightness)
 }
 
 // Sets a specific brightness of main the display
@@ -282,22 +274,56 @@ func setBrightness(percentage int) {
 	//}
 }
 
-// Adjusts the brightness of the main display
-func adjustBrightness(change int) {
-	// TODO: adjust to write directly to /sys/...
-
-	env := []string{"DISPLAY:=0"}
-	var command string
-	if change >= 0 {
-		command = "-inc"
-	} else {
-		command = "-dec"
-		change = -change
+func setBrightnessRaw(backlight string, brightness int) {
+	maxBrightness := getMaxBrightness()
+	targetBrightness := brightness
+	if targetBrightness < 0 {
+		targetBrightness = 0
 	}
-	_, err := execCommandEnv(env, true, "xbacklight", command, strconv.Itoa(change), "-steps", "1", "-time", "0")
+	if targetBrightness > maxBrightness {
+		targetBrightness = maxBrightness
+	}
+
+	brightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlight + string(os.PathSeparator) + Brightness
+
+	err := writeIntToFile(targetBrightness, brightnessPath)
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// Adjusts the brightness of the main display
+func adjustBrightness(change int) {
+	backlight := findBacklight()
+
+	maxBrightness := getMaxBrightness()
+	currentBrightness := getBrightness()
+
+	targetBrightness := currentBrightness + change
+	if targetBrightness < 0 {
+		targetBrightness = 0
+	}
+	if targetBrightness > maxBrightness {
+		targetBrightness = maxBrightness
+	}
+
+	setBrightnessRaw(backlight, targetBrightness)
+}
+
+func findBacklight() string {
+	files, err := ioutil.ReadDir(DisplayBacklightPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var backlightName string
+	if len(files) <= 1 {
+		backlightName = files[0].Name()
+	} else {
+		// TODO: select first? select by user input?
+	}
+
+	return backlightName
 }
 
 func findOpenWindows() []string {

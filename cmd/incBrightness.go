@@ -27,18 +27,25 @@ var incBrightnessCmd = &cobra.Command{
 	Short: "Increase display brightness",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		b := getBrightness()
+		brightness := getBrightness()
+		maxBrightness := getMaxBrightness()
+
+		percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
+
 		var change int
-		if b < 10 {
+		if percentage < 10 {
 			change = 1
-		} else if b < 20 {
+		} else if percentage < 20 {
 			change = 2
-		} else if b < 40 {
+		} else if percentage < 40 {
 			change = 4
 		} else {
 			change = 8
 		}
-		adjustBrightness(change)
+
+		rawChange := int(float32(change) * (float32(maxBrightness) / 100.0))
+
+		adjustBrightness(rawChange)
 	},
 }
 

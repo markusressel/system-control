@@ -41,8 +41,8 @@ func isMuted(channel string) bool {
 		log.Fatal(err)
 	}
 
-	r := regexp.MustCompile("\\[(on|off)\\]")
-	match := r.FindString(string(result))
+	r := regexp.MustCompile("\\[(on|off)]")
+	match := r.FindString(result)
 	return match == "[off]"
 }
 
@@ -67,7 +67,7 @@ func getVolume(channel string) int {
 	}
 
 	r := regexp.MustCompile("\\[\\d+%]")
-	match := r.FindString(string(result))
+	match := r.FindString(result)
 	match = match[1 : len(match)-2]
 	volume, err := strconv.Atoi(match)
 	if err != nil {
@@ -338,7 +338,7 @@ func findOpenWindows() []string {
 	}
 
 	r := regexp.MustCompile("(0x[0-9a-f]+) +(\\d+) +(" + hostname + "|N/A) +(.*)")
-	matches := r.FindAllString(string(result), -1)
+	matches := r.FindAllString(result, -1)
 	return matches
 }
 
@@ -347,7 +347,7 @@ func findOpenWindows() []string {
 // If an error occurs the content of stderr is printed
 // and an error is returned.
 func execCommand(command string, args ...string) (string, error) {
-	log.Printf("Executing command: %s %s", command, args)
+	//log.Printf("Executing command: %s %s", command, args)
 	cmd := exec.Command(command, args...)
 
 	var stdout, stderr bytes.Buffer
@@ -367,7 +367,7 @@ func execCommand(command string, args ...string) (string, error) {
 // Like execCommand but with the possibility to add environment variables
 // to the executed process.
 func execCommandEnv(env []string, attach bool, command string, args ...string) (string, error) {
-	log.Printf("Executing command: %s %s", command, args)
+	//log.Printf("Executing command: %s %s", command, args)
 	cmd := exec.Command(command, args...)
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, env...)

@@ -107,7 +107,14 @@ system-control audio volume set 100 --channel Master
 #### Sink
 
 ```shell script
+// list sinks
 system-control audio sink
+
+// get active sink
+system-control audio sink active
+system-control audio sink active "NVIDIA"
+
+// switch active sink
 system-control audio sink switch "Built-in"
 system-control audio sink switch "X-Fi"
 system-control audio sink switch "NVIDIA"

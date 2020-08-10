@@ -26,7 +26,7 @@ import (
 // sinkCmd represents the sink command
 var sinkCmd = &cobra.Command{
 	Use:   "sink",
-	Short: "A brief description of your command",
+	Short: "Show a list of all available sinks",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		result, err := execCommand("pacmd", "list-sinks")

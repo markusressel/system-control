@@ -100,6 +100,47 @@ func setVolume(channel string, volume int) {
 	}
 }
 
+// returns the index of the active sink
+// or 0 if the given text is NOT found in the active sink
+// or 1 if the given text IS found in the active sink
+func findActiveSink(text string) int {
+	// ignore case
+	text = strings.ToLower(text)
+
+	result, err := execCommand("pacmd", "list-sinks")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// we dont need case information
+	result = strings.ToLower(result)
+
+	// search for the Index line containing a star
+	ri := regexp.MustCompile("(?i)\\s+\\*\\s+Index: \\d+")
+	matches := ri.FindAllString(result, -1)
+	match := matches[len(matches)-1]
+
+	// extract the activeSinkIndex number
+	rd := regexp.MustCompile("(?i)\\d+")
+	activeSinkIndexMatch := rd.FindString(match)
+	activeSinkIndex, err := strconv.Atoi(activeSinkIndexMatch)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if len(text) > 0 {
+		sinkIndex := findSink(text)
+		if sinkIndex == activeSinkIndex {
+			return 1
+		} else {
+			return 0
+		}
+	} else {
+		return activeSinkIndex
+	}
+}
+
+// returns the index of a sink that contains the given text
 func findSink(text string) int {
 	// ignore case
 	text = strings.ToLower(text)

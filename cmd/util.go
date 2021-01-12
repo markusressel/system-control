@@ -241,7 +241,7 @@ func parsePipwireToMap(input string) []map[string]string {
 }
 
 // Switches the default sink and moves all existing sink inputs to the target sink
-func switchSink(index int) {
+func switchSinkPulse(index int) {
 	indexString := strconv.Itoa(index)
 	_, err := execCommand("pacmd", "set-default-sink", indexString)
 	if err != nil {
@@ -263,6 +263,15 @@ func switchSink(index int) {
 			log.Fatal(err)
 		}
 	}
+}
+
+// Switches the default sink and moves all existing sink inputs to the target sink
+func switchSinkPipewire(index int) {
+	// TODO: find all applications
+	// TOOD: find outputs of applications
+	// TODO: find current links of applications
+	// TODO: find inputs of target sink
+	// TODO: modify/delete and create links for all applications to the new target
 }
 
 func readIntFromFile(path string) (int64, error) {

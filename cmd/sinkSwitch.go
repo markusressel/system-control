@@ -44,9 +44,6 @@ You can specify the audio sink using its index, but also using other strings tha
 
 		//enum-params         	Enumerate params of an object <object-id> <param-id>
 		//set-param           	Set param of an object <object-id> <param-id> <param-json>
-
-		sinkIdx := findSink(searchString)
-		switchSink(sinkIdx)
 	},
 }
 

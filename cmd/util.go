@@ -129,7 +129,7 @@ func findActiveSink(text string) int {
 	}
 
 	if len(text) > 0 {
-		sinkIndex := findSink(text)
+		sinkIndex := findSinkPulse(text)
 		if sinkIndex == activeSinkIndex {
 			return 1
 		} else {
@@ -141,7 +141,7 @@ func findActiveSink(text string) int {
 }
 
 // returns the index of a sink that contains the given text
-func findSink(text string) int {
+func findSinkPulse(text string) int {
 	// ignore case
 	text = strings.ToLower(text)
 
@@ -175,8 +175,73 @@ func findSink(text string) int {
 	return index
 }
 
+// returns the index of a sink that contains the given text
+func findSinkPipewire(text string) int {
+	// ignore case
+	text = strings.ToLower(text)
+
+	result, err := execCommand("pw-cli", "list-objects")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	objects := parsePipwireToMap(result)
+	for _, item := range objects {
+		if item["media.class"] == "Audio/Sink" && strings.Contains(strings.ToLower(item["node.description"]), text) {
+			index, err := strconv.Atoi(item["id"])
+			if err != nil {
+				log.Fatal(err)
+			}
+			return index
+		}
+	}
+
+	return -1
+}
+
+func parsePipwireToMap(input string) []map[string]string {
+	//var result map[int]string
+	//input := `{"birds":{"pigeon":"likes to perch on rocks","eagle":"bird of prey"},"animals":"none"}`
+	var result = make([]map[string]string, 0, 1000)
+
+	lines := strings.Split(input, "\n")
+	var reqMap map[string]string
+	for _, line := range lines {
+		if len(strings.TrimSpace(line)) <= 0 {
+			continue
+		}
+		if strings.Contains(line, ",") {
+			if reqMap != nil {
+				result = append(result, reqMap)
+			}
+			reqMap = make(map[string]string)
+			splits := strings.Split(line, ",")
+			for _, item := range splits {
+				item = strings.TrimSpace(item)
+				splits := strings.SplitAfter(item, " ")
+				reqMap[strings.TrimSpace(splits[0])] = strings.TrimSpace(splits[1])
+			}
+		} else {
+			splits := strings.SplitAfter(line, "=")
+
+			key := strings.TrimRight(splits[0], "=")
+			key = strings.TrimSpace(key)
+
+			value := strings.TrimSpace(splits[1])
+			value = strings.TrimSuffix(value, "\"")
+			value = strings.TrimPrefix(value, "\"")
+			reqMap[key] = value
+		}
+	}
+	if reqMap != nil {
+		result = append(result, reqMap)
+	}
+
+	return result
+}
+
 // Switches the default sink and moves all existing sink inputs to the target sink
-func switchSink(index int) {
+func switchSinkPulse(index int) {
 	indexString := strconv.Itoa(index)
 	_, err := execCommand("pacmd", "set-default-sink", indexString)
 	if err != nil {
@@ -198,6 +263,15 @@ func switchSink(index int) {
 			log.Fatal(err)
 		}
 	}
+}
+
+// Switches the default sink and moves all existing sink inputs to the target sink
+func switchSinkPipewire(index int) {
+	// TODO: find all applications
+	// TOOD: find outputs of applications
+	// TODO: find current links of applications
+	// TODO: find inputs of target sink
+	// TODO: modify/delete and create links for all applications to the new target
 }
 
 func readIntFromFile(path string) (int64, error) {

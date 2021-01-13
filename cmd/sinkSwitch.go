@@ -34,6 +34,9 @@ You can specify the audio sink using its index, but also using other strings tha
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		searchString := args[0]
+		//sinkIdx := findSinkPulse(searchString)
+		sinkIdx := findSinkPipewire(searchString)
+		switchSinkPulse(sinkIdx)
 
 		//list-objects        	List objects or current remote. [<interface>]
 		//info                	Get info about an object. <object-id>|all

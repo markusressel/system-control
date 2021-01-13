@@ -9,13 +9,13 @@ On linux it can be cumbersome to do simple stuff via the command line, like f. e
 * manage WiFi connections / Hotspots
 * graceful shutting/restart
 In most cases these actions either require knowledge about a specific shell tool
-to do the job or even a custom built script.
+to do the job or even a custom-built script.
 
 This project aims to simplify that by providing a command line tool that
-can do all of the things mentioned above with a simple and easy to understand syntax.
+can do all the things mentioned above with a simple and easy to understand syntax.
 
 ## Why not use Shell scripts?
-Yes, you could write scripts for all of the things
+Yes, you could write scripts for all the things
 `system-control` can do and be happy with that. That was also my initial approach.
 When I wrote my first script I tried to use Bash since it is more
 close to the system, but:

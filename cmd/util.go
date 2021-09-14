@@ -36,7 +36,7 @@ const (
 )
 
 func isMuted(channel string) bool {
-	result, err := execCommand("amixer", "get", channel)
+	result, err := execCommand("amixer", "-D", "pulse", "get", channel)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -54,14 +54,14 @@ func setMuted(channel string, muted bool) {
 		state = "on"
 	}
 
-	_, err := execCommand("amixer", "set", channel, state)
+	_, err := execCommand("amixer", "-D", "pulse", "set", channel, state)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func getVolume(channel string) int {
-	result, err := execCommand("amixer", "get", channel)
+	result, err := execCommand("amixer", "-D", "pulse", "get", channel)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func calculateAppropriateVolumeChange(current int, increase bool) int {
 }
 
 func setVolume(channel string, volume int) {
-	_, err := execCommand("amixer", "set", channel, strconv.Itoa(volume)+"%")
+	_, err := execCommand("amixer", "-D", "pulse", "set", channel, strconv.Itoa(volume)+"%")
 	if err != nil {
 		log.Fatal(err)
 	}

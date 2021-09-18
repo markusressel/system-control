@@ -40,18 +40,18 @@ a single binary file that includes everything necessary and provides the best po
 
 ### Shutdown/Restart
 
-TODO:
+TODO: not yet fully working
 
 ```shell script
-system-control shutdown
+> system-control shutdown
 ```
 
 ```shell script
-system-control restart
+> system-control restart
 ```
 
 ```shell script
-system-control lock
+> system-control lock
 ```
 
 ## Hardware
@@ -63,11 +63,11 @@ system-control lock
 TODO: not yet implemented
 
 ```shell script
-system-control hotspot on -n "MyHotspot"
+> system-control hotspot on -n "MyHotspot"
 ```
 
 ```shell script
-system-control hotspot off -n "MyHotspot"
+> system-control hotspot off -n "MyHotspot"
 ```
 
 ### Screen
@@ -75,6 +75,7 @@ system-control hotspot off -n "MyHotspot"
 #### Brightness
 
 **Requirements:**
+
 * None
 
 ```shell script
@@ -84,6 +85,9 @@ system-control hotspot off -n "MyHotspot"
 ```
 
 ### Audio
+
+system-control is optimized for pipewire. If currently you are not using pipewire already, I strongly recommend you to
+consider it.
 
 **Requirements:**
 
@@ -125,10 +129,11 @@ Sink #43
 > system-control audio sink active
 46
 
+// check if the current active sink contains "nvidia" in its name
 > system-control audio sink active "NVIDIA"
 0
 
-// switch active sink
+// switch active sink to a sink which contains the given text
 > system-control audio sink switch "Built-in"
 > system-control audio sink switch "X-Fi"
 > system-control audio sink switch "NVIDIA"

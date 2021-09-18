@@ -39,7 +39,7 @@ var activeCmd = &cobra.Command{
 		if len(args) > 0 {
 			searchString = args[0]
 		}
-		sinkIdx := findActiveSink(searchString)
+		sinkIdx := findActiveSinkPipewire(searchString)
 		fmt.Println(sinkIdx)
 	},
 }

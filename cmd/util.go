@@ -103,7 +103,7 @@ func setVolume(channel string, volume int) {
 // returns the index of the active sink
 // or 0 if the given text is NOT found in the active sink
 // or 1 if the given text IS found in the active sink
-func findActiveSink(text string) int {
+func findActiveSinkPulse(text string) int {
 	// ignore case
 	text = strings.ToLower(text)
 
@@ -130,6 +130,41 @@ func findActiveSink(text string) int {
 
 	if len(text) > 0 {
 		sinkIndex := findSinkPulse(text)
+		if sinkIndex == activeSinkIndex {
+			return 1
+		} else {
+			return 0
+		}
+	} else {
+		return activeSinkIndex
+	}
+}
+
+// returns the index of the active sink
+// or 0 if the given text is NOT found in the active sink
+// or 1 if the given text IS found in the active sink
+func findActiveSinkPipewire(text string) int {
+	// ignore case
+	text = strings.ToLower(text)
+
+	currentDefaultSinkName, err := execCommand("pactl", "get-default-sink")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var activeSinkIndex int
+	objects := getPipewireObjects()
+	for _, item := range objects {
+		if item["media.class"] == "Audio/Sink" && strings.Contains(strings.ToLower(item["node.name"]), currentDefaultSinkName) {
+			activeSinkIndex, err = strconv.Atoi(item["id"])
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+
+	if len(text) > 0 {
+		sinkIndex := findSinkPipewire(text)
 		if sinkIndex == activeSinkIndex {
 			return 1
 		} else {
@@ -180,12 +215,7 @@ func findSinkPipewire(text string) int {
 	// ignore case
 	text = strings.ToLower(text)
 
-	result, err := execCommand("pw-cli", "list-objects")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	objects := parsePipwireToMap(result)
+	objects := getPipewireObjects()
 	for _, item := range objects {
 		if item["media.class"] == "Audio/Sink" && strings.Contains(strings.ToLower(item["node.description"]), text) {
 			index, err := strconv.Atoi(item["id"])
@@ -197,6 +227,15 @@ func findSinkPipewire(text string) int {
 	}
 
 	return -1
+}
+
+func getPipewireObjects() (objects []map[string]string) {
+	result, err := execCommand("pw-cli", "list-objects")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return parsePipwireToMap(result)
 }
 
 func parsePipwireToMap(input string) []map[string]string {
@@ -241,20 +280,30 @@ func parsePipwireToMap(input string) []map[string]string {
 }
 
 // Switches the default sink to the target sink
-func setDefaultSink(index int) (err error) {
+func setDefaultSinkPulse(index int) (err error) {
 	indexString := strconv.Itoa(index)
 	_, err = execCommand("pactl", "set-default-sink", indexString)
 	return err
 }
 
+// Switches the default sink to the target sink
+// You need to get a sink name with "pw-cli ls Node"
+// and look for the "node.name" property for a valid value.
+func setDefaultSinkPipewire(sinkName string) (err error) {
+	// TODO: not sure if this switches running apps over
+	_, err = execCommand("pw-metadata", "0", "default.configured.audio.sink", `'{ "name": "`+sinkName+`" }'`)
+	return err
+}
+
 // Switches the default sink and moves all existing sink inputs to the target sink
 func switchSinkPulse(index int) {
-	err := setDefaultSink(index)
+	err := setDefaultSinkPulse(index)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	indexString := strconv.Itoa(index)
+	// TODO: pacmd doesnt exist anymore?
 	result, err := execCommand("pacmd", "list-sink-inputs", indexString)
 	if err != nil {
 		log.Fatal(err)
@@ -265,7 +314,7 @@ func switchSinkPulse(index int) {
 
 	for i := range matches {
 		inputIdx := matches[i][1]
-		_, err := execCommand("pacmd", "move-sink-input", inputIdx, indexString)
+		_, err := execCommand("pactl", "move-sink-input", inputIdx, indexString)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -274,7 +323,7 @@ func switchSinkPulse(index int) {
 
 // Switches the default sink and moves all existing sink inputs to the target sink
 func switchSinkPipewire(index int) {
-	err := setDefaultSink(index)
+	err := setDefaultSinkPulse(index)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -447,7 +496,10 @@ func execCommand(command string, args ...string) (string, error) {
 		return "", err
 	}
 
-	return string(stdout.Bytes()), nil
+	result := string(stdout.Bytes())
+	result = strings.TrimSpace(result)
+
+	return result, nil
 }
 
 // Like execCommand but with the possibility to add environment variables

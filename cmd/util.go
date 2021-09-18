@@ -416,18 +416,7 @@ func getBrightness() int {
 
 // Sets a specific brightness of main the display
 func setBrightness(percentage int) {
-	files, err := ioutil.ReadDir(DisplayBacklightPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var backlightName string
-	if len(files) <= 1 {
-		backlightName = files[0].Name()
-	} else {
-		// TODO: select first? select by user input?
-	}
-
+	backlightName := findBacklight()
 	maxBrightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + MaxBrightness
 	brightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
 
@@ -441,13 +430,6 @@ func setBrightness(percentage int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	//env := []string{"DISPLAY:=0"}
-	//command := "-set"
-	//_, err := execCommandEnv(env, true, "xbacklight", command, strconv.Itoa(percentage), "-steps", "1", "-time", "0")
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
 }
 
 func setBrightnessRaw(backlight string, brightness int) {

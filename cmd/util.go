@@ -210,7 +210,7 @@ func parsePipwireToMap(input string) []map[string]string {
 		if len(strings.TrimSpace(line)) <= 0 {
 			continue
 		}
-		if strings.Contains(line, ",") {
+		if strings.Contains(line, ",") && !strings.Contains(line, "=") {
 			if reqMap != nil {
 				result = append(result, reqMap)
 			}
@@ -240,14 +240,21 @@ func parsePipwireToMap(input string) []map[string]string {
 	return result
 }
 
+// Switches the default sink to the target sink
+func setDefaultSink(index int) (err error) {
+	indexString := strconv.Itoa(index)
+	_, err = execCommand("pactl", "set-default-sink", indexString)
+	return err
+}
+
 // Switches the default sink and moves all existing sink inputs to the target sink
 func switchSinkPulse(index int) {
-	indexString := strconv.Itoa(index)
-	_, err := execCommand("pacmd", "set-default-sink", indexString)
+	err := setDefaultSink(index)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	indexString := strconv.Itoa(index)
 	result, err := execCommand("pacmd", "list-sink-inputs", indexString)
 	if err != nil {
 		log.Fatal(err)
@@ -267,6 +274,11 @@ func switchSinkPulse(index int) {
 
 // Switches the default sink and moves all existing sink inputs to the target sink
 func switchSinkPipewire(index int) {
+	err := setDefaultSink(index)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// TODO: find all applications
 	// TOOD: find outputs of applications
 	// TODO: find current links of applications

@@ -493,10 +493,14 @@ func findBacklight() string {
 	}
 
 	var backlightName string
-	if len(files) <= 1 {
+	if len(files) == 0 {
+		log.Fatal("No backlight found")
+	} else if len(files) == 1 {
 		backlightName = files[0].Name()
 	} else {
 		// TODO: select first? select by user input?
+		backlightName = files[0].Name()
+		log.Printf("Found multiple backlight sources, using: " + backlightName)
 	}
 
 	return backlightName

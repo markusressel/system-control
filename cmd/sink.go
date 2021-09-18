@@ -29,7 +29,7 @@ var sinkCmd = &cobra.Command{
 	Short: "Show a list of all available sinks",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		result, err := execCommand("pacmd", "list-sinks")
+		result, err := execCommand("pactl", "list", "sinks")
 		if err != nil {
 			log.Fatal(err)
 		}

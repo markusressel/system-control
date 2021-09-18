@@ -75,47 +75,61 @@ system-control hotspot off -n "MyHotspot"
 #### Brightness
 
 **Requirements:**
-* `xbacklight` (soon to be removed)
+* None
 
 ```shell script
-system-control display brightness set 100
-system-control display brightness inc
-system-control display brightness dec
+> system-control display brightness set 100
+> system-control display brightness inc
+> system-control display brightness dec
 ```
 
 ### Audio
 
 **Requirements:**
-* `pacmd`
+
+* `pacli`
+* `pw-cli`
 * `amixer`
 
 #### Volume
 
 ```shell script
-system-control audio mute
-system-control audio unmute
-system-control audio toggle-mute
+> system-control audio mute
+> system-control audio unmute
+> system-control audio toggle-mute
 ```
 
 ```shell script
-system-control audio volume
-system-control audio volume inc
-system-control audio volume dec
-system-control audio volume set 100 --channel Master
+> system-control audio volume
+28
+> system-control audio volume inc
+> system-control audio volume dec
+> system-control audio volume set 100 --channel Master
 ```
 
 #### Sink
 
 ```shell script
 // list sinks
-system-control audio sink
+> system-control audio sink
+Sink #43
+	State: SUSPENDED
+	Name: alsa_output.pci-0000_07_00.0.analog-stereo
+	Description: EMU20k2 [Sound Blaster X-Fi Titanium Series] Analog Stereo
+	Driver: PipeWire
+	Sample Specification: float32le 2ch 48000Hz
+	Channel Map: front-left,front-right
+[...]
 
 // get active sink
-system-control audio sink active
-system-control audio sink active "NVIDIA"
+> system-control audio sink active
+46
+
+> system-control audio sink active "NVIDIA"
+0
 
 // switch active sink
-system-control audio sink switch "Built-in"
-system-control audio sink switch "X-Fi"
-system-control audio sink switch "NVIDIA"
+> system-control audio sink switch "Built-in"
+> system-control audio sink switch "X-Fi"
+> system-control audio sink switch "NVIDIA"
 ```

@@ -153,9 +153,11 @@ func findActiveSinkPipewire(text string) int {
 	}
 
 	var activeSinkIndex int
-	objects := getPipewireObjects()
+	objects := getPipewireObjects(
+		PropertyFilter{"media.class", "Audio/Sink"},
+	)
 	for _, item := range objects {
-		if item["media.class"] == "Audio/Sink" && strings.Contains(strings.ToLower(item["node.name"]), currentDefaultSinkName) {
+		if strings.Contains(strings.ToLower(item["node.name"]), currentDefaultSinkName) {
 			activeSinkIndex, err = strconv.Atoi(item["id"])
 			if err != nil {
 				log.Fatal(err)
@@ -215,9 +217,11 @@ func findSinkPipewire(text string) int {
 	// ignore case
 	text = strings.ToLower(text)
 
-	objects := getPipewireObjects()
+	objects := getPipewireObjects(
+		PropertyFilter{"media.class", "Audio/Sink"},
+	)
 	for _, item := range objects {
-		if item["media.class"] == "Audio/Sink" && strings.Contains(strings.ToLower(item["node.description"]), text) {
+		if strings.Contains(strings.ToLower(item["node.description"]), text) {
 			index, err := strconv.Atoi(item["id"])
 			if err != nil {
 				log.Fatal(err)
@@ -229,52 +233,80 @@ func findSinkPipewire(text string) int {
 	return -1
 }
 
-func getPipewireObjects() (objects []map[string]string) {
-	result, err := execCommand("pw-cli", "list-objects")
+type PropertyFilter struct {
+	key   string
+	value string
+}
+
+// retrieve a list of pipewire objects
+// optionally filtered
+func getPipewireObjects(filters ...PropertyFilter) (objects []map[string]string) {
+	result, err := execCommand("pw-cli", "ls")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return parsePipwireToMap(result)
+	objects = parsePipwireToMap(result)
+	objects = FilterPipwireObjects(objects, func(v map[string]string) bool {
+		for _, filter := range filters {
+			if v[filter.key] != filter.value {
+				return false
+			}
+		}
+
+		return true
+	})
+
+	return objects
 }
 
 func parsePipwireToMap(input string) []map[string]string {
 	var result = make([]map[string]string, 0, 1000)
 
 	lines := strings.Split(input, "\n")
-	var reqMap map[string]string
+	var objectMap map[string]string
 	for _, line := range lines {
 		if len(strings.TrimSpace(line)) <= 0 {
 			continue
 		}
 		if strings.Contains(line, ",") && !strings.Contains(line, "=") {
-			if reqMap != nil {
-				result = append(result, reqMap)
-			}
-			reqMap = make(map[string]string)
+			// this is the "header" of an object
+
+			// create a new map for the current object and fill it
+			objectMap = make(map[string]string)
 			splits := strings.Split(line, ",")
 			for _, item := range splits {
 				item = strings.TrimSpace(item)
 				splits := strings.SplitAfter(item, " ")
-				reqMap[strings.TrimSpace(splits[0])] = strings.TrimSpace(splits[1])
+				objectMap[strings.TrimSpace(splits[0])] = strings.TrimSpace(splits[1])
 			}
+			result = append(result, objectMap)
 		} else {
+			// this is a property of an object
+
 			splits := strings.SplitAfter(line, "=")
 
 			key := strings.TrimRight(splits[0], "=")
 			key = strings.TrimSpace(key)
 
 			value := strings.TrimSpace(splits[1])
-			value = strings.TrimSuffix(value, "\"")
-			value = strings.TrimPrefix(value, "\"")
-			reqMap[key] = value
+			value = strings.Trim(value, "\"")
+			objectMap[key] = value
 		}
-	}
-	if reqMap != nil {
-		result = append(result, reqMap)
 	}
 
 	return result
+}
+
+// FilterPipwireObjects filters the given pipewire object map based on the given function
+func FilterPipwireObjects(vs []map[string]string, f func(map[string]string) bool) []map[string]string {
+	vsf := make([]map[string]string, 0)
+	for _, v := range vs {
+		if f(v) {
+			vsf = append(vsf, v)
+		}
+	}
+	return vsf
 }
 
 // Switches the default sink to the target sink

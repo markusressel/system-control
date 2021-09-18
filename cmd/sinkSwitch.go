@@ -36,8 +36,8 @@ You can specify the audio sink using its index, but also using other strings tha
 		searchString := args[0]
 		//sinkIdx := findSinkPulse(searchString)
 		//switchSinkPulse(sinkIdx)
-		sinkIdx := findSinkPipewire(searchString)
-		switchSinkPipewire(sinkIdx)
+		sink := findSinkPipewire(searchString)
+		switchSinkPipewire(sink)
 	},
 }
 

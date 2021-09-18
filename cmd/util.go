@@ -166,7 +166,11 @@ func findActiveSinkPipewire(text string) int {
 	}
 
 	if len(text) > 0 {
-		sinkIndex := findSinkPipewire(text)
+		sink := findSinkPipewire(text)
+		sinkIndex, err := strconv.Atoi(sink["id"])
+		if err != nil {
+			log.Fatal(err)
+		}
 		if sinkIndex == activeSinkIndex {
 			return 1
 		} else {
@@ -213,7 +217,7 @@ func findSinkPulse(text string) int {
 }
 
 // returns the index of a sink that contains the given text
-func findSinkPipewire(text string) int {
+func findSinkPipewire(text string) map[string]string {
 	// ignore case
 	text = strings.ToLower(text)
 
@@ -222,15 +226,11 @@ func findSinkPipewire(text string) int {
 	)
 	for _, item := range objects {
 		if strings.Contains(strings.ToLower(item["node.description"]), text) {
-			index, err := strconv.Atoi(item["id"])
-			if err != nil {
-				log.Fatal(err)
-			}
-			return index
+			return item
 		}
 	}
 
-	return -1
+	return nil
 }
 
 type PropertyFilter struct {
@@ -320,8 +320,7 @@ func setDefaultSinkPulse(index int) (err error) {
 // You need to get a sink name with "pw-cli ls Node"
 // and look for the "node.name" property for a valid value.
 func setDefaultSinkPipewire(sinkName string) (err error) {
-	// TODO: not sure if this switches running apps over
-	_, err = execCommand("pw-metadata", "0", "default.configured.audio.sink", `'{ "name": "`+sinkName+`" }'`)
+	_, err = execCommand("pw-metadata", "0", "default.configured.audio.sink", `{ "name": "`+sinkName+`" }`)
 	return err
 }
 
@@ -351,17 +350,30 @@ func switchSinkPulse(index int) {
 }
 
 // Switches the default sink and moves all existing sink inputs to the target sink
-func switchSinkPipewire(index int) {
-	err := setDefaultSinkPulse(index)
+func switchSinkPipewire(node map[string]string) {
+	nodeName := node["node.name"]
+	nodeId, err := strconv.Atoi(node["id"])
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = setDefaultSinkPipewire(nodeName)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// TODO: find all applications
-	// TOOD: find outputs of applications
-	// TODO: find current links of applications
-	// TODO: find inputs of target sink
-	// TODO: modify/delete and create links for all applications to the new target
+	var streams = getPipewireObjects(
+		PropertyFilter{"media.class", "Stream/Output/Audio"},
+	)
+	for _, stream := range streams {
+		moveStreamToNode(stream["id"], nodeId)
+	}
+}
+
+func moveStreamToNode(streamId string, nodeId int) {
+	_, err := execCommand("pw-metadata", streamId, "target.node", strconv.Itoa(nodeId))
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func readIntFromFile(path string) (int64, error) {

@@ -107,7 +107,7 @@ func findActiveSinkPulse(text string) int {
 	// ignore case
 	text = strings.ToLower(text)
 
-	result, err := execCommand("pacmd", "list-sinks")
+	result, err := execCommand("pactl", "list", "sinks")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func findSinkPulse(text string) int {
 	// ignore case
 	text = strings.ToLower(text)
 
-	result, err := execCommand("pacmd", "list-sinks")
+	result, err := execCommand("pactl", "list", "sinks")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -239,8 +239,6 @@ func getPipewireObjects() (objects []map[string]string) {
 }
 
 func parsePipwireToMap(input string) []map[string]string {
-	//var result map[int]string
-	//input := `{"birds":{"pigeon":"likes to perch on rocks","eagle":"bird of prey"},"animals":"none"}`
 	var result = make([]map[string]string, 0, 1000)
 
 	lines := strings.Split(input, "\n")
@@ -303,8 +301,7 @@ func switchSinkPulse(index int) {
 	}
 
 	indexString := strconv.Itoa(index)
-	// TODO: pacmd doesnt exist anymore?
-	result, err := execCommand("pacmd", "list-sink-inputs", indexString)
+	result, err := execCommand("pactl", "list", "sink-inputs", indexString)
 	if err != nil {
 		log.Fatal(err)
 	}

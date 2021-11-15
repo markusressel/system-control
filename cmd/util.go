@@ -22,6 +22,7 @@ import (
 	. "fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"os/exec"
 	"regexp"
@@ -31,6 +32,7 @@ import (
 
 const (
 	DisplayBacklightPath = "/sys/class/backlight"
+	LedsPath             = "/sys/class/leds"
 	MaxBrightness        = "max_brightness"
 	Brightness           = "brightness"
 )
@@ -486,6 +488,53 @@ func findBacklight() string {
 	}
 
 	return backlightName
+}
+
+func findKeyboardBacklight() string {
+	files, err := ioutil.ReadDir(LedsPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var kbdBacklight string
+	r := regexp.MustCompile(".*(kbd|keyboard).*")
+	for _, f := range files {
+
+		if r.MatchString(f.Name()) {
+			return f.Name()
+		}
+	}
+
+	log.Fatal("No keyboard backlight found")
+	return kbdBacklight
+}
+
+func getKeyboardBrightness() int {
+	backlightName := findKeyboardBacklight()
+	brightnessPath := LedsPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
+	brightness, err := readIntFromFile(brightnessPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return int(brightness)
+}
+
+func setKeyboardBrightness(brightness int) int {
+	backlightName := findKeyboardBacklight()
+	brightnessPath := LedsPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
+	maxBrightnessPath := LedsPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + MaxBrightness
+
+	maxBrightness, err := readIntFromFile(maxBrightnessPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	targetValue := math.Max(0, math.Min(float64(maxBrightness), float64(brightness)))
+	err = writeIntToFile(int(targetValue), brightnessPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return int(targetValue)
 }
 
 func findOpenWindows() []string {

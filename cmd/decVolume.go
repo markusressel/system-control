@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
 // decVolumeCmd represents the dec command
@@ -27,11 +28,16 @@ var decVolumeCmd = &cobra.Command{
 	Short: "Decrement audio volume",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		cardFlag := cmd.Flag("card")
+		card := cardFlag.Value.String()
+		cardInt, _ := strconv.Atoi(card)
+
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
-		volume := getVolume(channel)
+
+		volume := getVolume(cardInt, channel)
 		change := calculateAppropriateVolumeChange(volume, false)
-		setVolume(channel, volume-change)
+		setVolume(cardInt, channel, volume-change)
 	},
 }
 

@@ -62,8 +62,16 @@ func setMuted(channel string, muted bool) {
 	}
 }
 
-func getVolume(channel string) int {
-	result, err := execCommand("amixer", "-D", "pulse", "get", channel)
+func getVolume(card int, channel string) int {
+	var args []string
+	if card >= 0 {
+		args = append(args, "-c", strconv.Itoa(card))
+	} else {
+		args = append(args, "-D", "pulse")
+	}
+	args = append(args, "get", channel)
+
+	result, err := execCommand("amixer", args...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -95,8 +103,16 @@ func calculateAppropriateVolumeChange(current int, increase bool) int {
 	}
 }
 
-func setVolume(channel string, volume int) {
-	_, err := execCommand("amixer", "-D", "pulse", "set", channel, strconv.Itoa(volume)+"%")
+func setVolume(card int, channel string, volume int) {
+	var args []string
+	if card >= 0 {
+		args = append(args, "-c", strconv.Itoa(card))
+	} else {
+		args = append(args, "-D", "pulse")
+	}
+	args = append(args, "set", channel, strconv.Itoa(volume)+"%")
+
+	_, err := execCommand("amixer", args...)
 	if err != nil {
 		log.Fatal(err)
 	}

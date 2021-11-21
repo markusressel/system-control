@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
 // incVolumeCmd represents the inc command
@@ -27,11 +28,16 @@ var incVolumeCmd = &cobra.Command{
 	Short: "Increment audio volume",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		cardFlag := cmd.Flag("card")
+		card := cardFlag.Value.String()
+		cardInt, _ := strconv.Atoi(card)
+
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
-		volume := getVolume(channel)
+
+		volume := getVolume(cardInt, channel)
 		change := calculateAppropriateVolumeChange(volume, true)
-		setVolume(channel, volume+change)
+		setVolume(cardInt, channel, volume+change)
 	},
 }
 

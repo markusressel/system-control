@@ -20,6 +20,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
 // volumeCmd represents the volume command
@@ -27,13 +28,19 @@ var volumeCmd = &cobra.Command{
 	Use:   "volume",
 	Short: "Show the current volume",
 	Run: func(cmd *cobra.Command, args []string) {
+		cardFlag := cmd.Flag("card")
+		card := cardFlag.Value.String()
+		cardInt, _ := strconv.Atoi(card)
+
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
-		volume := getVolume(channel)
+
+		volume := getVolume(cardInt, channel)
 		fmt.Println(volume)
 	},
 }
 
+var Card string
 var Channel string
 
 func init() {

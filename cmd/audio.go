@@ -36,6 +36,13 @@ func init() {
 	rootCmd.AddCommand(audioCmd)
 
 	audioCmd.PersistentFlags().StringVarP(
+		&Card,
+		"card", "C",
+		"0",
+		"Card Index",
+	)
+
+	audioCmd.PersistentFlags().StringVarP(
 		&Channel,
 		"channel", "c",
 		"Master",

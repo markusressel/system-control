@@ -553,6 +553,31 @@ func setKeyboardBrightness(brightness int) int {
 	return int(targetValue)
 }
 
+func isTouchpadEnabled() bool {
+	result, _ := execCommand("synclient")
+	regex := regexp.MustCompile("\\s*TouchpadOff\\s*=\\s*(\\d)")
+
+	submatch := regex.FindStringSubmatch(result)[0]
+	submatch = strings.TrimSpace(submatch)
+	value := submatch[len(submatch)-1:]
+
+	resultInt, _ := strconv.Atoi(value)
+	return resultInt == 0
+}
+
+func setTouchpadEnabled(enabled bool) {
+	var enabledInt int
+	if enabled {
+		enabledInt = 0
+	} else {
+		enabledInt = 1
+	}
+	_, err := execCommand("synclient", "TouchpadOff="+strconv.Itoa(enabledInt))
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func findOpenWindows() []string {
 	result, err := execCommand("wmctrl", "-l")
 	if err != nil {

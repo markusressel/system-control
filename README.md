@@ -56,6 +56,12 @@ TODO: not yet fully working
 
 ## Hardware
 
+### Touchpad
+
+```shell
+> system-control touchpad toggle
+```
+
 ### Network
 
 #### Hotspot

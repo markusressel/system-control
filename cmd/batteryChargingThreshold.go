@@ -19,8 +19,11 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/markusressel/system-control/internal"
 	"github.com/spf13/cobra"
 	"log"
+	"os"
+	path2 "path"
 	"strconv"
 )
 
@@ -34,28 +37,80 @@ var batteryChargingThresholdCmd = &cobra.Command{
 		batteryFlag := cmd.Flag("name")
 		battery := batteryFlag.Value.String()
 
-		path := "/sys/class/power_supply/" + battery + "/charge_control_end_threshold"
-
 		if len(args) > 0 {
 			newValueString := args[0]
 			newValue, err := strconv.Atoi(newValueString)
 			if err != nil {
 				log.Fatal(err)
 			}
-			err = writeIntToFile(newValue, path)
-			if err != nil {
-				log.Fatal(err)
-			}
+			setBatteryThreshold(battery, newValue)
 		} else {
-			value, err := readIntFromFile(path)
-			if err != nil {
-				log.Fatal(err)
-			}
+			value := getBatteryThreshold(battery)
 			fmt.Println(value)
 		}
 	},
 }
 
+var batteryChargingThresholdSaveCmd = &cobra.Command{
+	Use:   "save",
+	Short: "Save the current battery charging threshold on disk",
+	Long:  ``,
+	Run: func(cmd *cobra.Command, args []string) {
+		batteryFlag := cmd.Flag("name")
+		battery := batteryFlag.Value.String()
+
+		current := getBatteryThreshold(battery)
+
+		err := os.MkdirAll(internal.ConfigBaseDir, 0755)
+		if err != nil {
+			log.Fatal(err)
+		}
+		path := path2.Join(internal.ConfigBaseDir, battery+"_charge_control_end_threshold.sav")
+		err = writeIntToFile(current, path)
+		if err != nil {
+			log.Fatal(err)
+		}
+	},
+}
+
+var batteryChargingThresholdRestoreCmd = &cobra.Command{
+	Use:   "restore",
+	Short: "Restore the last saved battery charging threshold",
+	Long:  ``,
+	Run: func(cmd *cobra.Command, args []string) {
+		batteryFlag := cmd.Flag("name")
+		battery := batteryFlag.Value.String()
+
+		path := path2.Join(internal.ConfigBaseDir, battery+"_charge_control_end_threshold.sav")
+		value, err := readIntFromFile(path)
+		if err != nil {
+			return
+		}
+		setBatteryThreshold(battery, int(value))
+	},
+}
+
+func setBatteryThreshold(battery string, value int) {
+	path := "/sys/class/power_supply/" + battery + "/charge_control_end_threshold"
+	err := writeIntToFile(value, path)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func getBatteryThreshold(battery string) int {
+	path := "/sys/class/power_supply/" + battery + "/charge_control_end_threshold"
+
+	value, err := readIntFromFile(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return int(value)
+}
+
 func init() {
 	batteryCmd.AddCommand(batteryChargingThresholdCmd)
+
+	batteryChargingThresholdCmd.AddCommand(batteryChargingThresholdSaveCmd)
+	batteryChargingThresholdCmd.AddCommand(batteryChargingThresholdRestoreCmd)
 }

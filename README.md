@@ -59,7 +59,12 @@ TODO: not yet fully working
 ### Battery
 
 ```shell
+> system-control battery threshold -name BAT0
+100
 > system-control battery threshold -name BAT0 75
+
+> system-control battery threshold -name BAT0 save       # run this after changing the threshold
+> system-control battery threshold -name BAT0 restore    # run this f.ex. right after boot
 ```
 
 ### Touchpad

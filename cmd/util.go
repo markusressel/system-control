@@ -405,11 +405,26 @@ func readIntFromFile(path string) (int64, error) {
 }
 
 func writeIntToFile(value int, path string) error {
+	touch(path)
 	fileStat, err := os.Stat(path)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	return ioutil.WriteFile(path, []byte(strconv.Itoa(value)), fileStat.Mode())
+}
+
+func touch(path string) {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		file, err := os.Create(path)
+		if err != nil {
+			panic(err)
+		}
+		defer file.Close()
+	} else if err != nil {
+		panic(err)
+	}
 }
 
 func getMaxBrightness() int {

@@ -56,6 +56,12 @@ TODO: not yet fully working
 
 ## Hardware
 
+### Battery
+
+```shell
+> system-control battery threshold -name BAT0 75
+```
+
 ### Touchpad
 
 ```shell

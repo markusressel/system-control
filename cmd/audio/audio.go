@@ -15,42 +15,37 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package audio
 
 import (
 	"github.com/spf13/cobra"
 )
 
-// incBrightnessCmd represents the inc command
-var incBrightnessCmd = &cobra.Command{
-	Use:   "inc",
-	Short: "Increase display brightness",
+// Command represents the audio command
+var Command = &cobra.Command{
+	Use:   "audio",
+	Short: "Control System Audio",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		brightness := getBrightness()
-		maxBrightness := getMaxBrightness()
-
-		percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
-
-		var change int
-		if percentage < 10 {
-			change = 1
-		} else if percentage < 20 {
-			change = 2
-		} else if percentage < 40 {
-			change = 4
-		} else {
-			change = 8
-		}
-
-		rawChange := int(float32(change) * (float32(maxBrightness) / 100.0))
-
-		adjustBrightness(rawChange)
-	},
+	//Run: func(cmd *cobra.Command, args []string) {
+	//	fmt.Println("audio called")
+	//},
+	TraverseChildren: true,
 }
 
 func init() {
-	brightnessCmd.AddCommand(incBrightnessCmd)
+	Command.PersistentFlags().StringVarP(
+		&Card,
+		"card", "C",
+		"0",
+		"Card Index",
+	)
+
+	Command.PersistentFlags().StringVarP(
+		&Channel,
+		"channel", "c",
+		"Master",
+		"Audio Channel",
+	)
 
 	// Here you will define your flags and configuration settings.
 

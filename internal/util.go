@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package internal
 
 import (
 	"bytes"
@@ -37,8 +37,8 @@ const (
 	Brightness           = "brightness"
 )
 
-func isMuted(channel string) bool {
-	result, err := execCommand("amixer", "-D", "pulse", "get", channel)
+func IsMuted(channel string) bool {
+	result, err := ExecCommand("amixer", "-D", "pulse", "get", channel)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func isMuted(channel string) bool {
 	return match == "[off]"
 }
 
-func setMuted(channel string, muted bool) {
+func SetMuted(channel string, muted bool) {
 	var state string
 	if muted {
 		state = "off"
@@ -56,13 +56,13 @@ func setMuted(channel string, muted bool) {
 		state = "on"
 	}
 
-	_, err := execCommand("amixer", "-D", "pulse", "set", channel, state)
+	_, err := ExecCommand("amixer", "-D", "pulse", "set", channel, state)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func getVolume(card int, channel string) int {
+func GetVolume(card int, channel string) int {
 	var args []string
 	if card >= 0 {
 		args = append(args, "-c", strconv.Itoa(card))
@@ -71,7 +71,7 @@ func getVolume(card int, channel string) int {
 	}
 	args = append(args, "get", channel)
 
-	result, err := execCommand("amixer", args...)
+	result, err := ExecCommand("amixer", args...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func getVolume(card int, channel string) int {
 }
 
 // Calculates an appropriate amount of volume change when the user did not specify a specific value.
-func calculateAppropriateVolumeChange(current int, increase bool) int {
+func CalculateAppropriateVolumeChange(current int, increase bool) int {
 	localCurrent := current
 
 	if !increase {
@@ -103,7 +103,7 @@ func calculateAppropriateVolumeChange(current int, increase bool) int {
 	}
 }
 
-func setVolume(card int, channel string, volume int) {
+func SetVolume(card int, channel string, volume int) {
 	var args []string
 	if card >= 0 {
 		args = append(args, "-c", strconv.Itoa(card))
@@ -112,7 +112,7 @@ func setVolume(card int, channel string, volume int) {
 	}
 	args = append(args, "set", channel, strconv.Itoa(volume)+"%")
 
-	_, err := execCommand("amixer", args...)
+	_, err := ExecCommand("amixer", args...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func findActiveSinkPulse(text string) int {
 	// ignore case
 	text = strings.ToLower(text)
 
-	result, err := execCommand("pactl", "list", "sinks")
+	result, err := ExecCommand("pactl", "list", "sinks")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -161,11 +161,11 @@ func findActiveSinkPulse(text string) int {
 // returns the index of the active sink
 // or 0 if the given text is NOT found in the active sink
 // or 1 if the given text IS found in the active sink
-func findActiveSinkPipewire(text string) int {
+func FindActiveSinkPipewire(text string) int {
 	// ignore case
 	text = strings.ToLower(text)
 
-	currentDefaultSinkName, err := execCommand("pactl", "get-default-sink")
+	currentDefaultSinkName, err := ExecCommand("pactl", "get-default-sink")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -184,7 +184,7 @@ func findActiveSinkPipewire(text string) int {
 	}
 
 	if len(text) > 0 {
-		sink := findSinkPipewire(text)
+		sink := FindSinkPipewire(text)
 		sinkIndex, err := strconv.Atoi(sink["id"])
 		if err != nil {
 			log.Fatal(err)
@@ -204,7 +204,7 @@ func findSinkPulse(text string) int {
 	// ignore case
 	text = strings.ToLower(text)
 
-	result, err := execCommand("pactl", "list", "sinks")
+	result, err := ExecCommand("pactl", "list", "sinks")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -235,7 +235,7 @@ func findSinkPulse(text string) int {
 }
 
 // returns the index of a sink that contains the given text
-func findSinkPipewire(text string) map[string]string {
+func FindSinkPipewire(text string) map[string]string {
 	// ignore case
 	text = strings.ToLower(text)
 
@@ -259,7 +259,7 @@ type PropertyFilter struct {
 // retrieve a list of pipewire objects
 // optionally filtered
 func getPipewireObjects(filters ...PropertyFilter) (objects []map[string]string) {
-	result, err := execCommand("pw-cli", "ls")
+	result, err := ExecCommand("pw-cli", "ls")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -330,7 +330,7 @@ func FilterPipwireObjects(vs []map[string]string, f func(map[string]string) bool
 // Switches the default sink to the target sink
 func setDefaultSinkPulse(index int) (err error) {
 	indexString := strconv.Itoa(index)
-	_, err = execCommand("pactl", "set-default-sink", indexString)
+	_, err = ExecCommand("pactl", "set-default-sink", indexString)
 	return err
 }
 
@@ -338,7 +338,7 @@ func setDefaultSinkPulse(index int) (err error) {
 // You need to get a sink name with "pw-cli ls Node"
 // and look for the "node.name" property for a valid value.
 func setDefaultSinkPipewire(sinkName string) (err error) {
-	_, err = execCommand("pw-metadata", "0", "default.configured.audio.sink", `{ "name": "`+sinkName+`" }`)
+	_, err = ExecCommand("pw-metadata", "0", "default.configured.audio.sink", `{ "name": "`+sinkName+`" }`)
 	return err
 }
 
@@ -350,7 +350,7 @@ func switchSinkPulse(index int) {
 	}
 
 	indexString := strconv.Itoa(index)
-	result, err := execCommand("pactl", "list", "sink-inputs", indexString)
+	result, err := ExecCommand("pactl", "list", "sink-inputs", indexString)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -360,7 +360,7 @@ func switchSinkPulse(index int) {
 
 	for i := range matches {
 		inputIdx := matches[i][1]
-		_, err := execCommand("pactl", "move-sink-input", inputIdx, indexString)
+		_, err := ExecCommand("pactl", "move-sink-input", inputIdx, indexString)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -368,7 +368,7 @@ func switchSinkPulse(index int) {
 }
 
 // Switches the default sink and moves all existing sink inputs to the target sink
-func switchSinkPipewire(node map[string]string) {
+func SwitchSinkPipewire(node map[string]string) {
 	nodeName := node["node.name"]
 	nodeId, err := strconv.Atoi(node["id"])
 	if err != nil {
@@ -388,13 +388,13 @@ func switchSinkPipewire(node map[string]string) {
 }
 
 func moveStreamToNode(streamId string, nodeId int) {
-	_, err := execCommand("pw-metadata", streamId, "target.node", strconv.Itoa(nodeId))
+	_, err := ExecCommand("pw-metadata", streamId, "target.node", strconv.Itoa(nodeId))
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func readIntFromFile(path string) (int64, error) {
+func ReadIntFromFile(path string) (int64, error) {
 	fileBuffer, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.Fatal(err)
@@ -404,7 +404,7 @@ func readIntFromFile(path string) (int64, error) {
 	return strconv.ParseInt(value, 0, 64)
 }
 
-func writeIntToFile(value int, path string) error {
+func WriteIntToFile(value int, path string) error {
 	touch(path)
 	fileStat, err := os.Stat(path)
 	if err != nil {
@@ -427,20 +427,20 @@ func touch(path string) {
 	}
 }
 
-func getMaxBrightness() int {
+func GetMaxBrightness() int {
 	backlightName := findBacklight()
 	maxBrightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + MaxBrightness
-	maxBrightness, err := readIntFromFile(maxBrightnessPath)
+	maxBrightness, err := ReadIntFromFile(maxBrightnessPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return int(maxBrightness)
 }
 
-func getBrightness() int {
+func GetBrightness() int {
 	backlightName := findBacklight()
 	brightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
-	brightness, err := readIntFromFile(brightnessPath)
+	brightness, err := ReadIntFromFile(brightnessPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -448,25 +448,25 @@ func getBrightness() int {
 }
 
 // Sets a specific brightness of main the display
-func setBrightness(percentage int) {
+func SetBrightness(percentage int) {
 	backlightName := findBacklight()
 	maxBrightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + MaxBrightness
 	brightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
 
-	maxBrightness, err := readIntFromFile(maxBrightnessPath)
+	maxBrightness, err := ReadIntFromFile(maxBrightnessPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	targetValue := int((float32(percentage) / 100.0) * float32(maxBrightness))
-	err = writeIntToFile(targetValue, brightnessPath)
+	err = WriteIntToFile(targetValue, brightnessPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func setBrightnessRaw(backlight string, brightness int) {
-	maxBrightness := getMaxBrightness()
+	maxBrightness := GetMaxBrightness()
 	targetBrightness := brightness
 	if targetBrightness < 0 {
 		targetBrightness = 0
@@ -477,18 +477,18 @@ func setBrightnessRaw(backlight string, brightness int) {
 
 	brightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlight + string(os.PathSeparator) + Brightness
 
-	err := writeIntToFile(targetBrightness, brightnessPath)
+	err := WriteIntToFile(targetBrightness, brightnessPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 // Adjusts the brightness of the main display
-func adjustBrightness(change int) {
+func AdjustBrightness(change int) {
 	backlight := findBacklight()
 
-	maxBrightness := getMaxBrightness()
-	currentBrightness := getBrightness()
+	maxBrightness := GetMaxBrightness()
+	currentBrightness := GetBrightness()
 
 	targetBrightness := currentBrightness + change
 	if targetBrightness < 0 {
@@ -540,36 +540,36 @@ func findKeyboardBacklight() string {
 	return kbdBacklight
 }
 
-func getKeyboardBrightness() int {
+func GetKeyboardBrightness() int {
 	backlightName := findKeyboardBacklight()
 	brightnessPath := LedsPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
-	brightness, err := readIntFromFile(brightnessPath)
+	brightness, err := ReadIntFromFile(brightnessPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return int(brightness)
 }
 
-func setKeyboardBrightness(brightness int) int {
+func SetKeyboardBrightness(brightness int) int {
 	backlightName := findKeyboardBacklight()
 	brightnessPath := LedsPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
 	maxBrightnessPath := LedsPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + MaxBrightness
 
-	maxBrightness, err := readIntFromFile(maxBrightnessPath)
+	maxBrightness, err := ReadIntFromFile(maxBrightnessPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	targetValue := math.Max(0, math.Min(float64(maxBrightness), float64(brightness)))
-	err = writeIntToFile(int(targetValue), brightnessPath)
+	err = WriteIntToFile(int(targetValue), brightnessPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return int(targetValue)
 }
 
-func isTouchpadEnabled() bool {
-	result, _ := execCommand("synclient")
+func IsTouchpadEnabled() bool {
+	result, _ := ExecCommand("synclient")
 	regex := regexp.MustCompile("\\s*TouchpadOff\\s*=\\s*(\\d)")
 
 	submatch := regex.FindStringSubmatch(result)[0]
@@ -580,21 +580,21 @@ func isTouchpadEnabled() bool {
 	return resultInt == 0
 }
 
-func setTouchpadEnabled(enabled bool) {
+func SetTouchpadEnabled(enabled bool) {
 	var enabledInt int
 	if enabled {
 		enabledInt = 0
 	} else {
 		enabledInt = 1
 	}
-	_, err := execCommand("synclient", "TouchpadOff="+strconv.Itoa(enabledInt))
+	_, err := ExecCommand("synclient", "TouchpadOff="+strconv.Itoa(enabledInt))
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func findOpenWindows() []string {
-	result, err := execCommand("wmctrl", "-l")
+func FindOpenWindows() []string {
+	result, err := ExecCommand("wmctrl", "-l")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -613,7 +613,7 @@ func findOpenWindows() []string {
 // and returns its stdout as a []byte.
 // If an error occurs the content of stderr is printed
 // and an error is returned.
-func execCommand(command string, args ...string) (string, error) {
+func ExecCommand(command string, args ...string) (string, error) {
 	//log.Printf("Executing command: %s %s", command, args)
 	cmd := exec.Command(command, args...)
 
@@ -634,7 +634,7 @@ func execCommand(command string, args ...string) (string, error) {
 	return result, nil
 }
 
-// Like execCommand but with the possibility to add environment variables
+// Like ExecCommand but with the possibility to add environment variables
 // to the executed process.
 func execCommandEnv(env []string, attach bool, command string, args ...string) (string, error) {
 	//log.Printf("Executing command: %s %s", command, args)

@@ -15,24 +15,32 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package keyboard
 
 import (
+	"fmt"
+	"github.com/markusressel/system-control/internal"
+
 	"github.com/spf13/cobra"
 )
 
-// keyboardCmd represents the keyboard command
-var keyboardCmd = &cobra.Command{
-	Use:   "keyboard",
-	Short: "Control Keyboard",
+// keyboardBrightnessCmd represents the brightness command
+var keyboardBrightnessCmd = &cobra.Command{
+	Use:   "brightness",
+	Short: "Show current keyboard brightness",
 	Long:  ``,
-	//Run: func(cmd *cobra.Command, args []string) {
-	//	fmt.Println("display called")
-	//},
+	Run: func(cmd *cobra.Command, args []string) {
+		brightness := internal.GetBrightness()
+		maxBrightness := internal.GetMaxBrightness()
+
+		percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
+
+		fmt.Println(percentage)
+	},
 }
 
 func init() {
-	rootCmd.AddCommand(keyboardCmd)
+	Command.AddCommand(keyboardBrightnessCmd)
 
 	// Here you will define your flags and configuration settings.
 

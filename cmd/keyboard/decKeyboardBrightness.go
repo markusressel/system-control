@@ -15,18 +15,27 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package keyboard
 
 import (
+	"github.com/markusressel/system-control/internal"
 	"github.com/spf13/cobra"
 )
 
-var touchpadCmd = &cobra.Command{
-	Use:   "touchpad",
-	Short: "Control touchpad",
+// decKeyboardBrightnessCmd represents the inc command
+var decKeyboardBrightnessCmd = &cobra.Command{
+	Use:   "dec",
+	Short: "Decrease keyboard backlight brightness",
 	Long:  ``,
+	Run: func(cmd *cobra.Command, args []string) {
+		brightness := internal.GetKeyboardBrightness()
+		internal.SetKeyboardBrightness(brightness - 1)
+	},
 }
 
 func init() {
-	rootCmd.AddCommand(touchpadCmd)
+	keyboardBrightnessCmd.AddCommand(decKeyboardBrightnessCmd)
+
+	// Here you will define your flags and configuration settings.
+
 }

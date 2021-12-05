@@ -15,18 +15,18 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package audio
 
 import (
+	"fmt"
+	"github.com/markusressel/system-control/internal"
 	"github.com/spf13/cobra"
 	"strconv"
 )
 
-// decVolumeCmd represents the dec command
-var decVolumeCmd = &cobra.Command{
-	Use:   "dec",
-	Short: "Decrement audio volume",
-	Long:  ``,
+var volumeCmd = &cobra.Command{
+	Use:   "volume",
+	Short: "Show the current volume",
 	Run: func(cmd *cobra.Command, args []string) {
 		cardFlag := cmd.Flag("card")
 		card := cardFlag.Value.String()
@@ -35,15 +35,14 @@ var decVolumeCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 
-		volume := getVolume(cardInt, channel)
-		change := calculateAppropriateVolumeChange(volume, false)
-		setVolume(cardInt, channel, volume-change)
+		volume := internal.GetVolume(cardInt, channel)
+		fmt.Println(volume)
 	},
 }
 
+var Card string
+var Channel string
+
 func init() {
-	volumeCmd.AddCommand(decVolumeCmd)
-
-	// Here you will define your flags and configuration settings.
-
+	Command.AddCommand(volumeCmd)
 }

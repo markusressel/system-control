@@ -15,25 +15,30 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package display
 
 import (
+	"fmt"
+	"github.com/markusressel/system-control/internal"
+
 	"github.com/spf13/cobra"
 )
 
-// displayCmd represents the display command
-var displayCmd = &cobra.Command{
-	Use:   "display",
-	Short: "Control Display",
+// brightnessCmd represents the brightness command
+var brightnessCmd = &cobra.Command{
+	Use:   "brightness",
+	Short: "Show current display brightness",
 	Long:  ``,
-	//Run: func(cmd *cobra.Command, args []string) {
-	//	fmt.Println("display called")
-	//},
+	Run: func(cmd *cobra.Command, args []string) {
+		brightness := internal.GetBrightness()
+		maxBrightness := internal.GetMaxBrightness()
+
+		percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
+
+		fmt.Println(percentage)
+	},
 }
 
 func init() {
-	rootCmd.AddCommand(displayCmd)
-
-	// Here you will define your flags and configuration settings.
-
+	Command.AddCommand(brightnessCmd)
 }

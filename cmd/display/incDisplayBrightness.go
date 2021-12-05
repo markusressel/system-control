@@ -15,33 +15,41 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package display
 
 import (
+	"github.com/markusressel/system-control/internal"
 	"github.com/spf13/cobra"
 )
 
-// audioCmd represents the audio command
-var batteryCmd = &cobra.Command{
-	Use:   "battery",
-	Short: "Control System Battery",
+// incBrightnessCmd represents the inc command
+var incBrightnessCmd = &cobra.Command{
+	Use:   "inc",
+	Short: "Increase display brightness",
 	Long:  ``,
-	//Run: func(cmd *cobra.Command, args []string) {
-	//	fmt.Println("battery called")
-	//},
-	TraverseChildren: true,
+	Run: func(cmd *cobra.Command, args []string) {
+		brightness := internal.GetBrightness()
+		maxBrightness := internal.GetMaxBrightness()
+
+		percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
+
+		var change int
+		if percentage < 10 {
+			change = 1
+		} else if percentage < 20 {
+			change = 2
+		} else if percentage < 40 {
+			change = 4
+		} else {
+			change = 8
+		}
+
+		rawChange := int(float32(change) * (float32(maxBrightness) / 100.0))
+
+		internal.AdjustBrightness(rawChange)
+	},
 }
 
 func init() {
-	rootCmd.AddCommand(batteryCmd)
-
-	batteryCmd.PersistentFlags().StringVarP(
-		&Card,
-		"name", "n",
-		"BAT0",
-		"Battery Name",
-	)
-
-	// Here you will define your flags and configuration settings.
-
+	brightnessCmd.AddCommand(incBrightnessCmd)
 }

@@ -15,26 +15,15 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package display
 
 import (
 	"github.com/spf13/cobra"
 )
 
-// decKeyboardBrightnessCmd represents the inc command
-var decKeyboardBrightnessCmd = &cobra.Command{
-	Use:   "dec",
-	Short: "Decrease keyboard backlight brightness",
+// Command represents the display command
+var Command = &cobra.Command{
+	Use:   "display",
+	Short: "Control Display",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		brightness := getKeyboardBrightness()
-		setKeyboardBrightness(brightness - 1)
-	},
-}
-
-func init() {
-	keyboardBrightnessCmd.AddCommand(decKeyboardBrightnessCmd)
-
-	// Here you will define your flags and configuration settings.
-
 }

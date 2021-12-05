@@ -15,27 +15,32 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package audio
 
 import (
+	"github.com/markusressel/system-control/internal"
 	"github.com/spf13/cobra"
 )
 
-// unmuteCmd represents the unmute command
-var unmuteCmd = &cobra.Command{
-	Use:   "unmute",
-	Short: "Unmute system audio",
-	Long:  ``,
+var switchCmd = &cobra.Command{
+	Use:   "switch",
+	Short: "Switch the default sink",
+	Long: `Switches the default audio sink and moves all existing audio streams to the given one.
+You can specify the audio sink using its index, but also using other strings that occur in its description:
+
+> system-control audio sink switch "headphone"
+
+> system-control audio sink switch "NVIDIA"`,
+	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		channelFlag := cmd.Flag("channel")
-		channel := channelFlag.Value.String()
-		setMuted(channel, false)
+		searchString := args[0]
+		//sinkIdx := findSinkPulse(searchString)
+		//switchSinkPulse(sinkIdx)
+		sink := internal.FindSinkPipewire(searchString)
+		internal.SwitchSinkPipewire(sink)
 	},
 }
 
 func init() {
-	audioCmd.AddCommand(unmuteCmd)
-
-	// Here you will define your flags and configuration settings.
-
+	sinkCmd.AddCommand(switchCmd)
 }

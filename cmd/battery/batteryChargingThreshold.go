@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package battery
 
 import (
 	"fmt"
@@ -27,7 +27,6 @@ import (
 	"strconv"
 )
 
-// batteryChargingThresholdCmd represents the batteryChargingThreshold command
 var batteryChargingThresholdCmd = &cobra.Command{
 	Use:   "threshold",
 	Short: "Get/Set battery charging threshold",
@@ -66,7 +65,7 @@ var batteryChargingThresholdSaveCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 		path := path2.Join(internal.ConfigBaseDir, battery+"_charge_control_end_threshold.sav")
-		err = writeIntToFile(current, path)
+		err = internal.WriteIntToFile(current, path)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -82,7 +81,7 @@ var batteryChargingThresholdRestoreCmd = &cobra.Command{
 		battery := batteryFlag.Value.String()
 
 		path := path2.Join(internal.ConfigBaseDir, battery+"_charge_control_end_threshold.sav")
-		value, err := readIntFromFile(path)
+		value, err := internal.ReadIntFromFile(path)
 		if err != nil {
 			return
 		}
@@ -92,7 +91,7 @@ var batteryChargingThresholdRestoreCmd = &cobra.Command{
 
 func setBatteryThreshold(battery string, value int) {
 	path := "/sys/class/power_supply/" + battery + "/charge_control_end_threshold"
-	err := writeIntToFile(value, path)
+	err := internal.WriteIntToFile(value, path)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -101,7 +100,7 @@ func setBatteryThreshold(battery string, value int) {
 func getBatteryThreshold(battery string) int {
 	path := "/sys/class/power_supply/" + battery + "/charge_control_end_threshold"
 
-	value, err := readIntFromFile(path)
+	value, err := internal.ReadIntFromFile(path)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -109,7 +108,7 @@ func getBatteryThreshold(battery string) int {
 }
 
 func init() {
-	batteryCmd.AddCommand(batteryChargingThresholdCmd)
+	Command.AddCommand(batteryChargingThresholdCmd)
 
 	batteryChargingThresholdCmd.AddCommand(batteryChargingThresholdSaveCmd)
 	batteryChargingThresholdCmd.AddCommand(batteryChargingThresholdRestoreCmd)

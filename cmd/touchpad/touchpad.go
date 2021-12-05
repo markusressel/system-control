@@ -15,40 +15,14 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package touchpad
 
 import (
-	"log"
-	"strconv"
-
 	"github.com/spf13/cobra"
 )
 
-// setVolumeCmd represents the set command
-var setVolumeCmd = &cobra.Command{
-	Use:   "set",
-	Short: "Set a specific volume",
+var Command = &cobra.Command{
+	Use:   "touchpad",
+	Short: "Control touchpad",
 	Long:  ``,
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		cardFlag := cmd.Flag("card")
-		card := cardFlag.Value.String()
-		cardInt, _ := strconv.Atoi(card)
-
-		channelFlag := cmd.Flag("channel")
-		channel := channelFlag.Value.String()
-
-		volume, err := strconv.Atoi(args[0])
-		if err != nil {
-			log.Fatal(err)
-		}
-		setVolume(cardInt, channel, volume)
-	},
-}
-
-func init() {
-	volumeCmd.AddCommand(setVolumeCmd)
-
-	// Here you will define your flags and configuration settings.
-
 }

@@ -19,6 +19,11 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/markusressel/system-control/cmd/audio"
+	"github.com/markusressel/system-control/cmd/battery"
+	"github.com/markusressel/system-control/cmd/display"
+	"github.com/markusressel/system-control/cmd/keyboard"
+	"github.com/markusressel/system-control/cmd/touchpad"
 	"github.com/spf13/cobra"
 	"os"
 
@@ -28,8 +33,8 @@ import (
 
 var cfgFile string
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
+// RootCmd represents the base command when called without any subcommands
+var RootCmd = &cobra.Command{
 	Use:   "system-control",
 	Short: "A brief description of your application",
 	Long: `A longer description that spans multiple lines and likely contains
@@ -44,26 +49,32 @@ to quickly create a Cobra application.`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
+// This is called by main.main(). It only needs to happen once to the RootCmd.
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 }
 
 func init() {
+	RootCmd.AddCommand(audio.Command)
+	RootCmd.AddCommand(battery.Command)
+	RootCmd.AddCommand(display.Command)
+	RootCmd.AddCommand(keyboard.Command)
+	RootCmd.AddCommand(touchpad.Command)
+
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.system-control.yaml)")
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.system-control.yaml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 // initConfig reads in config file and ENV variables if set.

@@ -15,35 +15,35 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package display
 
 import (
+	"github.com/markusressel/system-control/internal"
 	"github.com/spf13/cobra"
+	"log"
+	"strconv"
 )
 
-// switchCmd represents the switch command
-var switchCmd = &cobra.Command{
-	Use:   "switch",
-	Short: "Switch the default sink",
-	Long: `Switches the default audio sink and moves all existing audio streams to the given one.
-You can specify the audio sink using its index, but also using other strings that occur in its description:
+// setBrightnessCmd represents the set command
+var setBrightnessCmd = &cobra.Command{
+	Use:   "set",
+	Short: "A brief description of your command",
+	Long: `A longer description that spans multiple lines and likely contains examples
+and usage of using your command. For example:
 
-> system-control audio sink switch "headphone"
-
-> system-control audio sink switch "NVIDIA"`,
+Cobra is a CLI library for Go that empowers applications.
+This application is a tool to generate the needed files
+to quickly create a Cobra application.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		searchString := args[0]
-		//sinkIdx := findSinkPulse(searchString)
-		//switchSinkPulse(sinkIdx)
-		sink := findSinkPipewire(searchString)
-		switchSinkPipewire(sink)
+		p, err := strconv.Atoi(args[0])
+		if err != nil {
+			log.Fatal(err)
+		}
+		internal.SetBrightness(p)
 	},
 }
 
 func init() {
-	sinkCmd.AddCommand(switchCmd)
-
-	// Here you will define your flags and configuration settings.
-
+	brightnessCmd.AddCommand(setBrightnessCmd)
 }

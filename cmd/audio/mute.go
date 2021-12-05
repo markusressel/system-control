@@ -15,9 +15,10 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package audio
 
 import (
+	"github.com/markusressel/system-control/internal"
 	"github.com/spf13/cobra"
 )
 
@@ -34,12 +35,12 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
-		setMuted(channel, true)
+		internal.SetMuted(channel, true)
 	},
 }
 
 func init() {
-	audioCmd.AddCommand(muteCmd)
+	Command.AddCommand(muteCmd)
 
 	// Here you will define your flags and configuration settings.
 

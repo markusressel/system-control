@@ -15,40 +15,25 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package battery
 
 import (
+	"github.com/markusressel/system-control/cmd/audio"
 	"github.com/spf13/cobra"
 )
 
-// audioCmd represents the audio command
-var audioCmd = &cobra.Command{
-	Use:   "audio",
-	Short: "Control System Audio",
-	Long:  ``,
-	//Run: func(cmd *cobra.Command, args []string) {
-	//	fmt.Println("audio called")
-	//},
+var Command = &cobra.Command{
+	Use:              "battery",
+	Short:            "Control System Battery",
+	Long:             ``,
 	TraverseChildren: true,
 }
 
 func init() {
-	rootCmd.AddCommand(audioCmd)
-
-	audioCmd.PersistentFlags().StringVarP(
-		&Card,
-		"card", "C",
-		"0",
-		"Card Index",
+	Command.PersistentFlags().StringVarP(
+		&audio.Card,
+		"name", "n",
+		"BAT0",
+		"Battery Name",
 	)
-
-	audioCmd.PersistentFlags().StringVarP(
-		&Channel,
-		"channel", "c",
-		"Master",
-		"Audio Channel",
-	)
-
-	// Here you will define your flags and configuration settings.
-
 }

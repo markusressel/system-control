@@ -16,6 +16,7 @@ limitations under the License.
 package cmd
 
 import (
+	"github.com/markusressel/system-control/internal"
 	"github.com/spf13/cobra"
 	"log"
 	"strings"
@@ -28,11 +29,11 @@ var shutdownCmd = &cobra.Command{
 	Short: "Shutdown the system gracefully",
 	Long:  `Shuts down the system in a graceful way, first closing all opened applications.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		openWindows := findOpenWindows()
+		openWindows := internal.FindOpenWindows()
 
 		for _, element := range openWindows {
 			windowId := strings.Split(element, " ")[0]
-			_, err := execCommand("wmctrl", "-i", "-c", windowId)
+			_, err := internal.ExecCommand("wmctrl", "-i", "-c", windowId)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -40,7 +41,7 @@ var shutdownCmd = &cobra.Command{
 
 		// wait for all windows to disappear
 		for {
-			openWindows = findOpenWindows()
+			openWindows = internal.FindOpenWindows()
 			if len(openWindows) <= 0 {
 				break
 			} else {
@@ -48,7 +49,7 @@ var shutdownCmd = &cobra.Command{
 			}
 		}
 
-		_, err := execCommand("poweroff")
+		_, err := internal.ExecCommand("poweroff")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -56,5 +57,5 @@ var shutdownCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(shutdownCmd)
+	RootCmd.AddCommand(shutdownCmd)
 }

@@ -15,25 +15,35 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package audio
 
 import (
+	"github.com/markusressel/system-control/internal"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
-// incKeyboardBrightnessCmd represents the inc command
-var incKeyboardBrightnessCmd = &cobra.Command{
-	Use:   "inc",
-	Short: "Increase keyboard backlight brightness",
+// decVolumeCmd represents the dec command
+var decVolumeCmd = &cobra.Command{
+	Use:   "dec",
+	Short: "Decrement audio volume",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		brightness := getKeyboardBrightness()
-		setKeyboardBrightness(brightness + 1)
+		cardFlag := cmd.Flag("card")
+		card := cardFlag.Value.String()
+		cardInt, _ := strconv.Atoi(card)
+
+		channelFlag := cmd.Flag("channel")
+		channel := channelFlag.Value.String()
+
+		volume := internal.GetVolume(cardInt, channel)
+		change := internal.CalculateAppropriateVolumeChange(volume, false)
+		internal.SetVolume(cardInt, channel, volume-change)
 	},
 }
 
 func init() {
-	keyboardBrightnessCmd.AddCommand(incKeyboardBrightnessCmd)
+	volumeCmd.AddCommand(decVolumeCmd)
 
 	// Here you will define your flags and configuration settings.
 

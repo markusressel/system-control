@@ -15,37 +15,24 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package audio
 
 import (
-	"fmt"
+	"github.com/markusressel/system-control/internal"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
-// volumeCmd represents the volume command
-var volumeCmd = &cobra.Command{
-	Use:   "volume",
-	Short: "Show the current volume",
+var unmuteCmd = &cobra.Command{
+	Use:   "unmute",
+	Short: "Unmute system audio",
+	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		cardFlag := cmd.Flag("card")
-		card := cardFlag.Value.String()
-		cardInt, _ := strconv.Atoi(card)
-
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
-
-		volume := getVolume(cardInt, channel)
-		fmt.Println(volume)
+		internal.SetMuted(channel, false)
 	},
 }
 
-var Card string
-var Channel string
-
 func init() {
-	audioCmd.AddCommand(volumeCmd)
-
-	// Here you will define your flags and configuration settings.
-
+	Command.AddCommand(unmuteCmd)
 }

@@ -15,31 +15,40 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package audio
 
 import (
-	"fmt"
+	"github.com/markusressel/system-control/internal"
+	"log"
+	"strconv"
 
 	"github.com/spf13/cobra"
 )
 
-// keyboardBrightnessCmd represents the brightness command
-var keyboardBrightnessCmd = &cobra.Command{
-	Use:   "brightness",
-	Short: "Show current keyboard brightness",
+// setVolumeCmd represents the set command
+var setVolumeCmd = &cobra.Command{
+	Use:   "set",
+	Short: "Set a specific volume",
 	Long:  ``,
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		brightness := getBrightness()
-		maxBrightness := getMaxBrightness()
+		cardFlag := cmd.Flag("card")
+		card := cardFlag.Value.String()
+		cardInt, _ := strconv.Atoi(card)
 
-		percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
+		channelFlag := cmd.Flag("channel")
+		channel := channelFlag.Value.String()
 
-		fmt.Println(percentage)
+		volume, err := strconv.Atoi(args[0])
+		if err != nil {
+			log.Fatal(err)
+		}
+		internal.SetVolume(cardInt, channel, volume)
 	},
 }
 
 func init() {
-	keyboardCmd.AddCommand(keyboardBrightnessCmd)
+	volumeCmd.AddCommand(setVolumeCmd)
 
 	// Here you will define your flags and configuration settings.
 

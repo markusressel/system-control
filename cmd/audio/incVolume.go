@@ -15,9 +15,10 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package audio
 
 import (
+	"github.com/markusressel/system-control/internal"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -35,9 +36,9 @@ var incVolumeCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 
-		volume := getVolume(cardInt, channel)
-		change := calculateAppropriateVolumeChange(volume, true)
-		setVolume(cardInt, channel, volume+change)
+		volume := internal.GetVolume(cardInt, channel)
+		change := internal.CalculateAppropriateVolumeChange(volume, true)
+		internal.SetVolume(cardInt, channel, volume+change)
 	},
 }
 

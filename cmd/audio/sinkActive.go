@@ -15,31 +15,38 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package audio
 
 import (
-	"log"
-
+	"fmt"
+	"github.com/markusressel/system-control/internal"
 	"github.com/spf13/cobra"
 )
 
-// sinkCmd represents the sink command
-var sinkCmd = &cobra.Command{
-	Use:   "sink",
-	Short: "Show a list of all available sinks",
-	Long:  ``,
+// activeCmd represents the active command
+var activeCmd = &cobra.Command{
+	Use:   "active",
+	Short: "Get active sink index",
+	Long: `Get the index of the currently active sink, or check if a given text is part of the active sink:
+
+> system-control audio sink active "headphone"
+1
+
+> system-control audio sink active
+3`,
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		result, err := execCommand("pactl", "list", "sinks")
-		if err != nil {
-			log.Fatal(err)
+		searchString := ""
+		if len(args) > 0 {
+			searchString = args[0]
 		}
-		print(result)
+		sinkIdx := internal.FindActiveSinkPipewire(searchString)
+		fmt.Println(sinkIdx)
 	},
 }
 
 func init() {
-	audioCmd.AddCommand(sinkCmd)
+	sinkCmd.AddCommand(activeCmd)
 
 	// Here you will define your flags and configuration settings.
-
 }

@@ -15,27 +15,31 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cmd
+package audio
 
 import (
+	"github.com/markusressel/system-control/internal"
+	"log"
+
 	"github.com/spf13/cobra"
 )
 
-// toggleMuteCmd represents the toggleMute command
-var toggleMuteCmd = &cobra.Command{
-	Use:   "toggle-mute",
-	Short: "Toggle the Mute state",
+// sinkCmd represents the sink command
+var sinkCmd = &cobra.Command{
+	Use:   "sink",
+	Short: "Show a list of all available sinks",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		channelFlag := cmd.Flag("channel")
-		channel := channelFlag.Value.String()
-		isMuted := isMuted(channel)
-		setMuted(channel, !isMuted)
+		result, err := internal.ExecCommand("pactl", "list", "sinks")
+		if err != nil {
+			log.Fatal(err)
+		}
+		print(result)
 	},
 }
 
 func init() {
-	audioCmd.AddCommand(toggleMuteCmd)
+	Command.AddCommand(sinkCmd)
 
 	// Here you will define your flags and configuration settings.
 

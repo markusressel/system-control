@@ -18,9 +18,10 @@
 package battery
 
 import (
-	"github.com/markusressel/system-control/cmd/audio"
 	"github.com/spf13/cobra"
 )
+
+var Name string
 
 var Command = &cobra.Command{
 	Use:              "battery",
@@ -31,7 +32,7 @@ var Command = &cobra.Command{
 
 func init() {
 	Command.PersistentFlags().StringVarP(
-		&audio.Card,
+		&Name,
 		"name", "n",
 		"BAT0",
 		"Battery Name",

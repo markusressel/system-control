@@ -40,9 +40,6 @@ var volumeCmd = &cobra.Command{
 	},
 }
 
-var Card string
-var Channel string
-
 func init() {
 	Command.AddCommand(volumeCmd)
 }

@@ -21,6 +21,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var Card string
+var Channel string
+
 // Command represents the audio command
 var Command = &cobra.Command{
 	Use:   "audio",

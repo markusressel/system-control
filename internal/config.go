@@ -2,8 +2,8 @@ package internal
 
 import (
 	"os/user"
-	path2 "path"
+	"path"
 )
 
 var currentUser, _ = user.Current()
-var ConfigBaseDir = path2.Join(currentUser.HomeDir, ".config", "system-control")
+var ConfigBaseDir = path.Join(currentUser.HomeDir, ".config", "system-control")

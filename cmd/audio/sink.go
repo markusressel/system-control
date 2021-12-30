@@ -24,7 +24,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// sinkCmd represents the sink command
 var sinkCmd = &cobra.Command{
 	Use:   "sink",
 	Short: "Show a list of all available sinks",
@@ -40,7 +39,4 @@ var sinkCmd = &cobra.Command{
 
 func init() {
 	Command.AddCommand(sinkCmd)
-
-	// Here you will define your flags and configuration settings.
-
 }

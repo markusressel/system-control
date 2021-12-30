@@ -23,7 +23,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// activeCmd represents the active command
 var activeCmd = &cobra.Command{
 	Use:   "active",
 	Short: "Get active sink index",
@@ -47,6 +46,4 @@ var activeCmd = &cobra.Command{
 
 func init() {
 	sinkCmd.AddCommand(activeCmd)
-
-	// Here you will define your flags and configuration settings.
 }

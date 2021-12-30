@@ -22,7 +22,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// incKeyboardBrightnessCmd represents the inc command
 var incKeyboardBrightnessCmd = &cobra.Command{
 	Use:   "inc",
 	Short: "Increase keyboard backlight brightness",
@@ -35,7 +34,4 @@ var incKeyboardBrightnessCmd = &cobra.Command{
 
 func init() {
 	keyboardBrightnessCmd.AddCommand(incKeyboardBrightnessCmd)
-
-	// Here you will define your flags and configuration settings.
-
 }

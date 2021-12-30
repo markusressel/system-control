@@ -22,7 +22,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// toggleTouchpadCmd represents the toggleTouchpad command
 var toggleTouchpadCmd = &cobra.Command{
 	Use:   "toggle",
 	Short: "Toggle the Touchpad state",

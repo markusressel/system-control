@@ -22,7 +22,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// decBrightnessCmd represents the dec command
 var decBrightnessCmd = &cobra.Command{
 	Use:   "dec",
 	Short: "Decrease display brightness",
@@ -52,7 +51,4 @@ var decBrightnessCmd = &cobra.Command{
 
 func init() {
 	brightnessCmd.AddCommand(decBrightnessCmd)
-
-	// Here you will define your flags and configuration settings.
-
 }

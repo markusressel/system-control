@@ -24,7 +24,6 @@ import (
 	"strconv"
 )
 
-// setBrightnessCmd represents the set command
 var setBrightnessCmd = &cobra.Command{
 	Use:   "set",
 	Short: "A brief description of your command",

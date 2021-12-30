@@ -23,12 +23,11 @@ import (
 	"strconv"
 )
 
-// decVolumeCmd represents the dec command
 var decVolumeCmd = &cobra.Command{
 	Use:   "dec",
 	Short: "Decrement audio volume",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		cardFlag := cmd.Flag("card")
 		card := cardFlag.Value.String()
 		cardInt, _ := strconv.Atoi(card)
@@ -38,13 +37,10 @@ var decVolumeCmd = &cobra.Command{
 
 		volume := internal.GetVolume(cardInt, channel)
 		change := internal.CalculateAppropriateVolumeChange(volume, false)
-		internal.SetVolume(cardInt, channel, volume-change)
+		return internal.SetVolume(cardInt, channel, volume-change)
 	},
 }
 
 func init() {
 	volumeCmd.AddCommand(decVolumeCmd)
-
-	// Here you will define your flags and configuration settings.
-
 }

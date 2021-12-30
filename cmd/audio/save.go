@@ -19,16 +19,23 @@ package audio
 
 import (
 	"github.com/markusressel/system-control/internal"
-	"strconv"
-
+	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
-var setVolumeCmd = &cobra.Command{
-	Use:   "set",
-	Short: "Set a specific volume",
+type audioState struct {
+	OutputType string
+	Card       int
+	Channel    string
+	Volume     int
+	Muted      bool
+}
+
+var saveCmd = &cobra.Command{
+	Use:   "save",
+	Short: "Save the current state of the given audio channel",
 	Long:  ``,
-	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cardFlag := cmd.Flag("card")
 		card := cardFlag.Value.String()
@@ -37,14 +44,23 @@ var setVolumeCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 
-		volume, err := strconv.Atoi(args[0])
-		if err != nil {
-			return err
+		currentVolume := internal.GetVolume(cardInt, channel)
+		muted := internal.IsMuted(cardInt, channel)
+
+		key := computeKey(internal.IsHeadphoneConnected(), card, channel)
+		data := audioState{
+			OutputType: "OutputType",
+			Card:       cardInt,
+			Channel:    channel,
+			Volume:     currentVolume,
+			Muted:      muted,
 		}
-		return internal.SetVolume(cardInt, channel, volume)
+		err := persistence.SaveStruct(key, &data)
+
+		return err
 	},
 }
 
 func init() {
-	volumeCmd.AddCommand(setVolumeCmd)
+	Command.AddCommand(saveCmd)
 }

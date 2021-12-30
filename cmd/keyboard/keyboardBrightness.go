@@ -24,13 +24,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// keyboardBrightnessCmd represents the brightness command
 var keyboardBrightnessCmd = &cobra.Command{
 	Use:   "brightness",
 	Short: "Show current keyboard brightness",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		brightness := internal.GetBrightness()
+		brightness := internal.GetKeyboardBrightness()
 		maxBrightness := internal.GetMaxBrightness()
 
 		percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
@@ -41,7 +40,4 @@ var keyboardBrightnessCmd = &cobra.Command{
 
 func init() {
 	Command.AddCommand(keyboardBrightnessCmd)
-
-	// Here you will define your flags and configuration settings.
-
 }

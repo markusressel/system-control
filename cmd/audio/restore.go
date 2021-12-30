@@ -19,16 +19,15 @@ package audio
 
 import (
 	"github.com/markusressel/system-control/internal"
-	"strconv"
-
+	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
-var setVolumeCmd = &cobra.Command{
-	Use:   "set",
-	Short: "Set a specific volume",
+var restoreCmd = &cobra.Command{
+	Use:   "restore",
+	Short: "Restore the state of the given audio channel from a previous save",
 	Long:  ``,
-	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cardFlag := cmd.Flag("card")
 		card := cardFlag.Value.String()
@@ -37,14 +36,33 @@ var setVolumeCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 
-		volume, err := strconv.Atoi(args[0])
+		headphonesConnected := internal.IsHeadphoneConnected()
+		key := computeKey(headphonesConnected, Card, Channel)
+
+		data := audioState{}
+		err := persistence.ReadStruct(key, &data)
 		if err != nil {
 			return err
 		}
-		return internal.SetVolume(cardInt, channel, volume)
+
+		err = internal.SetMuted(cardInt, channel, data.Muted)
+		err = internal.SetVolume(cardInt, Channel, data.Volume)
+
+		return err
 	},
 }
 
+func computeKey(headphonesConnected bool, card string, channel string) string {
+	var speakerType string
+	if headphonesConnected {
+		speakerType = "headphones"
+	} else {
+		speakerType = "speaker"
+	}
+
+	return speakerType + "_" + card + "_" + channel
+}
+
 func init() {
-	volumeCmd.AddCommand(setVolumeCmd)
+	Command.AddCommand(restoreCmd)
 }

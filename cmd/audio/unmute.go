@@ -20,16 +20,21 @@ package audio
 import (
 	"github.com/markusressel/system-control/internal"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
 var unmuteCmd = &cobra.Command{
 	Use:   "unmute",
 	Short: "Unmute system audio",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cardFlag := cmd.Flag("card")
+		card := cardFlag.Value.String()
+		cardInt, _ := strconv.Atoi(card)
+
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
-		internal.SetMuted(channel, false)
+		return internal.SetMuted(cardInt, channel, false)
 	},
 }
 

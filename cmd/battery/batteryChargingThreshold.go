@@ -20,10 +20,9 @@ package battery
 import (
 	"fmt"
 	"github.com/markusressel/system-control/internal"
+	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/spf13/cobra"
 	"log"
-	"os"
-	"path"
 	"strconv"
 )
 
@@ -60,12 +59,7 @@ var batteryChargingThresholdSaveCmd = &cobra.Command{
 
 		current := getBatteryThreshold(battery)
 
-		err := os.MkdirAll(internal.ConfigBaseDir, 0755)
-		if err != nil {
-			log.Fatal(err)
-		}
-		file := path.Join(internal.ConfigBaseDir, battery+"_charge_control_end_threshold.sav")
-		err = internal.WriteIntToFile(current, file)
+		err := persistence.SaveInt(battery+"_charge_control_end_threshold.sav", current)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -80,8 +74,7 @@ var batteryChargingThresholdRestoreCmd = &cobra.Command{
 		batteryFlag := cmd.Flag("name")
 		battery := batteryFlag.Value.String()
 
-		file := path.Join(internal.ConfigBaseDir, battery+"_charge_control_end_threshold.sav")
-		value, err := internal.ReadIntFromFile(file)
+		value, err := persistence.ReadInt(battery + "_charge_control_end_threshold.sav")
 		if err != nil {
 			return
 		}

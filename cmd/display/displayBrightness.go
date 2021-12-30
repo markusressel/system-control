@@ -24,7 +24,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// brightnessCmd represents the brightness command
 var brightnessCmd = &cobra.Command{
 	Use:   "brightness",
 	Short: "Show current display brightness",

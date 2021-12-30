@@ -22,7 +22,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// incBrightnessCmd represents the inc command
 var incBrightnessCmd = &cobra.Command{
 	Use:   "inc",
 	Short: "Increase display brightness",

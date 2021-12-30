@@ -20,17 +20,23 @@ package audio
 import (
 	"github.com/markusressel/system-control/internal"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
 var toggleMuteCmd = &cobra.Command{
 	Use:   "toggle-mute",
 	Short: "Toggle the Mute state",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cardFlag := cmd.Flag("card")
+		card := cardFlag.Value.String()
+		cardInt, _ := strconv.Atoi(card)
+
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
-		isMuted := internal.IsMuted(channel)
-		internal.SetMuted(channel, !isMuted)
+
+		isMuted := internal.IsMuted(cardInt, channel)
+		return internal.SetMuted(cardInt, channel, !isMuted)
 	},
 }
 

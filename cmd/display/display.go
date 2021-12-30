@@ -21,7 +21,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Command represents the display command
 var Command = &cobra.Command{
 	Use:   "display",
 	Short: "Control Display",

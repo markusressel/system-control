@@ -37,8 +37,16 @@ const (
 	Brightness           = "brightness"
 )
 
-func IsMuted(channel string) bool {
-	result, err := ExecCommand("amixer", "-D", "pulse", "get", channel)
+func IsMuted(card int, channel string) bool {
+	var args []string
+	if card >= 0 {
+		args = append(args, "-c", strconv.Itoa(card))
+	} else {
+		args = append(args, "-D", "pulse")
+	}
+	args = append(args, "get", channel)
+
+	result, err := ExecCommand("amixer", args...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -48,7 +56,7 @@ func IsMuted(channel string) bool {
 	return match == "[off]"
 }
 
-func SetMuted(channel string, muted bool) {
+func SetMuted(card int, channel string, muted bool) error {
 	var state string
 	if muted {
 		state = "off"
@@ -56,10 +64,16 @@ func SetMuted(channel string, muted bool) {
 		state = "on"
 	}
 
-	_, err := ExecCommand("amixer", "-D", "pulse", "set", channel, state)
-	if err != nil {
-		log.Fatal(err)
+	var args []string
+	if card >= 0 {
+		args = append(args, "-c", strconv.Itoa(card))
+	} else {
+		args = append(args, "-D", "pulse")
 	}
+	args = append(args, "set", channel, state)
+
+	_, err := ExecCommand("amixer", args...)
+	return err
 }
 
 func GetVolume(card int, channel string) int {
@@ -103,7 +117,7 @@ func CalculateAppropriateVolumeChange(current int, increase bool) int {
 	}
 }
 
-func SetVolume(card int, channel string, volume int) {
+func SetVolume(card int, channel string, volume int) error {
 	var args []string
 	if card >= 0 {
 		args = append(args, "-c", strconv.Itoa(card))
@@ -113,9 +127,12 @@ func SetVolume(card int, channel string, volume int) {
 	args = append(args, "set", channel, strconv.Itoa(volume)+"%")
 
 	_, err := ExecCommand("amixer", args...)
-	if err != nil {
-		log.Fatal(err)
-	}
+	return err
+}
+
+func IsHeadphoneConnected() bool {
+	// TODO:
+	return false
 }
 
 // returns the index of the active sink

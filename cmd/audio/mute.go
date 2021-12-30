@@ -20,9 +20,9 @@ package audio
 import (
 	"github.com/markusressel/system-control/internal"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
-// muteCmd represents the mute command
 var muteCmd = &cobra.Command{
 	Use:   "mute",
 	Short: "Mute system audio",
@@ -32,16 +32,17 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cardFlag := cmd.Flag("card")
+		card := cardFlag.Value.String()
+		cardInt, _ := strconv.Atoi(card)
+
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
-		internal.SetMuted(channel, true)
+		return internal.SetMuted(cardInt, channel, true)
 	},
 }
 
 func init() {
 	Command.AddCommand(muteCmd)
-
-	// Here you will define your flags and configuration settings.
-
 }

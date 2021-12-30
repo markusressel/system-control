@@ -24,14 +24,10 @@ import (
 var Card string
 var Channel string
 
-// Command represents the audio command
 var Command = &cobra.Command{
-	Use:   "audio",
-	Short: "Control System Audio",
-	Long:  ``,
-	//Run: func(cmd *cobra.Command, args []string) {
-	//	fmt.Println("audio called")
-	//},
+	Use:              "audio",
+	Short:            "Control System Audio",
+	Long:             ``,
 	TraverseChildren: true,
 }
 
@@ -49,7 +45,4 @@ func init() {
 		"Master",
 		"Audio Channel",
 	)
-
-	// Here you will define your flags and configuration settings.
-
 }

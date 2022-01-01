@@ -59,7 +59,7 @@ var batteryChargingThresholdSaveCmd = &cobra.Command{
 
 		current := getBatteryThreshold(battery)
 
-		err := persistence.SaveInt(battery+"_charge_control_end_threshold.sav", current)
+		err := persistence.SaveInt(battery+"_charge_control_end_threshold", current)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -74,7 +74,7 @@ var batteryChargingThresholdRestoreCmd = &cobra.Command{
 		batteryFlag := cmd.Flag("name")
 		battery := batteryFlag.Value.String()
 
-		value, err := persistence.ReadInt(battery + "_charge_control_end_threshold.sav")
+		value, err := persistence.ReadInt(battery + "_charge_control_end_threshold")
 		if err != nil {
 			return
 		}

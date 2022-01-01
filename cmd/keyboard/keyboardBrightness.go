@@ -20,6 +20,7 @@ package keyboard
 import (
 	"fmt"
 	"github.com/markusressel/system-control/internal"
+	"strconv"
 
 	"github.com/spf13/cobra"
 )
@@ -28,13 +29,20 @@ var keyboardBrightnessCmd = &cobra.Command{
 	Use:   "brightness",
 	Short: "Show current keyboard brightness",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		brightness := internal.GetKeyboardBrightness()
-		maxBrightness := internal.GetMaxBrightness()
 
-		percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
+		if len(args) > 0 {
+			p, err := strconv.Atoi(args[0])
+			if err != nil {
+				return err
+			}
+			internal.SetKeyboardBrightness(p)
+		} else {
+			fmt.Println(brightness)
+		}
 
-		fmt.Println(percentage)
+		return nil
 	},
 }
 

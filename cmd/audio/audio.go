@@ -35,7 +35,7 @@ func init() {
 	Command.PersistentFlags().StringVarP(
 		&Card,
 		"card", "C",
-		"0",
+		"-1",
 		"Card Index",
 	)
 

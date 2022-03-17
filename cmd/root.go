@@ -24,6 +24,7 @@ import (
 	"github.com/markusressel/system-control/cmd/display"
 	"github.com/markusressel/system-control/cmd/keyboard"
 	"github.com/markusressel/system-control/cmd/touchpad"
+	"github.com/markusressel/system-control/cmd/video"
 	"github.com/spf13/cobra"
 	"os"
 
@@ -63,6 +64,7 @@ func init() {
 	RootCmd.AddCommand(display.Command)
 	RootCmd.AddCommand(keyboard.Command)
 	RootCmd.AddCommand(touchpad.Command)
+	RootCmd.AddCommand(video.Command)
 
 	cobra.OnInitialize(initConfig)
 

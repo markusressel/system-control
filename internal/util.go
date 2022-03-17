@@ -547,7 +547,6 @@ func findKeyboardBacklight() string {
 	var kbdBacklight string
 	r := regexp.MustCompile(".*(kbd|keyboard).*")
 	for _, f := range files {
-
 		if r.MatchString(f.Name()) {
 			return f.Name()
 		}

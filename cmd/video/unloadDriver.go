@@ -27,7 +27,6 @@ var unloadDriverCmd = &cobra.Command{
 	Short: "Unload the video driver, preventing access to any video device",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		internal.ExecCommand("lsmod", "uvcvideo")
 		internal.ExecCommand("rmmod", "-f", "uvcvideo")
 	},
 }

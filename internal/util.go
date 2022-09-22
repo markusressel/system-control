@@ -20,7 +20,6 @@ package internal
 import (
 	"bytes"
 	. "fmt"
-	"io/ioutil"
 	"log"
 	"math"
 	"os"
@@ -147,7 +146,7 @@ func findActiveSinkPulse(text string) int {
 		log.Fatal(err)
 	}
 
-	// we dont need case information
+	// we don't need case information
 	result = strings.ToLower(result)
 
 	// search for the Index line containing a star
@@ -225,7 +224,7 @@ func findSinkPulse(text string) int {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// we dont need case information
+	// we don't need case information
 	result = strings.ToLower(result)
 
 	// find the wanted text
@@ -251,7 +250,7 @@ func findSinkPulse(text string) int {
 	return index
 }
 
-// returns the index of a sink that contains the given text
+// FindSinkPipewire returns the index of a sink that contains the given text
 func FindSinkPipewire(text string) map[string]string {
 	// ignore case
 	text = strings.ToLower(text)
@@ -384,7 +383,7 @@ func switchSinkPulse(index int) {
 	}
 }
 
-// Switches the default sink and moves all existing sink inputs to the target sink
+// SwitchSinkPipewire switches the default sink and moves all existing sink inputs to the target sink
 func SwitchSinkPipewire(node map[string]string) {
 	nodeName := node["node.name"]
 	nodeId, err := strconv.Atoi(node["id"])
@@ -412,7 +411,7 @@ func moveStreamToNode(streamId string, nodeId int) {
 }
 
 func ReadIntFromFile(path string) (int64, error) {
-	fileBuffer, err := ioutil.ReadFile(path)
+	fileBuffer, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -428,7 +427,7 @@ func WriteIntToFile(value int, path string) error {
 		log.Fatal(err)
 	}
 
-	return ioutil.WriteFile(path, []byte(strconv.Itoa(value)), fileStat.Mode())
+	return os.WriteFile(path, []byte(strconv.Itoa(value)), fileStat.Mode())
 }
 
 func touch(path string) {
@@ -464,7 +463,7 @@ func GetBrightness() int {
 	return int(brightness)
 }
 
-// Sets a specific brightness of main the display
+// SetBrightness sets a specific brightness of main the display
 func SetBrightness(percentage int) {
 	backlightName := findBacklight()
 	maxBrightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + MaxBrightness
@@ -500,7 +499,7 @@ func setBrightnessRaw(backlight string, brightness int) {
 	}
 }
 
-// Adjusts the brightness of the main display
+// AdjustBrightness adjusts the brightness of the main display
 func AdjustBrightness(change int) {
 	backlight := findBacklight()
 
@@ -519,7 +518,7 @@ func AdjustBrightness(change int) {
 }
 
 func findBacklight() string {
-	files, err := ioutil.ReadDir(DisplayBacklightPath)
+	files, err := os.ReadDir(DisplayBacklightPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -539,7 +538,7 @@ func findBacklight() string {
 }
 
 func findKeyboardBacklight() string {
-	files, err := ioutil.ReadDir(LedsPath)
+	files, err := os.ReadDir(LedsPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -692,7 +691,7 @@ func FindOpenWindows() []string {
 	return matches
 }
 
-// Executes a shell command with the given arguments
+// ExecCommand executes a shell command with the given arguments
 // and returns its stdout as a []byte.
 // If an error occurs the content of stderr is printed
 // and an error is returned.

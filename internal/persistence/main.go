@@ -39,7 +39,7 @@ func SaveStruct(key string, value interface{}) error {
 
 func ReadStruct(key string, target interface{}) error {
 	file := path.Join(BaseDir, key+".sav")
-	content, err := ioutil.ReadFile(file)
+	content, err := os.ReadFile(file)
 	if err != nil {
 		return err
 	}

@@ -201,6 +201,9 @@ func FindActiveSinkPipewire(text string) int {
 
 	if len(text) > 0 {
 		sink := FindSinkPipewire(text)
+		if sink == nil {
+			return 0
+		}
 		sinkIndex, err := strconv.Atoi(sink["id"])
 		if err != nil {
 			log.Fatal(err)

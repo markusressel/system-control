@@ -19,7 +19,7 @@ package audio
 
 import (
 	"fmt"
-	"github.com/markusressel/system-control/internal"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -41,9 +41,9 @@ var activeCmd = &cobra.Command{
 		}
 
 		if len(searchString) > 0 {
-			fmt.Println(internal.ContainsActiveSinkPipewire(searchString))
+			fmt.Println(util.ContainsActiveSinkPipewire(searchString))
 		} else {
-			sink := internal.FindActiveSinkPipewire(searchString)
+			sink := util.FindActiveSinkPipewire(searchString)
 			fmt.Println(sink["id"])
 		}
 	},

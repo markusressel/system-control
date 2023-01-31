@@ -18,7 +18,7 @@
 package cmd
 
 import (
-	"github.com/markusressel/system-control/internal"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 	"log"
 	"strings"
@@ -30,11 +30,11 @@ var restartCmd = &cobra.Command{
 	Short: "Reboot the system gracefully",
 	Long:  `Reboots the system gracefully by first closing all currently open windows.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		openWindows := internal.FindOpenWindows()
+		openWindows := util.FindOpenWindows()
 
 		for _, element := range openWindows {
 			windowId := strings.Split(element, " ")[0]
-			_, err := internal.ExecCommand("wmctrl", "-i", "-c", windowId)
+			_, err := util.ExecCommand("wmctrl", "-i", "-c", windowId)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -42,7 +42,7 @@ var restartCmd = &cobra.Command{
 
 		// wait for all windows to disappear
 		for {
-			openWindows = internal.FindOpenWindows()
+			openWindows = util.FindOpenWindows()
 			if len(openWindows) <= 0 {
 				break
 			} else {
@@ -50,7 +50,7 @@ var restartCmd = &cobra.Command{
 			}
 		}
 
-		_, err := internal.ExecCommand("reboot")
+		_, err := util.ExecCommand("reboot")
 		if err != nil {
 			log.Fatal(err)
 		}

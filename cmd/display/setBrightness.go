@@ -18,7 +18,7 @@
 package display
 
 import (
-	"github.com/markusressel/system-control/internal"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 	"log"
 	"strconv"
@@ -39,7 +39,7 @@ to quickly create a Cobra application.`,
 		if err != nil {
 			log.Fatal(err)
 		}
-		internal.SetBrightness(p)
+		util.SetBrightness(p)
 	},
 }
 

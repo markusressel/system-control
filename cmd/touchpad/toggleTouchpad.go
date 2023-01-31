@@ -18,7 +18,7 @@
 package touchpad
 
 import (
-	"github.com/markusressel/system-control/internal"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -27,8 +27,8 @@ var toggleTouchpadCmd = &cobra.Command{
 	Short: "Toggle the Touchpad state",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		isTouchpadEnabled := internal.IsTouchpadEnabled()
-		internal.SetTouchpadEnabled(!isTouchpadEnabled)
+		isTouchpadEnabled := util.IsTouchpadEnabled()
+		util.SetTouchpadEnabled(!isTouchpadEnabled)
 	},
 }
 

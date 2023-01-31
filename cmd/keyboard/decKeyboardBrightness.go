@@ -18,7 +18,7 @@
 package keyboard
 
 import (
-	"github.com/markusressel/system-control/internal"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -27,8 +27,8 @@ var decKeyboardBrightnessCmd = &cobra.Command{
 	Short: "Decrease keyboard backlight brightness",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		brightness := internal.GetKeyboardBrightness()
-		internal.SetKeyboardBrightness(brightness - 1)
+		brightness := util.GetKeyboardBrightness()
+		util.SetKeyboardBrightness(brightness - 1)
 	},
 }
 

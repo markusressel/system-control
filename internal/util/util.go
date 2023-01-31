@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package internal
+package util
 
 import (
 	"bytes"
@@ -202,7 +202,7 @@ func FindActiveSinkPipewire(text string) map[string]string {
 		PropertyFilter{"media.class", "Audio/Sink"},
 	)
 	for _, item := range objects {
-		if strings.Contains(strings.ToLower(item["node.name"]), strings.ToLower(currentDefaultSinkName)) {
+		if ContainsIgnoreCase(item["node.name"], currentDefaultSinkName) {
 			activeSink = item
 		}
 	}
@@ -218,7 +218,9 @@ func ContainsActiveSinkPipewire(text string) int {
 	if sink == nil {
 		return 0
 	}
-	if strings.Contains(strings.ToLower(sink["node.name"]), strings.ToLower(text)) {
+
+	if ContainsIgnoreCase(sink["node.name"], text) ||
+		ContainsIgnoreCase(sink["node.description"], text) {
 		return 1
 	} else {
 		return 0
@@ -262,14 +264,11 @@ func findSinkPulse(text string) int {
 
 // FindSinkPipewire returns the index of a sink that contains the given text
 func FindSinkPipewire(text string) map[string]string {
-	// ignore case
-	text = strings.ToLower(text)
-
 	objects := getPipewireObjects(
 		PropertyFilter{"media.class", "Audio/Sink"},
 	)
 	for _, item := range objects {
-		if strings.Contains(strings.ToLower(item["node.description"]), text) {
+		if ContainsIgnoreCase(item["node.description"], text) {
 			return item
 		}
 	}
@@ -623,7 +622,7 @@ func GetInputDevices() []string {
 
 func IsInputDeviceEnabled(name string) bool {
 	result, _ := ExecCommand("xinput", "list", name)
-	return !strings.Contains(result, "This device is disabled")
+	return !ContainsIgnoreCase(result, "This device is disabled")
 }
 
 func EnableInputDevice(name string) {
@@ -643,7 +642,7 @@ func DisableInputDevice(name string) {
 func GetTouchpadInputDevice() *string {
 	inputDevices := GetInputDevices()
 	for _, device := range inputDevices {
-		if strings.Contains(device, "Touchpad") {
+		if ContainsIgnoreCase(device, "Touchpad") {
 			return &device
 		}
 	}

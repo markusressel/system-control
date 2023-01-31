@@ -18,7 +18,7 @@
 package audio
 
 import (
-	"github.com/markusressel/system-control/internal"
+	"github.com/markusressel/system-control/internal/util"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -29,7 +29,7 @@ var sinkCmd = &cobra.Command{
 	Short: "Show a list of all available sinks",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		result, err := internal.ExecCommand("pactl", "list", "sinks")
+		result, err := util.ExecCommand("pactl", "list", "sinks")
 		if err != nil {
 			log.Fatal(err)
 		}

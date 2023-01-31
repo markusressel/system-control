@@ -19,7 +19,7 @@ package display
 
 import (
 	"fmt"
-	"github.com/markusressel/system-control/internal"
+	"github.com/markusressel/system-control/internal/util"
 
 	"github.com/spf13/cobra"
 )
@@ -29,8 +29,8 @@ var brightnessCmd = &cobra.Command{
 	Short: "Show current display brightness",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		brightness := internal.GetBrightness()
-		maxBrightness := internal.GetMaxBrightness()
+		brightness := util.GetBrightness()
+		maxBrightness := util.GetMaxBrightness()
 
 		percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
 

@@ -2,8 +2,8 @@ package persistence
 
 import (
 	"encoding/json"
-	"github.com/markusressel/system-control/internal"
 	"github.com/markusressel/system-control/internal/configuration"
+	"github.com/markusressel/system-control/internal/util"
 	"io/ioutil"
 	"log"
 	"os"
@@ -23,12 +23,12 @@ func init() {
 
 func SaveInt(key string, value int) error {
 	file := path.Join(BaseDir, key+".sav")
-	return internal.WriteIntToFile(value, file)
+	return util.WriteIntToFile(value, file)
 }
 
 func ReadInt(key string) (int64, error) {
 	file := path.Join(BaseDir, key+".sav")
-	return internal.ReadIntFromFile(file)
+	return util.ReadIntFromFile(file)
 }
 
 func SaveStruct(key string, value interface{}) error {

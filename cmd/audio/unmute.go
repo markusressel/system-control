@@ -18,7 +18,7 @@
 package audio
 
 import (
-	"github.com/markusressel/system-control/internal"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -34,7 +34,7 @@ var unmuteCmd = &cobra.Command{
 
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
-		return internal.SetMuted(cardInt, channel, false)
+		return util.SetMuted(cardInt, channel, false)
 	},
 }
 

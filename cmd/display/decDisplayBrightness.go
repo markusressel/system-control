@@ -18,7 +18,7 @@
 package display
 
 import (
-	"github.com/markusressel/system-control/internal"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -27,8 +27,8 @@ var decBrightnessCmd = &cobra.Command{
 	Short: "Decrease display brightness",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		brightness := internal.GetBrightness()
-		maxBrightness := internal.GetMaxBrightness()
+		brightness := util.GetBrightness()
+		maxBrightness := util.GetMaxBrightness()
 
 		percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
 
@@ -45,7 +45,7 @@ var decBrightnessCmd = &cobra.Command{
 
 		rawChange := int(float32(change) * (float32(maxBrightness) / 100.0))
 
-		internal.AdjustBrightness(-rawChange)
+		util.AdjustBrightness(-rawChange)
 	},
 }
 

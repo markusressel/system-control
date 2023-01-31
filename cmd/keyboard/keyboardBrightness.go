@@ -19,7 +19,7 @@ package keyboard
 
 import (
 	"fmt"
-	"github.com/markusressel/system-control/internal"
+	"github.com/markusressel/system-control/internal/util"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -30,14 +30,14 @@ var keyboardBrightnessCmd = &cobra.Command{
 	Short: "Show current keyboard brightness",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		brightness := internal.GetKeyboardBrightness()
+		brightness := util.GetKeyboardBrightness()
 
 		if len(args) > 0 {
 			p, err := strconv.Atoi(args[0])
 			if err != nil {
 				return err
 			}
-			internal.SetKeyboardBrightness(p)
+			util.SetKeyboardBrightness(p)
 		} else {
 			fmt.Println(brightness)
 		}

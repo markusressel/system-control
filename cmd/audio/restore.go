@@ -18,8 +18,8 @@
 package audio
 
 import (
-	"github.com/markusressel/system-control/internal"
 	"github.com/markusressel/system-control/internal/persistence"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -36,7 +36,7 @@ var restoreCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 
-		headphonesConnected := internal.IsHeadphoneConnected()
+		headphonesConnected := util.IsHeadphoneConnected()
 		key := computeKey(headphonesConnected, Card, Channel)
 
 		data := audioState{}
@@ -45,8 +45,8 @@ var restoreCmd = &cobra.Command{
 			return err
 		}
 
-		err = internal.SetMuted(cardInt, channel, data.Muted)
-		err = internal.SetVolume(cardInt, Channel, data.Volume)
+		err = util.SetMuted(cardInt, channel, data.Muted)
+		err = util.SetVolume(cardInt, Channel, data.Volume)
 
 		return err
 	},

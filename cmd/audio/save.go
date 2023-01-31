@@ -18,8 +18,8 @@
 package audio
 
 import (
-	"github.com/markusressel/system-control/internal"
 	"github.com/markusressel/system-control/internal/persistence"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -44,10 +44,10 @@ var saveCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 
-		currentVolume := internal.GetVolume(cardInt, channel)
-		muted := internal.IsMuted(cardInt, channel)
+		currentVolume := util.GetVolume(cardInt, channel)
+		muted := util.IsMuted(cardInt, channel)
 
-		key := computeKey(internal.IsHeadphoneConnected(), card, channel)
+		key := computeKey(util.IsHeadphoneConnected(), card, channel)
 		data := audioState{
 			OutputType: "OutputType",
 			Card:       cardInt,

@@ -18,7 +18,7 @@
 package video
 
 import (
-	"github.com/markusressel/system-control/internal"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +27,7 @@ var unloadDriverCmd = &cobra.Command{
 	Short: "Unload the video driver, preventing access to any video device",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		internal.ExecCommand("rmmod", "-f", "uvcvideo")
+		util.ExecCommand("rmmod", "-f", "uvcvideo")
 	},
 }
 

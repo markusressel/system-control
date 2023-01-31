@@ -19,8 +19,8 @@ package battery
 
 import (
 	"fmt"
-	"github.com/markusressel/system-control/internal"
 	"github.com/markusressel/system-control/internal/persistence"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 	"log"
 	"strconv"
@@ -84,7 +84,7 @@ var batteryChargingThresholdRestoreCmd = &cobra.Command{
 
 func setBatteryThreshold(battery string, value int) {
 	file := "/sys/class/power_supply/" + battery + "/charge_control_end_threshold"
-	err := internal.WriteIntToFile(value, file)
+	err := util.WriteIntToFile(value, file)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func setBatteryThreshold(battery string, value int) {
 func getBatteryThreshold(battery string) int {
 	file := "/sys/class/power_supply/" + battery + "/charge_control_end_threshold"
 
-	value, err := internal.ReadIntFromFile(file)
+	value, err := util.ReadIntFromFile(file)
 	if err != nil {
 		log.Fatal(err)
 	}

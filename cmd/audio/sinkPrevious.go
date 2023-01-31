@@ -22,18 +22,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var nextCmd = &cobra.Command{
-	Use:   "next",
-	Short: "Switch to the next sink after the currently active one",
-	Long: `Switches the default audio sink and moves all existing audio streams to the next available one.
+var previousCmd = &cobra.Command{
+	Use:   "previous",
+	Short: "Switch to the previous sink before the currently active one",
+	Long: `Switches the default audio sink and moves all existing audio streams to the previous available one.
 
-> system-control audio sink next`,
+> system-control audio sink previous`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		internal.RotateActiveSinkPipewire(false)
+		internal.RotateActiveSinkPipewire(true)
 	},
 }
 
 func init() {
-	sinkCmd.AddCommand(nextCmd)
+	sinkCmd.AddCommand(previousCmd)
 }

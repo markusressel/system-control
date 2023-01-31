@@ -387,7 +387,7 @@ func switchSinkPulse(index int) {
 }
 
 // RotateActiveSinkPipewire switches the default sink and moves all existing sink inputs to the next available sink in the list
-func RotateActiveSinkPipewire() {
+func RotateActiveSinkPipewire(reverse bool) {
 	activeSinkId := FindActiveSinkPipewire("")
 
 	objects := getPipewireObjects(
@@ -396,7 +396,11 @@ func RotateActiveSinkPipewire() {
 
 	for idx, item := range objects {
 		if item["id"] == strconv.Itoa(activeSinkId) {
-			nextIndex := (idx + 1) % len(objects)
+			offset := 1
+			if reverse {
+				offset = -1
+			}
+			nextIndex := (len(objects) + (idx + offset)) % len(objects)
 			nextSink := objects[nextIndex]
 			SwitchSinkPipewire(nextSink)
 		}

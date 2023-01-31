@@ -18,7 +18,7 @@
 package audio
 
 import (
-	"github.com/markusressel/system-control/internal/util"
+	"github.com/markusressel/system-control/internal/audio"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -35,8 +35,8 @@ var toggleMuteCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 
-		isMuted := util.IsMuted(cardInt, channel)
-		return util.SetMuted(cardInt, channel, !isMuted)
+		isMuted := audio.IsMuted(cardInt, channel)
+		return audio.SetMuted(cardInt, channel, !isMuted)
 	},
 }
 

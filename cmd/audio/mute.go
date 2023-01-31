@@ -18,7 +18,7 @@
 package audio
 
 import (
-	"github.com/markusressel/system-control/internal/util"
+	"github.com/markusressel/system-control/internal/audio"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -39,7 +39,7 @@ to quickly create a Cobra application.`,
 
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
-		return util.SetMuted(cardInt, channel, true)
+		return audio.SetMuted(cardInt, channel, true)
 	},
 }
 

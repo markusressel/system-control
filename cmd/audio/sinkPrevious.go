@@ -18,7 +18,7 @@
 package audio
 
 import (
-	"github.com/markusressel/system-control/internal/util"
+	"github.com/markusressel/system-control/internal/audio"
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +30,7 @@ var previousCmd = &cobra.Command{
 > system-control audio sink previous`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		util.RotateActiveSinkPipewire(true)
+		audio.RotateActiveSinkPipewire(true)
 	},
 }
 

@@ -18,7 +18,7 @@
 package audio
 
 import (
-	"github.com/markusressel/system-control/internal/util"
+	"github.com/markusressel/system-control/internal/audio"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -41,7 +41,7 @@ var setVolumeCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return util.SetVolume(cardInt, channel, volume)
+		return audio.SetVolume(cardInt, channel, volume)
 	},
 }
 

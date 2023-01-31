@@ -19,7 +19,7 @@ package audio
 
 import (
 	"fmt"
-	"github.com/markusressel/system-control/internal/util"
+	"github.com/markusressel/system-control/internal/audio"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -35,7 +35,7 @@ var volumeCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 
-		volume := util.GetVolume(cardInt, channel)
+		volume := audio.GetVolume(cardInt, channel)
 		fmt.Println(volume)
 	},
 }

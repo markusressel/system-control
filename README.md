@@ -108,7 +108,7 @@ consider it.
 
 **Requirements:**
 
-* `pacli`
+* `pactl`
 * `pw-cli`
 * `amixer`
 

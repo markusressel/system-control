@@ -18,7 +18,7 @@
 package audio
 
 import (
-	"github.com/markusressel/system-control/internal/util"
+	"github.com/markusressel/system-control/internal/audio"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -35,16 +35,16 @@ var decVolumeCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 
-		volume := util.GetVolume(cardInt, channel)
-		change := util.CalculateAppropriateVolumeChange(volume, false)
+		volume := audio.GetVolume(cardInt, channel)
+		change := audio.CalculateAppropriateVolumeChange(volume, false)
 
-		activeSink := util.FindActiveSinkPipewire("")
+		activeSink := audio.FindActiveSinkPipewire("")
 
 		activeSinkSerial, err := strconv.Atoi(activeSink["object.serial"])
 		if err != nil {
 			return err
 		}
-		return util.SetVolumePipewire(activeSinkSerial, volume-change)
+		return audio.SetVolumePipewire(activeSinkSerial, volume-change)
 	},
 }
 

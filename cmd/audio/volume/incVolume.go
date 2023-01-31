@@ -38,7 +38,7 @@ var IncVolumeCmd = &cobra.Command{
 		volume := audio.GetVolume(cardInt, channel)
 		change := audio.CalculateAppropriateVolumeChange(volume, true)
 
-		activeSink := audio.FindActiveSinkPipewire("")
+		activeSink := audio.GetActiveSinkPipewire()
 
 		activeSinkSerial, err := strconv.Atoi(activeSink["object.serial"])
 		if err != nil {

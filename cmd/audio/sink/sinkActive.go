@@ -43,7 +43,7 @@ var activeCmd = &cobra.Command{
 		if len(searchString) > 0 {
 			fmt.Println(audio.ContainsActiveSinkPipewire(searchString))
 		} else {
-			sink := audio.FindActiveSinkPipewire(searchString)
+			sink := audio.GetActiveSinkPipewire()
 			fmt.Println(sink["id"])
 		}
 	},

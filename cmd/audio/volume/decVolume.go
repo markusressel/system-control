@@ -35,10 +35,13 @@ var decVolumeCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 
-		volume := audio.GetVolume(cardInt, channel)
+		println(cardInt, channel)
+
+		//volume := audio.GetVolume(cardInt, channel)
+		volume := audio.GetVolumePipewire()
 		change := audio.CalculateAppropriateVolumeChange(volume, false)
 
-		activeSink := audio.FindActiveSinkPipewire("")
+		activeSink := audio.GetActiveSinkPipewire()
 
 		activeSinkSerial, err := strconv.Atoi(activeSink["object.serial"])
 		if err != nil {

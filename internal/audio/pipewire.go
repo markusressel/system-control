@@ -1,6 +1,7 @@
 package audio
 
 import (
+	"fmt"
 	"github.com/markusressel/system-control/internal/util"
 	"log"
 	"strconv"
@@ -12,66 +13,9 @@ type PropertyFilter struct {
 	value string
 }
 
-func parsePipwireToMap(input string) []map[string]string {
-	var result = make([]map[string]string, 0, 1000)
-
-	lines := strings.Split(input, "\n")
-	var objectMap map[string]string
-	for _, line := range lines {
-		if len(strings.TrimSpace(line)) <= 0 {
-			continue
-		}
-		if strings.Contains(line, ",") && !strings.Contains(line, "=") {
-			// this is the "header" of an object
-
-			// create a new map for the current object and fill it
-			objectMap = make(map[string]string)
-			splits := strings.Split(line, ",")
-			for _, item := range splits {
-				item = strings.TrimSpace(item)
-				splits := strings.SplitAfter(item, " ")
-				objectMap[strings.TrimSpace(splits[0])] = strings.TrimSpace(splits[1])
-			}
-			result = append(result, objectMap)
-		} else {
-			// this is a property of an object
-
-			splits := strings.SplitAfter(line, "=")
-
-			key := strings.TrimRight(splits[0], "=")
-			key = strings.TrimSpace(key)
-
-			value := strings.TrimSpace(splits[1])
-			value = strings.Trim(value, "\"")
-			objectMap[key] = value
-		}
-	}
-
-	return result
-}
-
-// FilterPipwireObjects filters the given pipewire object map based on the given function
-func FilterPipwireObjects(vs []map[string]string, f func(map[string]string) bool) []map[string]string {
-	vsf := make([]map[string]string, 0)
-	for _, v := range vs {
-		if f(v) {
-			vsf = append(vsf, v)
-		}
-	}
-	return vsf
-}
-
-// Switches the default sink to the target sink
-// You need to get a sink name with "pw-cli ls Node"
-// and look for the "node.name" property for a valid value.
-func setDefaultSinkPipewire(sinkName string) (err error) {
-	_, err = util.ExecCommand("pw-metadata", "0", "default.configured.audio.sink", `{ "name": "`+sinkName+`" }`)
-	return err
-}
-
 // RotateActiveSinkPipewire switches the default sink and moves all existing sink inputs to the next available sink in the list
 func RotateActiveSinkPipewire(reverse bool) {
-	activeSink := FindActiveSinkPipewire("")
+	activeSink := GetActiveSinkPipewire()
 
 	objects := getPipewireObjects(
 		PropertyFilter{"media.class", "Audio/Sink"},
@@ -119,6 +63,34 @@ func moveStreamToNode(streamId string, nodeId int) {
 	}
 }
 
+func GetVolumePipewire() int {
+	activeSink := GetActiveSinkPipewire()
+
+	activeSinkId, err := strconv.Atoi(activeSink["id"])
+	if err != nil {
+		println(err)
+		return -1
+	}
+	nodeDetails, err := getNodeParams(activeSinkId)
+	if err != nil {
+		return -1
+	}
+	property := findParamProperty(nodeDetails, "channelVolumes")
+	volume, err := strconv.Atoi(fmt.Sprint(property))
+	if err != nil {
+		return -1
+	}
+	return volume
+}
+
+func findParamProperty(details []PipewireObject, s string) PipewireProperty {
+	// TODO:
+	return PipewireProperty{
+		// TODO: in practive this will be an array with values for each channel
+		Value: 100,
+	}
+}
+
 // SetVolumePipewire sets the given volume to the given sink using pipewire
 // volume in percent
 func SetVolumePipewire(sinkId int, volume int) error {
@@ -130,35 +102,8 @@ func SetVolumePipewire(sinkId int, volume int) error {
 	return err
 }
 
-// retrieve a list of pipewire objects
-// optionally filtered
-func getPipewireObjects(filters ...PropertyFilter) (objects []map[string]string) {
-	result, err := util.ExecCommand("pw-cli", "ls")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	objects = parsePipwireToMap(result)
-	objects = FilterPipwireObjects(objects, func(v map[string]string) bool {
-		for _, filter := range filters {
-			if v[filter.key] != filter.value {
-				return false
-			}
-		}
-
-		return true
-	})
-
-	return objects
-}
-
-// FindActiveSinkPipewire returns the index of the active sink
-// or 0 if the given text is NOT found in the active sink
-// or 1 if the given text IS found in the active sink
-func FindActiveSinkPipewire(text string) map[string]string {
-	// ignore case
-	text = strings.ToLower(text)
-
+// GetActiveSinkPipewire returns the index of the active sink
+func GetActiveSinkPipewire() map[string]string {
 	currentDefaultSinkName, err := util.ExecCommand("pactl", "get-default-sink")
 	if err != nil {
 		log.Fatal(err)
@@ -181,7 +126,7 @@ func FindActiveSinkPipewire(text string) map[string]string {
 // 0: if the given text is NOT found in the active sink
 // 1: if the given text IS found in the active sink
 func ContainsActiveSinkPipewire(text string) int {
-	sink := FindActiveSinkPipewire(text)
+	sink := GetActiveSinkPipewire()
 	if sink == nil {
 		return 0
 	}
@@ -206,4 +151,276 @@ func FindSinkPipewire(text string) map[string]string {
 	}
 
 	return nil
+}
+
+func SetMutedPipewire(sinkId int, channel string, muted bool) error {
+	var targetState int
+	if muted {
+		targetState = 1
+	} else {
+		targetState = 0
+	}
+	_, err := util.ExecCommand("pactl", "set-sink-mute", strconv.Itoa(sinkId), strconv.Itoa(targetState))
+	return err
+}
+
+// Switches the default sink to the target sink
+// You need to get a sink name with "pw-cli ls Node"
+// and look for the "node.name" property for a valid value.
+func setDefaultSinkPipewire(sinkName string) (err error) {
+	_, err = util.ExecCommand("pw-metadata", "0", "default.configured.audio.sink", `{ "name": "`+sinkName+`" }`)
+	return err
+}
+
+// retrieve a list of pipewire objects
+// optionally filtered
+func getPipewireObjects(filters ...PropertyFilter) (objects []map[string]string) {
+	result, err := util.ExecCommand("pw-cli", "list-objects")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	objects = parsePipwireObjectsToMap(result)
+	objects = filterPipwireObjects(objects, func(v map[string]string) bool {
+		for _, filter := range filters {
+			if v[filter.key] != filter.value {
+				return false
+			}
+		}
+
+		return true
+	})
+
+	return objects
+}
+
+func parsePipwireObjectsToMap(input string) []map[string]string {
+	var result = make([]map[string]string, 0, 1000)
+
+	lines := strings.Split(input, "\n")
+	var objectMap map[string]string
+	for _, line := range lines {
+		if len(strings.TrimSpace(line)) <= 0 {
+			continue
+		}
+		if strings.Contains(line, ",") && !strings.Contains(line, "=") {
+			// this is the "header" of an object
+
+			// create a new map for the current object and fill it
+			objectMap = make(map[string]string)
+			splits := strings.Split(line, ",")
+			for _, item := range splits {
+				item = strings.TrimSpace(item)
+				splits := strings.SplitAfter(item, " ")
+				objectMap[strings.TrimSpace(splits[0])] = strings.TrimSpace(splits[1])
+			}
+			result = append(result, objectMap)
+		} else {
+			// this is a property of an object
+
+			splits := strings.SplitAfter(line, "=")
+
+			key := strings.TrimRight(splits[0], "=")
+			key = strings.TrimSpace(key)
+
+			value := strings.TrimSpace(splits[1])
+			value = strings.Trim(value, "\"")
+			objectMap[key] = value
+		}
+	}
+
+	return result
+}
+
+// filterPipwireObjects filters the given pipewire object map based on the given function
+func filterPipwireObjects(vs []map[string]string, f func(map[string]string) bool) []map[string]string {
+	vsf := make([]map[string]string, 0)
+	for _, v := range vs {
+		if f(v) {
+			vsf = append(vsf, v)
+		}
+	}
+	return vsf
+}
+
+func getNodeParams(nodeId int) ([]PipewireObject, error) {
+	result, err := util.ExecCommand("pw-cli", "enum-params", strconv.Itoa(nodeId), "Props")
+	if err != nil {
+		return nil, err
+	}
+	params := parsePipwireParamsToMap(result)
+	return params, nil
+}
+
+type PipewireObject struct {
+	Size       int
+	Type       string
+	Id         string
+	Properties ObjectProperties
+}
+
+type PipewireProperty struct {
+	Key   string
+	Flags string
+	Value interface{}
+}
+
+type ObjectProperties map[string]PipewireProperty
+
+func parsePipwireParamsToMap(input string) []PipewireObject {
+	result := make([]PipewireObject, 0, 1000)
+
+	lines := strings.Split(input, "\n")
+
+	i := 0
+	for i < len(lines) {
+		line := lines[i]
+		trimmedLine := strings.TrimSpace(line)
+
+		if strings.HasPrefix(trimmedLine, "Object:") {
+			objectParams := getPairsFromLine(strings.TrimPrefix(trimmedLine, "Object:"))
+			objectSize, _ := strconv.Atoi(objectParams["size"])
+
+			// properties
+			objectIndentation := util.CountLeadingSpace(line)
+			objectProperties := parsePipewireObjectProperties(lines[i+1:], objectIndentation)
+
+			// construct object
+			pipewireObject := PipewireObject{
+				Id:         objectParams["id"],
+				Type:       objectParams["type"],
+				Size:       objectSize,
+				Properties: objectProperties,
+			}
+			result = append(result, pipewireObject)
+		}
+
+		i++
+	}
+
+	return result
+}
+
+func parsePipewireObjectProperties(lines []string, endIndentation int) ObjectProperties {
+	result := make(ObjectProperties)
+
+	i := 0
+	for i < len(lines) && util.CountLeadingSpace(lines[i]) > endIndentation {
+		line := lines[i]
+		trimmedLine := strings.TrimSpace(line)
+
+		if strings.HasPrefix(trimmedLine, "Prop:") {
+			propertyIndentation := util.CountLeadingSpace(line)
+
+			propertyParams := getPairsFromLine(strings.TrimPrefix(trimmedLine, "Prop:"))
+
+			// has a key, and properties in the following lines
+			propertyKey := propertyParams["key"]
+			propertyFlags := propertyParams["flags"]
+			propertyValue, consumedLines := parsePipewireObjectPropertyValue(lines[i+1:], propertyIndentation)
+			i = i + consumedLines
+
+			property := PipewireProperty{
+				Key:   propertyKey,
+				Flags: propertyFlags,
+				Value: propertyValue,
+			}
+
+			result[propertyKey] = property
+		}
+
+		i++
+	}
+
+	return result
+}
+
+func parsePipewireObjectPropertyValue(lines []string, endIndentation int) (value interface{}, consumedLines int) {
+	consumedLines = 0
+	var err error
+	for consumedLines < len(lines) && util.CountLeadingSpace(lines[consumedLines]) > endIndentation {
+		line := lines[consumedLines]
+		trimmedLine := strings.TrimSpace(line)
+		propertyIndentation := util.CountLeadingSpace(line)
+
+		keyValue := strings.SplitN(trimmedLine, " ", 2)
+		key, rawValue := strings.TrimSpace(keyValue[0]), strings.TrimSpace(keyValue[1])
+
+		if key == "Bool" {
+			value, err = strconv.ParseBool(strings.TrimSpace(rawValue))
+			consumedLines = 1
+			break
+		} else if key == "Int" {
+			value, err = strconv.ParseInt(strings.TrimSpace(strings.TrimPrefix(trimmedLine, "Int")), 10, 32)
+			consumedLines = 1
+			break
+		} else if key == "Long" {
+			value, err = strconv.ParseInt(strings.TrimSpace(strings.TrimPrefix(trimmedLine, "Long")), 10, 64)
+			consumedLines = 1
+			break
+		} else if key == "Float" {
+			value, err = strconv.ParseFloat(strings.TrimSpace(strings.TrimPrefix(trimmedLine, "Float")), 64)
+			consumedLines = 1
+			break
+		} else if key == "String" {
+			value = rawValue[1 : len(rawValue)-1]
+			consumedLines = 1
+			break
+		} else if key == "Array:" {
+			// TODO:
+			_value, subConsumedLines := parsePipewireObjectPropertyValueArray(lines[consumedLines+1:len(lines)-1], propertyIndentation)
+			value = _value
+			consumedLines = consumedLines + subConsumedLines
+			break
+		} else if key == "Struct:" {
+			// TODO:
+			_value, subConsumedLines := parsePipewireObjectPropertyValueStruct(lines[consumedLines+1:len(lines)-1], propertyIndentation)
+			value = _value
+			consumedLines = consumedLines + subConsumedLines
+			break
+		} else {
+			consumedLines++
+		}
+	}
+
+	if err != nil {
+		panic(err)
+	}
+
+	return value, consumedLines
+}
+
+func parsePipewireObjectPropertyValueArray(lines []string, endIndentation int) (value []interface{}, consumedLines int) {
+	consumedLines = 0
+	for consumedLines < len(lines) && util.CountLeadingSpace(lines[consumedLines]) > endIndentation {
+		line := lines[consumedLines]
+		//trimmedLine := strings.TrimSpace(line)
+		//
+		//getPairsFromLine(trimmedLine)
+		arrayIndentation := util.CountLeadingSpace(line)
+
+		subValue, subConsumedLines := parsePipewireObjectPropertyValue(lines[consumedLines+1:len(lines)-1], arrayIndentation)
+		consumedLines = consumedLines + subConsumedLines
+
+		value = append(value, subValue)
+		consumedLines++
+	}
+
+	return value, consumedLines
+}
+
+func parsePipewireObjectPropertyValueStruct(lines []string, endIndentation int) (value map[string]interface{}, consumedLines int) {
+	// TODO:
+	return map[string]interface{}{}, 0
+}
+
+func getPairsFromLine(line string) map[string]string {
+	result := make(map[string]string)
+	objectParams := strings.Split(line, ",")
+	for _, item := range objectParams {
+		item = strings.TrimSpace(item)
+		splits := strings.SplitAfter(item, " ")
+		result[strings.TrimSpace(splits[0])] = strings.TrimSpace(splits[1])
+	}
+	return result
 }

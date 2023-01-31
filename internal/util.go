@@ -116,6 +116,17 @@ func CalculateAppropriateVolumeChange(current int, increase bool) int {
 	}
 }
 
+// SetVolumePipewire sets the given volume to the given sink using pipewire
+// volume in percent
+func SetVolumePipewire(sinkId int, volume int) error {
+	//objects := getPipewireObjects(
+	//	PropertyFilter{"media.class", "Audio/Sink"},
+	//)
+
+	_, err := ExecCommand("pactl", "set-sink-volume", strconv.Itoa(sinkId), strconv.Itoa(volume)+"%")
+	return err
+}
+
 func SetVolume(card int, channel string, volume int) error {
 	var args []string
 	if card >= 0 {
@@ -177,7 +188,7 @@ func findActiveSinkPulse(text string) int {
 // FindActiveSinkPipewire returns the index of the active sink
 // or 0 if the given text is NOT found in the active sink
 // or 1 if the given text IS found in the active sink
-func FindActiveSinkPipewire(text string) int {
+func FindActiveSinkPipewire(text string) map[string]string {
 	// ignore case
 	text = strings.ToLower(text)
 
@@ -186,35 +197,31 @@ func FindActiveSinkPipewire(text string) int {
 		log.Fatal(err)
 	}
 
-	var activeSinkIndex int
+	var activeSink map[string]string
 	objects := getPipewireObjects(
 		PropertyFilter{"media.class", "Audio/Sink"},
 	)
 	for _, item := range objects {
 		if strings.Contains(strings.ToLower(item["node.name"]), strings.ToLower(currentDefaultSinkName)) {
-			activeSinkIndex, err = strconv.Atoi(item["id"])
-			if err != nil {
-				log.Fatal(err)
-			}
+			activeSink = item
 		}
 	}
 
-	if len(text) > 0 {
-		sink := FindSinkPipewire(text)
-		if sink == nil {
-			return 0
-		}
-		sinkIndex, err := strconv.Atoi(sink["id"])
-		if err != nil {
-			log.Fatal(err)
-		}
-		if sinkIndex == activeSinkIndex {
-			return 1
-		} else {
-			return 0
-		}
+	return activeSink
+}
+
+// ContainsActiveSinkPipewire returns
+// 0: if the given text is NOT found in the active sink
+// 1: if the given text IS found in the active sink
+func ContainsActiveSinkPipewire(text string) int {
+	sink := FindActiveSinkPipewire(text)
+	if sink == nil {
+		return 0
+	}
+	if strings.Contains(strings.ToLower(sink["node.name"]), strings.ToLower(text)) {
+		return 1
 	} else {
-		return activeSinkIndex
+		return 0
 	}
 }
 
@@ -388,14 +395,14 @@ func switchSinkPulse(index int) {
 
 // RotateActiveSinkPipewire switches the default sink and moves all existing sink inputs to the next available sink in the list
 func RotateActiveSinkPipewire(reverse bool) {
-	activeSinkId := FindActiveSinkPipewire("")
+	activeSink := FindActiveSinkPipewire("")
 
 	objects := getPipewireObjects(
 		PropertyFilter{"media.class", "Audio/Sink"},
 	)
 
 	for idx, item := range objects {
-		if item["id"] == strconv.Itoa(activeSinkId) {
+		if item["id"] == activeSink["id"] {
 			offset := 1
 			if reverse {
 				offset = -1

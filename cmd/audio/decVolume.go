@@ -37,7 +37,14 @@ var decVolumeCmd = &cobra.Command{
 
 		volume := internal.GetVolume(cardInt, channel)
 		change := internal.CalculateAppropriateVolumeChange(volume, false)
-		return internal.SetVolume(cardInt, channel, volume-change)
+
+		activeSink := internal.FindActiveSinkPipewire("")
+
+		activeSinkSerial, err := strconv.Atoi(activeSink["object.serial"])
+		if err != nil {
+			return err
+		}
+		return internal.SetVolumePipewire(activeSinkSerial, volume-change)
 	},
 }
 

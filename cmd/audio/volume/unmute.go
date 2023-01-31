@@ -15,25 +15,29 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package audio
+package volume
 
 import (
 	"github.com/markusressel/system-control/internal/audio"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
-var nextCmd = &cobra.Command{
-	Use:   "next",
-	Short: "Switch to the next sink after the currently active one",
-	Long: `Switches the default audio sink and moves all existing audio streams to the next available one.
+var unmuteCmd = &cobra.Command{
+	Use:   "unmute",
+	Short: "Unmute system audio",
+	Long:  ``,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cardFlag := cmd.Flag("card")
+		card := cardFlag.Value.String()
+		cardInt, _ := strconv.Atoi(card)
 
-> system-control audio sink next`,
-	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		audio.RotateActiveSinkPipewire(false)
+		channelFlag := cmd.Flag("channel")
+		channel := channelFlag.Value.String()
+		return audio.SetMuted(cardInt, channel, false)
 	},
 }
 
 func init() {
-	sinkCmd.AddCommand(nextCmd)
+	VolumeCmd.AddCommand(unmuteCmd)
 }

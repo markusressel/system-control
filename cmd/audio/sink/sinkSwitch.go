@@ -15,34 +15,32 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package audio
+package sink
 
 import (
 	"github.com/markusressel/system-control/internal/audio"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
-var muteCmd = &cobra.Command{
-	Use:   "mute",
-	Short: "Mute system audio",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+var switchCmd = &cobra.Command{
+	Use:   "switch",
+	Short: "Switch the default sink",
+	Long: `Switches the default audio sink and moves all existing audio streams to the given one.
+You can specify the audio sink using its index, but also using other strings that occur in its description:
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		cardFlag := cmd.Flag("card")
-		card := cardFlag.Value.String()
-		cardInt, _ := strconv.Atoi(card)
+> system-control audio sink switch "headphone"
 
-		channelFlag := cmd.Flag("channel")
-		channel := channelFlag.Value.String()
-		return audio.SetMuted(cardInt, channel, true)
+> system-control audio sink switch "NVIDIA"`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		searchString := args[0]
+		//sinkIdx := findSinkPulse(searchString)
+		//switchSinkPulse(sinkIdx)
+		sink := audio.FindSinkPipewire(searchString)
+		audio.SwitchSinkPipewire(sink)
 	},
 }
 
 func init() {
-	Command.AddCommand(muteCmd)
+	SinkCmd.AddCommand(switchCmd)
 }

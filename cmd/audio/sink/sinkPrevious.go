@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package audio
+package sink
 
 import (
 	"github.com/markusressel/system-control/internal/audio"
@@ -35,5 +35,5 @@ var previousCmd = &cobra.Command{
 }
 
 func init() {
-	sinkCmd.AddCommand(previousCmd)
+	SinkCmd.AddCommand(previousCmd)
 }

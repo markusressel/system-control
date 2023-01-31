@@ -15,32 +15,24 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package audio
+package sink
 
 import (
-	"github.com/markusressel/system-control/internal/audio"
+	"github.com/markusressel/system-control/internal/util"
+	"log"
+
 	"github.com/spf13/cobra"
 )
 
-var switchCmd = &cobra.Command{
-	Use:   "switch",
-	Short: "Switch the default sink",
-	Long: `Switches the default audio sink and moves all existing audio streams to the given one.
-You can specify the audio sink using its index, but also using other strings that occur in its description:
-
-> system-control audio sink switch "headphone"
-
-> system-control audio sink switch "NVIDIA"`,
-	Args: cobra.ExactArgs(1),
+var SinkCmd = &cobra.Command{
+	Use:   "sink",
+	Short: "Show a list of all available sinks",
+	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		searchString := args[0]
-		//sinkIdx := findSinkPulse(searchString)
-		//switchSinkPulse(sinkIdx)
-		sink := audio.FindSinkPipewire(searchString)
-		audio.SwitchSinkPipewire(sink)
+		result, err := util.ExecCommand("pactl", "list", "sinks")
+		if err != nil {
+			log.Fatal(err)
+		}
+		print(result)
 	},
-}
-
-func init() {
-	sinkCmd.AddCommand(switchCmd)
 }

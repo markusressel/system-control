@@ -15,40 +15,40 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package audio
+package sink
 
 import (
+	"fmt"
 	"github.com/markusressel/system-control/internal/audio"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
-var incVolumeCmd = &cobra.Command{
-	Use:   "inc",
-	Short: "Increment audio volume",
-	Long:  ``,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		cardFlag := cmd.Flag("card")
-		card := cardFlag.Value.String()
-		cardInt, _ := strconv.Atoi(card)
+var activeCmd = &cobra.Command{
+	Use:   "active",
+	Short: "Get active sink index",
+	Long: `Get the index of the currently active sink, or check if a given text is part of the active sink:
 
-		channelFlag := cmd.Flag("channel")
-		channel := channelFlag.Value.String()
+> system-control audio sink active "headphone"
+1
 
-		volume := audio.GetVolume(cardInt, channel)
-		change := audio.CalculateAppropriateVolumeChange(volume, true)
-
-		activeSink := audio.FindActiveSinkPipewire("")
-
-		activeSinkSerial, err := strconv.Atoi(activeSink["object.serial"])
-		if err != nil {
-			return err
+> system-control audio sink active
+3`,
+	Args: cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		searchString := ""
+		if len(args) > 0 {
+			searchString = args[0]
 		}
-		return audio.SetVolumePipewire(activeSinkSerial, volume+change)
+
+		if len(searchString) > 0 {
+			fmt.Println(audio.ContainsActiveSinkPipewire(searchString))
+		} else {
+			sink := audio.FindActiveSinkPipewire(searchString)
+			fmt.Println(sink["id"])
+		}
 	},
 }
 
 func init() {
-	volumeCmd.AddCommand(incVolumeCmd)
-
+	SinkCmd.AddCommand(activeCmd)
 }

@@ -15,40 +15,25 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package audio
+package sink
 
 import (
-	"fmt"
 	"github.com/markusressel/system-control/internal/audio"
 	"github.com/spf13/cobra"
 )
 
-var activeCmd = &cobra.Command{
-	Use:   "active",
-	Short: "Get active sink index",
-	Long: `Get the index of the currently active sink, or check if a given text is part of the active sink:
+var nextCmd = &cobra.Command{
+	Use:   "next",
+	Short: "Switch to the next sink after the currently active one",
+	Long: `Switches the default audio sink and moves all existing audio streams to the next available one.
 
-> system-control audio sink active "headphone"
-1
-
-> system-control audio sink active
-3`,
-	Args: cobra.MaximumNArgs(1),
+> system-control audio sink next`,
+	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		searchString := ""
-		if len(args) > 0 {
-			searchString = args[0]
-		}
-
-		if len(searchString) > 0 {
-			fmt.Println(audio.ContainsActiveSinkPipewire(searchString))
-		} else {
-			sink := audio.FindActiveSinkPipewire(searchString)
-			fmt.Println(sink["id"])
-		}
+		audio.RotateActiveSinkPipewire(false)
 	},
 }
 
 func init() {
-	sinkCmd.AddCommand(activeCmd)
+	SinkCmd.AddCommand(nextCmd)
 }

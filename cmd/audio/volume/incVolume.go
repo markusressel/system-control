@@ -15,26 +15,17 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package audio
+package volume
 
 import (
 	"github.com/markusressel/system-control/internal/audio"
-	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/spf13/cobra"
 	"strconv"
 )
 
-type audioState struct {
-	OutputType string
-	Card       int
-	Channel    string
-	Volume     int
-	Muted      bool
-}
-
-var saveCmd = &cobra.Command{
-	Use:   "save",
-	Short: "Save the current state of the given audio channel",
+var IncVolumeCmd = &cobra.Command{
+	Use:   "inc",
+	Short: "Increment audio volume",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cardFlag := cmd.Flag("card")
@@ -44,23 +35,19 @@ var saveCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 
-		currentVolume := audio.GetVolume(cardInt, channel)
-		muted := audio.IsMuted(cardInt, channel)
+		volume := audio.GetVolume(cardInt, channel)
+		change := audio.CalculateAppropriateVolumeChange(volume, true)
 
-		key := computeKey(audio.IsHeadphoneConnected(), card, channel)
-		data := audioState{
-			OutputType: "OutputType",
-			Card:       cardInt,
-			Channel:    channel,
-			Volume:     currentVolume,
-			Muted:      muted,
+		activeSink := audio.FindActiveSinkPipewire("")
+
+		activeSinkSerial, err := strconv.Atoi(activeSink["object.serial"])
+		if err != nil {
+			return err
 		}
-		err := persistence.SaveStruct(key, &data)
-
-		return err
+		return audio.SetVolumePipewire(activeSinkSerial, volume+change)
 	},
 }
 
 func init() {
-	Command.AddCommand(saveCmd)
+	VolumeCmd.AddCommand(IncVolumeCmd)
 }

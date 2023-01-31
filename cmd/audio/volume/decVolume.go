@@ -15,28 +15,39 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package audio
+package volume
 
 import (
-	"github.com/markusressel/system-control/internal/util"
-	"log"
-
+	"github.com/markusressel/system-control/internal/audio"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
-var sinkCmd = &cobra.Command{
-	Use:   "sink",
-	Short: "Show a list of all available sinks",
+var decVolumeCmd = &cobra.Command{
+	Use:   "dec",
+	Short: "Decrement audio volume",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		result, err := util.ExecCommand("pactl", "list", "sinks")
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cardFlag := cmd.Flag("card")
+		card := cardFlag.Value.String()
+		cardInt, _ := strconv.Atoi(card)
+
+		channelFlag := cmd.Flag("channel")
+		channel := channelFlag.Value.String()
+
+		volume := audio.GetVolume(cardInt, channel)
+		change := audio.CalculateAppropriateVolumeChange(volume, false)
+
+		activeSink := audio.FindActiveSinkPipewire("")
+
+		activeSinkSerial, err := strconv.Atoi(activeSink["object.serial"])
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
-		print(result)
+		return audio.SetVolumePipewire(activeSinkSerial, volume-change)
 	},
 }
 
 func init() {
-	Command.AddCommand(sinkCmd)
+	VolumeCmd.AddCommand(decVolumeCmd)
 }

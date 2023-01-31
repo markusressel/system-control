@@ -18,11 +18,10 @@
 package audio
 
 import (
+	"github.com/markusressel/system-control/cmd/audio/sink"
+	"github.com/markusressel/system-control/cmd/audio/volume"
 	"github.com/spf13/cobra"
 )
-
-var Card string
-var Channel string
 
 var Command = &cobra.Command{
 	Use:              "audio",
@@ -32,17 +31,6 @@ var Command = &cobra.Command{
 }
 
 func init() {
-	Command.PersistentFlags().StringVarP(
-		&Card,
-		"card", "C",
-		"-1",
-		"Card Index",
-	)
-
-	Command.PersistentFlags().StringVarP(
-		&Channel,
-		"channel", "c",
-		"Master",
-		"Audio Channel",
-	)
+	Command.AddCommand(volume.VolumeCmd)
+	Command.AddCommand(sink.SinkCmd)
 }

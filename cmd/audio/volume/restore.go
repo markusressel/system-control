@@ -15,17 +15,18 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package audio
+package volume
 
 import (
 	"github.com/markusressel/system-control/internal/audio"
+	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/spf13/cobra"
 	"strconv"
 )
 
-var decVolumeCmd = &cobra.Command{
-	Use:   "dec",
-	Short: "Decrement audio volume",
+var restoreCmd = &cobra.Command{
+	Use:   "restore",
+	Short: "Restore the state of the given audio channel from a previous save",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cardFlag := cmd.Flag("card")
@@ -35,19 +36,33 @@ var decVolumeCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 
-		volume := audio.GetVolume(cardInt, channel)
-		change := audio.CalculateAppropriateVolumeChange(volume, false)
+		headphonesConnected := audio.IsHeadphoneConnected()
+		key := computeKey(headphonesConnected, card, channel)
 
-		activeSink := audio.FindActiveSinkPipewire("")
-
-		activeSinkSerial, err := strconv.Atoi(activeSink["object.serial"])
+		data := audioState{}
+		err := persistence.ReadStruct(key, &data)
 		if err != nil {
 			return err
 		}
-		return audio.SetVolumePipewire(activeSinkSerial, volume-change)
+
+		err = audio.SetMuted(cardInt, channel, data.Muted)
+		err = audio.SetVolume(cardInt, channel, data.Volume)
+
+		return err
 	},
 }
 
+func computeKey(headphonesConnected bool, card string, channel string) string {
+	var speakerType string
+	if headphonesConnected {
+		speakerType = "headphones"
+	} else {
+		speakerType = "speaker"
+	}
+
+	return speakerType + "_" + card + "_" + channel
+}
+
 func init() {
-	volumeCmd.AddCommand(decVolumeCmd)
+	VolumeCmd.AddCommand(restoreCmd)
 }

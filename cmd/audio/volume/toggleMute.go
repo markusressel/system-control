@@ -15,18 +15,17 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package audio
+package volume
 
 import (
 	"github.com/markusressel/system-control/internal/audio"
-	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/spf13/cobra"
 	"strconv"
 )
 
-var restoreCmd = &cobra.Command{
-	Use:   "restore",
-	Short: "Restore the state of the given audio channel from a previous save",
+var toggleMuteCmd = &cobra.Command{
+	Use:   "toggle-mute",
+	Short: "Toggle the Mute state",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cardFlag := cmd.Flag("card")
@@ -36,33 +35,11 @@ var restoreCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 
-		headphonesConnected := audio.IsHeadphoneConnected()
-		key := computeKey(headphonesConnected, Card, Channel)
-
-		data := audioState{}
-		err := persistence.ReadStruct(key, &data)
-		if err != nil {
-			return err
-		}
-
-		err = audio.SetMuted(cardInt, channel, data.Muted)
-		err = audio.SetVolume(cardInt, Channel, data.Volume)
-
-		return err
+		isMuted := audio.IsMuted(cardInt, channel)
+		return audio.SetMuted(cardInt, channel, !isMuted)
 	},
 }
 
-func computeKey(headphonesConnected bool, card string, channel string) string {
-	var speakerType string
-	if headphonesConnected {
-		speakerType = "headphones"
-	} else {
-		speakerType = "speaker"
-	}
-
-	return speakerType + "_" + card + "_" + channel
-}
-
 func init() {
-	Command.AddCommand(restoreCmd)
+	VolumeCmd.AddCommand(toggleMuteCmd)
 }

@@ -15,19 +15,20 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package audio
+package volume
 
 import (
-	"fmt"
 	"github.com/markusressel/system-control/internal/audio"
 	"github.com/spf13/cobra"
 	"strconv"
 )
 
-var volumeCmd = &cobra.Command{
-	Use:   "volume",
-	Short: "Show the current volume",
-	Run: func(cmd *cobra.Command, args []string) {
+var setVolumeCmd = &cobra.Command{
+	Use:   "set",
+	Short: "Set a specific volume",
+	Long:  ``,
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
 		cardFlag := cmd.Flag("card")
 		card := cardFlag.Value.String()
 		cardInt, _ := strconv.Atoi(card)
@@ -35,11 +36,14 @@ var volumeCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 
-		volume := audio.GetVolume(cardInt, channel)
-		fmt.Println(volume)
+		volume, err := strconv.Atoi(args[0])
+		if err != nil {
+			return err
+		}
+		return audio.SetVolume(cardInt, channel, volume)
 	},
 }
 
 func init() {
-	Command.AddCommand(volumeCmd)
+	VolumeCmd.AddCommand(setVolumeCmd)
 }

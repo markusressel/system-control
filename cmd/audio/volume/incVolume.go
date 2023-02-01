@@ -28,15 +28,22 @@ var IncVolumeCmd = &cobra.Command{
 	Short: "Increment audio volume",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cardFlag := cmd.Flag("card")
-		card := cardFlag.Value.String()
-		cardInt, _ := strconv.Atoi(card)
+		//cardFlag := cmd.Flag("card")
+		//card := cardFlag.Value.String()
+		//cardInt, _ := strconv.Atoi(card)
+		//
+		//channelFlag := cmd.Flag("channel")
+		//channel := channelFlag.Value.String()
+		//
+		//volume := audio.GetVolume(cardInt, channel)
+		//change := audio.CalculateAppropriateVolumeChange(float64(volume), true)
 
-		channelFlag := cmd.Flag("channel")
-		channel := channelFlag.Value.String()
-
-		volume := audio.GetVolume(cardInt, channel)
-		change := audio.CalculateAppropriateVolumeChange(volume, true)
+		volume, err := audio.GetVolumePipewire()
+		if err != nil {
+			return err
+		}
+		change := audio.CalculateAppropriateVolumeChange(volume, true) / 100.0
+		print(change)
 
 		activeSink := audio.GetActiveSinkPipewire()
 

@@ -1,6 +1,7 @@
 package audio
 
 import (
+	"errors"
 	"fmt"
 	"github.com/markusressel/system-control/internal/util"
 	"log"
@@ -63,42 +64,72 @@ func moveStreamToNode(streamId string, nodeId int) {
 	}
 }
 
-func GetVolumePipewire() int {
+func GetVolumePipewire() (float64, error) {
 	activeSink := GetActiveSinkPipewire()
 
 	activeSinkId, err := strconv.Atoi(activeSink["id"])
 	if err != nil {
-		println(err)
-		return -1
+		return -1, err
 	}
 	nodeDetails, err := getNodeParams(activeSinkId)
 	if err != nil {
-		return -1
+		return -1, err
 	}
-	property := findParamProperty(nodeDetails, "channelVolumes")
-	volume, err := strconv.Atoi(fmt.Sprint(property))
+	property, err := findParamProperty(nodeDetails, "channelVolumes")
 	if err != nil {
-		return -1
+		return -1, err
 	}
-	return volume
+
+	var volume float64
+
+	value := property.Value
+	switch value.(type) {
+	case []interface{}:
+		value = value.([]interface{})[0]
+	}
+
+	switch value.(type) {
+	case int:
+		volume = float64(value.(int))
+	case int32, int64:
+		volume = value.(float64)
+	case float64, float32:
+		typedValue := value.(float64)
+		volume = typedValue
+	default:
+		volume, err = strconv.ParseFloat(fmt.Sprint(value), 64)
+	}
+	if err != nil {
+		return -1, err
+	}
+	return volume, nil
 }
 
-func findParamProperty(details []PipewireObject, s string) PipewireProperty {
-	// TODO:
-	return PipewireProperty{
-		// TODO: in practive this will be an array with values for each channel
-		Value: 100,
+func findParamProperty(details []PipewireObject, s string) (PipewireProperty, error) {
+	for _, detail := range details {
+		for key, property := range detail.Properties {
+			if util.ContainsIgnoreCase(key, s) {
+				return property, nil
+			}
+		}
 	}
+
+	return PipewireProperty{}, errors.New("Unable to find property ")
 }
 
 // SetVolumePipewire sets the given volume to the given sink using pipewire
 // volume in percent
-func SetVolumePipewire(sinkId int, volume int) error {
+func SetVolumePipewire(sinkId int, volume float64) error {
 	//objects := getPipewireObjects(
 	//	PropertyFilter{"media.class", "Audio/Sink"},
 	//)
 
-	_, err := util.ExecCommand("pactl", "set-sink-volume", strconv.Itoa(sinkId), strconv.Itoa(volume)+"%")
+	_, err := util.ExecCommand(
+		"pactl",
+		"set-sink-volume",
+		strconv.Itoa(sinkId),
+		fmt.Sprint(volume),
+	)
 	return err
 }
 
@@ -347,19 +378,19 @@ func parsePipewireObjectPropertyValue(lines []string, endIndentation int) (value
 		key, rawValue := strings.TrimSpace(keyValue[0]), strings.TrimSpace(keyValue[1])
 
 		if key == "Bool" {
-			value, err = strconv.ParseBool(strings.TrimSpace(rawValue))
+			value, err = strconv.ParseBool(rawValue)
 			consumedLines = 1
 			break
 		} else if key == "Int" {
-			value, err = strconv.ParseInt(strings.TrimSpace(strings.TrimPrefix(trimmedLine, "Int")), 10, 32)
+			value, err = strconv.ParseInt(rawValue, 10, 32)
 			consumedLines = 1
 			break
 		} else if key == "Long" {
-			value, err = strconv.ParseInt(strings.TrimSpace(strings.TrimPrefix(trimmedLine, "Long")), 10, 64)
+			value, err = strconv.ParseInt(rawValue, 10, 64)
 			consumedLines = 1
 			break
 		} else if key == "Float" {
-			value, err = strconv.ParseFloat(strings.TrimSpace(strings.TrimPrefix(trimmedLine, "Float")), 64)
+			value, err = strconv.ParseFloat(rawValue, 64)
 			consumedLines = 1
 			break
 		} else if key == "String" {
@@ -379,6 +410,7 @@ func parsePipewireObjectPropertyValue(lines []string, endIndentation int) (value
 			consumedLines = consumedLines + subConsumedLines
 			break
 		} else {
+			log.Printf("Ignored line: %s", line)
 			consumedLines++
 		}
 	}
@@ -393,13 +425,12 @@ func parsePipewireObjectPropertyValue(lines []string, endIndentation int) (value
 func parsePipewireObjectPropertyValueArray(lines []string, endIndentation int) (value []interface{}, consumedLines int) {
 	consumedLines = 0
 	for consumedLines < len(lines) && util.CountLeadingSpace(lines[consumedLines]) > endIndentation {
-		line := lines[consumedLines]
+		//line := lines[consumedLines]
 		//trimmedLine := strings.TrimSpace(line)
 		//
 		//getPairsFromLine(trimmedLine)
-		arrayIndentation := util.CountLeadingSpace(line)
 
-		subValue, subConsumedLines := parsePipewireObjectPropertyValue(lines[consumedLines+1:len(lines)-1], arrayIndentation)
+		subValue, subConsumedLines := parsePipewireObjectPropertyValue(lines[consumedLines+1:len(lines)-1], endIndentation)
 		consumedLines = consumedLines + subConsumedLines
 
 		value = append(value, subValue)

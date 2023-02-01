@@ -6,7 +6,7 @@ func IsHeadphoneConnected() bool {
 }
 
 // Calculates an appropriate amount of volume change when the user did not specify a specific value.
-func CalculateAppropriateVolumeChange(current int, increase bool) int {
+func CalculateAppropriateVolumeChange(current float64, increase bool) float64 {
 	localCurrent := current
 
 	if !increase {

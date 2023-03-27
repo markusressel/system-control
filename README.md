@@ -8,8 +8,8 @@ On linux it can be cumbersome to do simple stuff via the command line, like f. e
 * increasing the display brightness
 * manage WiFi connections / Hotspots
 * graceful shutting/restart
-  In most cases these actions either require knowledge about a specific shell tool to do the job or even a custom-built
-  script.
+
+In most cases these actions either require knowledge about a specific shell tool to do the job or even a custom-built script.
 
 This project aims to simplify that by providing a command line tool that can do all the things mentioned above with a
 simple and easy to understand syntax.

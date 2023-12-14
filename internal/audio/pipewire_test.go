@@ -24,7 +24,8 @@ func TestFilterPipewireObjects(t *testing.T) {
 	input, err := os.ReadFile("../../test/pipewire/pw-cli_list-objects.txt")
 	assert.NoError(t, err)
 	filters := []PropertyFilter{
-		{key: "media.class", value: "Audio/Sink"},
+		{key: "media.class", value: "Audio/Device"},
+		{key: "id", value: "43"},
 	}
 
 	// WHEN

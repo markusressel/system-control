@@ -11,7 +11,7 @@ import (
 
 type PropertyFilter struct {
 	key   string
-	value interface{}
+	value string
 }
 
 // RotateActiveSinkPipewire switches the default sink and moves all existing sink inputs to the next available sink in the list
@@ -123,10 +123,15 @@ func findParamProperty(details []PipewireObject, s string) (PipewireProperty, er
 // volume in percent
 func SetVolumePipewire(deviceId int, volume float64) error {
 	objects := getPipewireObjects(
-		PropertyFilter{"media.class", "Audio/Sink"},
-		PropertyFilter{"id", deviceId},
+		PropertyFilter{"media.class", "Audio/Device"},
+		PropertyFilter{"id", strconv.Itoa(deviceId)},
 	)
 
+	route, err := getNodeRoutes(deviceId)
+	if err != nil {
+		return err
+	}
+	print(route[0].Properties["save"].Value)
 	print(objects[0]["id"])
 
 	routeIndex := 0
@@ -134,9 +139,9 @@ func SetVolumePipewire(deviceId int, volume float64) error {
 
 	muted := false
 	save := true
-	_, err := util.ExecCommand(
+	_, err = util.ExecCommand(
 		"pw-cli",
-		"s",
+		"set-param",
 		strconv.Itoa(deviceId),
 		"Route",
 		fmt.Sprintf("'{ index: %d, device: %d, props: { mute: %s, channelVolumes: [ %f, %f ] }, save: %s }'",
@@ -314,6 +319,15 @@ func getNodeParams(nodeId int) ([]PipewireObject, error) {
 	return params, nil
 }
 
+func getNodeRoutes(nodeId int) ([]PipewireObject, error) {
+	result, err := util.ExecCommand("pw-cli", "enum-params", strconv.Itoa(nodeId), "Route")
+	if err != nil {
+		return nil, err
+	}
+	params := parsePipwireParamsToMap(result)
+	return params, nil
+}
+
 type PipewireObject struct {
 	Size       int
 	Type       string
@@ -461,11 +475,10 @@ func parsePipewireObjectPropertyValueArray(lines []string, endIndentation int) (
 		//
 		//getPairsFromLine(trimmedLine)
 
-		subValue, subConsumedLines := parsePipewireObjectPropertyValue(lines[consumedLines+1:len(lines)-1], endIndentation)
+		subValue, subConsumedLines := parsePipewireObjectPropertyValue(lines[consumedLines:len(lines)-1], endIndentation)
 		consumedLines = consumedLines + subConsumedLines
 
 		value = append(value, subValue)
-		consumedLines++
 	}
 
 	return value, consumedLines

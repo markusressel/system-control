@@ -18,6 +18,7 @@
 package volume
 
 import (
+	"fmt"
 	"github.com/markusressel/system-control/internal/audio"
 	"github.com/spf13/cobra"
 	"strconv"
@@ -41,16 +42,21 @@ var decVolumeCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		change := audio.CalculateAppropriateVolumeChange(volume, true) / 100.0
-		print(change)
-
+		change := audio.CalculateAppropriateVolumeChange(volume*100, false) / 100.0
 		activeSink := audio.GetActiveSinkPipewire()
 
-		activeSinkSerial, err := strconv.Atoi(activeSink["object.serial"])
+		//activeSinkSerial, err := strconv.Atoi(activeSink["object.serial"])
+		activeSinkDeviceId, err := strconv.Atoi(activeSink["device.id"])
 		if err != nil {
 			return err
 		}
-		return audio.SetVolumePipewire(activeSinkSerial, volume-change)
+		err = audio.SetVolumePipewire(activeSinkDeviceId, volume-change)
+		if err != nil {
+			return err
+		}
+		newVolume, err := audio.GetVolumePipewire()
+		print(fmt.Sprintf("New volume: %f", newVolume))
+		return err
 	},
 }
 

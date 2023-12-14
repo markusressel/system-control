@@ -11,7 +11,7 @@ import (
 
 type PropertyFilter struct {
 	key   string
-	value string
+	value interface{}
 }
 
 // RotateActiveSinkPipewire switches the default sink and moves all existing sink inputs to the next available sink in the list
@@ -64,6 +64,8 @@ func moveStreamToNode(streamId string, nodeId int) {
 	}
 }
 
+// GetVolumePipewire returns the volume of the active sink
+// The volume is returned as a float value in [0..1]
 func GetVolumePipewire() (float64, error) {
 	activeSink := GetActiveSinkPipewire()
 
@@ -119,11 +121,40 @@ func findParamProperty(details []PipewireObject, s string) (PipewireProperty, er
 
 // SetVolumePipewire sets the given volume to the given sink using pipewire
 // volume in percent
-func SetVolumePipewire(sinkId int, volume float64) error {
-	//objects := getPipewireObjects(
-	//	PropertyFilter{"media.class", "Audio/Sink"},
-	//)
+func SetVolumePipewire(deviceId int, volume float64) error {
+	objects := getPipewireObjects(
+		PropertyFilter{"media.class", "Audio/Sink"},
+		PropertyFilter{"id", deviceId},
+	)
 
+	print(objects[0]["id"])
+
+	routeIndex := 0
+	cardProfileDevice := 0
+
+	muted := false
+	save := true
+	_, err := util.ExecCommand(
+		"pw-cli",
+		"s",
+		strconv.Itoa(deviceId),
+		"Route",
+		fmt.Sprintf("'{ index: %d, device: %d, props: { mute: %s, channelVolumes: [ %f, %f ] }, save: %s }'",
+			routeIndex,
+			cardProfileDevice,
+			strconv.FormatBool(muted),
+			volume,
+			volume,
+			strconv.FormatBool(save),
+		),
+	)
+
+	return err
+}
+
+// SetVolumePulseAudio sets the given volume to the given sink using PulseAudio
+// volume in percent
+func SetVolumePulseAudio(sinkId int, volume float64) error {
 	_, err := util.ExecCommand(
 		"pactl",
 		"set-sink-volume",

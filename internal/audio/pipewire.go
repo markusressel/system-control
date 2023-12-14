@@ -443,7 +443,6 @@ func parsePipewireObjectPropertyValue(lines []string, endIndentation int) (value
 			consumedLines = 1
 			break
 		} else if key == "Array:" {
-			// TODO:
 			_value, subConsumedLines := parsePipewireObjectPropertyValueArray(lines[consumedLines+1:len(lines)-1], propertyIndentation)
 			value = _value
 			consumedLines = consumedLines + subConsumedLines
@@ -470,11 +469,6 @@ func parsePipewireObjectPropertyValue(lines []string, endIndentation int) (value
 func parsePipewireObjectPropertyValueArray(lines []string, endIndentation int) (value []interface{}, consumedLines int) {
 	consumedLines = 0
 	for consumedLines < len(lines) && util.CountLeadingSpace(lines[consumedLines]) > endIndentation {
-		//line := lines[consumedLines]
-		//trimmedLine := strings.TrimSpace(line)
-		//
-		//getPairsFromLine(trimmedLine)
-
 		subValue, subConsumedLines := parsePipewireObjectPropertyValue(lines[consumedLines:len(lines)-1], endIndentation)
 		consumedLines = consumedLines + subConsumedLines
 

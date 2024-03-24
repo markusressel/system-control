@@ -50,7 +50,8 @@ var decVolumeCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		err = audio.SetVolumePipewire(activeSinkDeviceId, volume-change)
+		targetVolume := volume - change
+		err = audio.SetVolumePipewire(activeSinkDeviceId, targetVolume)
 		if err != nil {
 			return err
 		}

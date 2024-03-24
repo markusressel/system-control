@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/markusressel/system-control/internal/util"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -104,6 +105,7 @@ func GetVolumePipewire() (float64, error) {
 	if err != nil {
 		return -1, err
 	}
+	volume = math.Cbrt(volume)
 	return volume, nil
 }
 
@@ -134,8 +136,20 @@ func SetVolumePipewire(deviceId int, volume float64) error {
 	print(route[0].Properties["save"].Value)
 	print(objects[0]["id"])
 
-	routeIndex := 0
-	cardProfileDevice := 0
+	// index and deviceId are properties of the route
+	// index 2 is "analog-output-speaker" on M16
+	// device 7 is a property of the route with index 2 on M16
+	routeIndex := 2
+	cardProfileDevice := 7
+
+	// TODO: which route is the correct one?
+
+	if volume < 0 {
+		volume = 0
+	} else if volume > 1 {
+		volume = 1
+	}
+	volumeCubicRoot := math.Pow(volume, 3)
 
 	muted := false
 	save := true
@@ -144,12 +158,12 @@ func SetVolumePipewire(deviceId int, volume float64) error {
 		"set-param",
 		strconv.Itoa(deviceId),
 		"Route",
-		fmt.Sprintf("'{ index: %d, device: %d, props: { mute: %s, channelVolumes: [ %f, %f ] }, save: %s }'",
+		fmt.Sprintf("{ index: %d, device: %d, props: { mute: %s, channelVolumes: [ %f, %f ] }, save: %s }",
 			routeIndex,
 			cardProfileDevice,
 			strconv.FormatBool(muted),
-			volume,
-			volume,
+			volumeCubicRoot,
+			volumeCubicRoot,
 			strconv.FormatBool(save),
 		),
 	)
@@ -324,6 +338,9 @@ func getNodeRoutes(nodeId int) ([]PipewireObject, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO: on my laptop there should be two routes
+
 	params := parsePipwireParamsToMap(result)
 	return params, nil
 }
@@ -344,12 +361,22 @@ type PipewireProperty struct {
 type ObjectProperties map[string]PipewireProperty
 
 func parsePipwireParamsToMap(input string) []PipewireObject {
+	lines := strings.Split(input, "\n")
+	result, _ := parsePipewireObjects(lines, -1)
+	return result
+}
+
+func parsePipewireObjects(lines []string, endIndentation int) ([]PipewireObject, int) {
+	var err error
+	var consumedLines int
 	result := make([]PipewireObject, 0, 1000)
 
-	lines := strings.Split(input, "\n")
+	// TODO: this currently also seems to parse nested objects, which is
+	//  not entirely wrong, but they nested objects should not be part of the result here,
+	//  but property values of the parent object instead
 
 	i := 0
-	for i < len(lines) {
+	for i < len(lines) && util.CountLeadingSpace(lines[i]) > endIndentation {
 		line := lines[i]
 		trimmedLine := strings.TrimSpace(line)
 
@@ -362,23 +389,31 @@ func parsePipwireParamsToMap(input string) []PipewireObject {
 			objectProperties := parsePipewireObjectProperties(lines[i+1:], objectIndentation)
 
 			// construct object
-			pipewireObject := PipewireObject{
+			object := PipewireObject{
 				Id:         objectParams["id"],
 				Type:       objectParams["type"],
 				Size:       objectSize,
 				Properties: objectProperties,
 			}
-			result = append(result, pipewireObject)
+
+			consumedLines = i
+			result = append(result, object)
 		}
 
 		i++
 	}
 
-	return result
+	if err != nil {
+		panic(err)
+	}
+
+	return result, consumedLines
 }
 
 func parsePipewireObjectProperties(lines []string, endIndentation int) ObjectProperties {
 	result := make(ObjectProperties)
+
+	//result = parsePipewireObjectPropertyValue(lines, endIndentation)
 
 	i := 0
 	for i < len(lines) && util.CountLeadingSpace(lines[i]) > endIndentation {
@@ -453,6 +488,11 @@ func parsePipewireObjectPropertyValue(lines []string, endIndentation int) (value
 			value = _value
 			consumedLines = consumedLines + subConsumedLines
 			break
+		} else if key == "Object:" {
+			_value, subConsumedLines := parsePipewireObject(lines[consumedLines:len(lines)-1], propertyIndentation)
+			value = _value
+			consumedLines = consumedLines + subConsumedLines
+			break
 		} else {
 			log.Printf("Ignored line: %s", line)
 			consumedLines++
@@ -481,6 +521,31 @@ func parsePipewireObjectPropertyValueArray(lines []string, endIndentation int) (
 func parsePipewireObjectPropertyValueStruct(lines []string, endIndentation int) (value map[string]interface{}, consumedLines int) {
 	// TODO:
 	return map[string]interface{}{}, 0
+}
+
+func parsePipewireObject(lines []string, endIndentation int) (value PipewireObject, consumedLines int) {
+	i := 0
+	for i < len(lines) && util.CountLeadingSpace(lines[i]) > endIndentation {
+		line := lines[i]
+		trimmedLine := strings.TrimSpace(line)
+
+		objectParams := getPairsFromLine(strings.TrimPrefix(trimmedLine, "Object:"))
+		objectSize, _ := strconv.Atoi(objectParams["size"])
+
+		// properties
+		objectIndentation := util.CountLeadingSpace(line)
+		objectProperties := parsePipewireObjectProperties(lines[i+1:], objectIndentation)
+
+		// construct object
+		value = PipewireObject{
+			Id:         objectParams["id"],
+			Type:       objectParams["type"],
+			Size:       objectSize,
+			Properties: objectProperties,
+		}
+
+	}
+	return value, consumedLines
 }
 
 func getPairsFromLine(line string) map[string]string {

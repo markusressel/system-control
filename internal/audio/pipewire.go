@@ -65,16 +65,38 @@ func moveStreamToNode(streamId string, nodeId int) {
 	}
 }
 
-// GetVolumePipewire returns the volume of the active sink
+// GetVolumePipewireByName returns the volume of the with the given name.
+// The name must be part of the "node.name" or "node.description" property.
+// If the name is empty, the volume of the active sink is returned.
 // The volume is returned as a float value in [0..1]
-func GetVolumePipewire() (float64, error) {
-	activeSink := GetActiveSinkPipewire()
-
-	activeSinkId, err := strconv.Atoi(activeSink["id"])
-	if err != nil {
-		return -1, err
+func GetVolumePipewireByName(name string) (float64, error) {
+	var sinkId int
+	if name == "" {
+		activeSink := GetActiveSinkPipewire()
+		activeSinkId, err := strconv.Atoi(activeSink["id"])
+		if err != nil {
+			return -1, err
+		}
+		sinkId = activeSinkId
+	} else {
+		sink := FindSinkPipewire(name)
+		if sink == nil {
+			return -1, errors.New("Sink not found")
+		}
+		targetSinkId, err := strconv.Atoi(sink["id"])
+		if err != nil {
+			return -1, err
+		}
+		sinkId = targetSinkId
 	}
-	nodeDetails, err := getNodeParams(activeSinkId)
+
+	return GetVolumePipewireBySink(sinkId)
+}
+
+// GetVolumePipewireBySink returns the volume of the sink with the given sinkId
+// The volume is returned as a float value in [0..1]
+func GetVolumePipewireBySink(sinkId int) (float64, error) {
+	nodeDetails, err := getNodeParams(sinkId)
 	if err != nil {
 		return -1, err
 	}
@@ -109,37 +131,57 @@ func GetVolumePipewire() (float64, error) {
 	return volume, nil
 }
 
+// GetVolumePipewire returns the volume of the active sink
+// The volume is returned as a float value in [0..1]
+func GetVolumePipewire() (float64, error) {
+	return GetVolumePipewireByName("")
+}
+
 func findParamProperty(details []PipewireObject, s string) (PipewireProperty, error) {
 	for _, detail := range details {
-		for key, property := range detail.Properties {
-			if util.ContainsIgnoreCase(key, s) {
-				return property, nil
-			}
+		property, err := findParamProperty1(detail, s)
+		if err != nil {
+			return PipewireProperty{}, err
+		}
+		if property != nil {
+			return *property, nil
 		}
 	}
 
 	return PipewireProperty{}, errors.New("Unable to find property ")
 }
 
+func findParamProperty1(details PipewireObject, s string) (*PipewireProperty, error) {
+	for key, property := range details.Properties {
+		if util.ContainsIgnoreCase(key, s) {
+			return &property, nil
+		}
+	}
+	return &PipewireProperty{}, errors.New("Unable to find property ")
+}
+
 // SetVolumePipewire sets the given volume to the given sink using pipewire
 // volume in percent
 func SetVolumePipewire(deviceId int, volume float64) error {
-	objects := getPipewireObjects(
-		PropertyFilter{"media.class", "Audio/Device"},
-		PropertyFilter{"id", strconv.Itoa(deviceId)},
-	)
-
 	route, err := getNodeRoutes(deviceId)
 	if err != nil {
 		return err
 	}
-	print(route[0].Properties["save"].Value)
-	print(objects[0]["id"])
+	// TODO: find default route of this device, since it might not be the first one
+	indexProperty, err := findParamProperty1(route[0], "index")
+	if err != nil {
+		return err
+	}
+
+	//objects := getPipewireObjects(
+	//	PropertyFilter{"media.class", "Audio/Device"},
+	//	PropertyFilter{"id", strconv.Itoa(deviceId)},
+	//)
 
 	// index and deviceId are properties of the route
 	// index 2 is "analog-output-speaker" on M16
 	// device 7 is a property of the route with index 2 on M16
-	routeIndex := 2
+	routeIndex := indexProperty.Value
 	cardProfileDevice := 7
 
 	// TODO: which route is the correct one?
@@ -226,7 +268,7 @@ func FindSinkPipewire(text string) map[string]string {
 		PropertyFilter{"media.class", "Audio/Sink"},
 	)
 	for _, item := range objects {
-		if util.ContainsIgnoreCase(item["node.description"], text) {
+		if util.ContainsIgnoreCase(item["node.name"], text) || util.ContainsIgnoreCase(item["node.description"], text) {
 			return item
 		}
 	}

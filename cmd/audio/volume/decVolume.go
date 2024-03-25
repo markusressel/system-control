@@ -29,15 +29,6 @@ var decVolumeCmd = &cobra.Command{
 	Short: "Decrement audio volume",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		//cardFlag := cmd.Flag("card")
-		//card := cardFlag.Value.String()
-		//cardInt, _ := strconv.Atoi(card)
-		//
-		//channelFlag := cmd.Flag("channel")
-		//channel := channelFlag.Value.String()
-
-		//volume := audio.GetVolume(cardInt, channel)
-
 		volume, err := audio.GetVolumePipewire()
 		if err != nil {
 			return err
@@ -45,7 +36,6 @@ var decVolumeCmd = &cobra.Command{
 		change := audio.CalculateAppropriateVolumeChange(volume*100, false) / 100.0
 		activeSink := audio.GetActiveSinkPipewire()
 
-		//activeSinkSerial, err := strconv.Atoi(activeSink["object.serial"])
 		activeSinkDeviceId, err := strconv.Atoi(activeSink["device.id"])
 		if err != nil {
 			return err
@@ -56,7 +46,8 @@ var decVolumeCmd = &cobra.Command{
 			return err
 		}
 		newVolume, err := audio.GetVolumePipewire()
-		print(fmt.Sprintf("New volume: %f", newVolume))
+		volumeAsInt := (int)(newVolume * 100)
+		fmt.Println(volumeAsInt)
 		return err
 	},
 }

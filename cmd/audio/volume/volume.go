@@ -23,25 +23,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var card string
-var channel string
+var name string
 
 var VolumeCmd = &cobra.Command{
 	Use:   "volume",
 	Short: "Show the current volume",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		//cardFlag := cmd.Flag("card")
-		//card := cardFlag.Value.String()
-		//cardInt, _ := strconv.Atoi(card)
-		//
-		//channelFlag := cmd.Flag("channel")
-		//channel := channelFlag.Value.String()
-		//
-		//volume := audio.GetVolume(cardInt, channel)
+		nameFlag := cmd.Flag("name")
+		name := nameFlag.Value.String()
 
-		volume, error := audio.GetVolumePipewire()
-		if error != nil {
-			return error
+		volume, err := audio.GetVolumePipewireByName(name)
+		if err != nil {
+			return err
 		}
 		volumeAsInt := (int)(volume * 100)
 		fmt.Println(volumeAsInt)
@@ -51,16 +44,9 @@ var VolumeCmd = &cobra.Command{
 
 func init() {
 	VolumeCmd.PersistentFlags().StringVarP(
-		&card,
-		"card", "C",
-		"-1",
-		"Card Index",
-	)
-
-	VolumeCmd.PersistentFlags().StringVarP(
-		&channel,
-		"channel", "c",
-		"Master",
-		"Audio Channel",
+		&name,
+		"name", "N",
+		"",
+		"Sink Name/Description",
 	)
 }

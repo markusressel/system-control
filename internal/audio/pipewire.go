@@ -494,7 +494,7 @@ func parsePipewireObjectPropertyValue(lines []string, endIndentation int) (value
 			consumedLines = consumedLines + subConsumedLines
 			break
 		} else {
-			log.Printf("Ignored line: %s", line)
+			// log.Printf("Ignored line: %s", line)
 			consumedLines++
 		}
 	}

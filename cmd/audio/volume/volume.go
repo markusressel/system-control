@@ -43,7 +43,8 @@ var VolumeCmd = &cobra.Command{
 		if error != nil {
 			return error
 		}
-		fmt.Println(volume)
+		volumeAsInt := (int)(volume * 100)
+		fmt.Println(volumeAsInt)
 		return nil
 	},
 }

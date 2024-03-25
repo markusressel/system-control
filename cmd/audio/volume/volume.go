@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"github.com/markusressel/system-control/internal/audio"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
 var card string
@@ -30,16 +29,22 @@ var channel string
 var VolumeCmd = &cobra.Command{
 	Use:   "volume",
 	Short: "Show the current volume",
-	Run: func(cmd *cobra.Command, args []string) {
-		cardFlag := cmd.Flag("card")
-		card := cardFlag.Value.String()
-		cardInt, _ := strconv.Atoi(card)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		//cardFlag := cmd.Flag("card")
+		//card := cardFlag.Value.String()
+		//cardInt, _ := strconv.Atoi(card)
+		//
+		//channelFlag := cmd.Flag("channel")
+		//channel := channelFlag.Value.String()
+		//
+		//volume := audio.GetVolume(cardInt, channel)
 
-		channelFlag := cmd.Flag("channel")
-		channel := channelFlag.Value.String()
-
-		volume := audio.GetVolume(cardInt, channel)
+		volume, error := audio.GetVolumePipewire()
+		if error != nil {
+			return error
+		}
 		fmt.Println(volume)
+		return nil
 	},
 }
 

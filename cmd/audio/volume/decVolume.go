@@ -29,19 +29,28 @@ var decVolumeCmd = &cobra.Command{
 	Short: "Decrement audio volume",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		volume, err := audio.GetVolumePipewire()
+		nameFlag := cmd.Flag("name")
+		name := nameFlag.Value.String()
+
+		volume, err := audio.GetVolumePipewireByName(name)
 		if err != nil {
 			return err
 		}
 		change := audio.CalculateAppropriateVolumeChange(volume*100, false) / 100.0
-		activeSink := audio.GetActiveSinkPipewire()
 
-		activeSinkDeviceId, err := strconv.Atoi(activeSink["device.id"])
+		var targetSink map[string]string
+		if name == "" {
+			targetSink = audio.GetActiveSinkPipewire()
+		} else {
+			targetSink = audio.GetSinkByName(name)
+		}
+
+		targetSinkDeviceId, err := strconv.Atoi(targetSink["device.id"])
 		if err != nil {
 			return err
 		}
 		targetVolume := volume - change
-		err = audio.SetVolumePipewire(activeSinkDeviceId, targetVolume)
+		err = audio.SetVolumePipewire(targetSinkDeviceId, targetVolume)
 		if err != nil {
 			return err
 		}

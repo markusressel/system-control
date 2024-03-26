@@ -139,7 +139,7 @@ func GetVolumePipewire() (float64, error) {
 
 func findParamProperty(details []PipewireObject, s string) (PipewireProperty, error) {
 	for _, detail := range details {
-		property, err := findParamProperty1(detail, s)
+		property, err := detail.findParamProperty1(s)
 		if err != nil {
 			return PipewireProperty{}, err
 		}
@@ -151,64 +151,72 @@ func findParamProperty(details []PipewireObject, s string) (PipewireProperty, er
 	return PipewireProperty{}, errors.New("Unable to find property ")
 }
 
-func findParamProperty1(details PipewireObject, s string) (*PipewireProperty, error) {
-	for key, property := range details.Properties {
-		if util.ContainsIgnoreCase(key, s) {
-			return &property, nil
-		}
-	}
-	return &PipewireProperty{}, errors.New("Unable to find property ")
+func (p *PipewireObject) findParamProperty1(s string) (*PipewireProperty, error) {
+	return p.GetProperty(s)
 }
 
 // SetVolumePipewire sets the given volume to the given sink using pipewire
 // volume in percent
 func SetVolumePipewire(deviceId int, volume float64) error {
-	route, err := getNodeRoutes(deviceId)
+	routes, err := getNodeRoutes(deviceId)
 	if err != nil {
 		return err
 	}
+
 	// TODO: find default route of this device, since it might not be the first one
-	indexProperty, err := findParamProperty1(route[0], "index")
-	if err != nil {
-		return err
-	}
-
-	//objects := getPipewireObjects(
-	//	PropertyFilter{"media.class", "Audio/Device"},
-	//	PropertyFilter{"id", strconv.Itoa(deviceId)},
-	//)
-
-	// index and deviceId are properties of the route
-	// index 2 is "analog-output-speaker" on M16
-	// device 7 is a property of the route with index 2 on M16
-	routeIndex := indexProperty.Value
-	cardProfileDevice := 7
-
 	// TODO: which route is the correct one?
 
-	if volume < 0 {
-		volume = 0
-	} else if volume > 1 {
-		volume = 1
-	}
-	volumeCubicRoot := math.Pow(volume, 3)
+	for _, route := range routes {
+		currentRoute := route
 
-	muted := false
-	save := true
-	_, err = util.ExecCommand(
-		"pw-cli",
-		"set-param",
-		strconv.Itoa(deviceId),
-		"Route",
-		fmt.Sprintf("{ index: %d, device: %d, props: { mute: %s, channelVolumes: [ %f, %f ] }, save: %s }",
-			routeIndex,
-			cardProfileDevice,
-			strconv.FormatBool(muted),
-			volumeCubicRoot,
-			volumeCubicRoot,
-			strconv.FormatBool(save),
-		),
-	)
+		indexProperty, err := currentRoute.findParamProperty1("index")
+		if err != nil {
+			continue
+		}
+
+		deviceProperty, err := currentRoute.findParamProperty1("device")
+		if err != nil {
+			continue
+		}
+
+		//objects := getPipewireObjects(
+		//	PropertyFilter{"media.class", "Audio/Device"},
+		//	PropertyFilter{"id", strconv.Itoa(deviceId)},
+		//)
+
+		// index and deviceId are properties of the route
+		// index 2 is "analog-output-speaker" on M16
+		// device 7 is a property of the route with index 2 on M16
+		routeIndex := indexProperty.Value
+		cardProfileDevice := deviceProperty.Value
+
+		if volume < 0 {
+			volume = 0
+		} else if volume > 1 {
+			volume = 1
+		}
+		volumeCubicRoot := math.Pow(volume, 3)
+
+		muted := false
+		save := true
+		_, err = util.ExecCommand(
+			"pw-cli",
+			"set-param",
+			strconv.Itoa(deviceId),
+			"Route",
+			fmt.Sprintf("{ index: %d, device: %d, props: { mute: %s, channelVolumes: [ %f, %f ] }, save: %s }",
+				routeIndex,
+				cardProfileDevice,
+				strconv.FormatBool(muted),
+				volumeCubicRoot,
+				volumeCubicRoot,
+				strconv.FormatBool(save),
+			),
+		)
+		if err != nil {
+			continue
+		}
+	}
 
 	return err
 }
@@ -225,24 +233,26 @@ func SetVolumePulseAudio(sinkId int, volume float64) error {
 	return err
 }
 
+func GetSinkByName(name string) map[string]string {
+	objects := getPipewireObjects(
+		PropertyFilter{"media.class", "Audio/Sink"},
+	)
+	for _, item := range objects {
+		if util.ContainsIgnoreCase(item["node.name"], name) || util.ContainsIgnoreCase(item["node.description"], name) {
+			return item
+		}
+	}
+
+	return nil
+}
+
 // GetActiveSinkPipewire returns the index of the active sink
 func GetActiveSinkPipewire() map[string]string {
 	currentDefaultSinkName, err := util.ExecCommand("pactl", "get-default-sink")
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	var activeSink map[string]string
-	objects := getPipewireObjects(
-		PropertyFilter{"media.class", "Audio/Sink"},
-	)
-	for _, item := range objects {
-		if util.ContainsIgnoreCase(item["node.name"], currentDefaultSinkName) {
-			activeSink = item
-		}
-	}
-
-	return activeSink
+	return GetSinkByName(currentDefaultSinkName)
 }
 
 // ContainsActiveSinkPipewire returns
@@ -398,6 +408,16 @@ type PipewireProperty struct {
 	Key   string
 	Flags string
 	Value interface{}
+}
+
+func (p *PipewireObject) GetProperty(name string) (*PipewireProperty, error) {
+	for key, property := range p.Properties {
+		keyParts := strings.Split(key, ":")
+		if util.EqualsIgnoreCase(keyParts[len(keyParts)-1], name) {
+			return &property, nil
+		}
+	}
+	return nil, errors.New("Property not found")
 }
 
 type ObjectProperties map[string]PipewireProperty

@@ -20,6 +20,7 @@ package volume
 import (
 	"fmt"
 	"github.com/markusressel/system-control/internal/audio"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -29,24 +30,35 @@ var IncVolumeCmd = &cobra.Command{
 	Short: "Increment audio volume",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		volume, err := audio.GetVolumePipewire()
+		nameFlag := cmd.Flag("name")
+		name := nameFlag.Value.String()
+
+		volume, err := audio.GetVolumePipewireByName(name)
+		volume = util.RoundToTwoDecimals(volume)
 		if err != nil {
 			return err
 		}
 		change := audio.CalculateAppropriateVolumeChange(volume*100, true) / 100.0
-		activeSink := audio.GetActiveSinkPipewire()
 
-		activeSinkDeviceId, err := strconv.Atoi(activeSink["device.id"])
+		var targetSink map[string]string
+		if name == "" {
+			targetSink = audio.GetActiveSinkPipewire()
+		} else {
+			targetSink = audio.GetSinkByName(name)
+		}
+
+		targetSinkDeviceId, err := strconv.Atoi(targetSink["device.id"])
 		if err != nil {
 			return err
 		}
 		targetVolume := volume + change
-		err = audio.SetVolumePipewire(activeSinkDeviceId, targetVolume)
+		err = audio.SetVolumePipewire(targetSinkDeviceId, targetVolume)
 		if err != nil {
 			return err
 		}
 		newVolume, err := audio.GetVolumePipewire()
-		print(fmt.Sprintf("New volume: %f", newVolume))
+		volumeAsInt := (int)(newVolume * 100)
+		fmt.Println(volumeAsInt)
 		return err
 	},
 }

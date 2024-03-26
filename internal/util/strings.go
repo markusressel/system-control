@@ -2,6 +2,10 @@ package util
 
 import "strings"
 
+func EqualsIgnoreCase(s string, substr string) bool {
+	return strings.Compare(strings.ToLower(s), strings.ToLower(substr)) == 0
+}
+
 func ContainsIgnoreCase(s string, substr string) bool {
 	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }

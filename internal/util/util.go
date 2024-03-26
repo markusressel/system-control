@@ -19,6 +19,7 @@ package util
 
 import (
 	"log"
+	"math"
 	"os"
 	"regexp"
 )
@@ -44,4 +45,8 @@ func FindOpenWindows() []string {
 	r := regexp.MustCompile("(0x[0-9a-f]+) +(\\d+) +(" + hostname + "|N/A) +(.*)")
 	matches := r.FindAllString(result, -1)
 	return matches
+}
+
+func RoundToTwoDecimals(number float64) float64 {
+	return math.Round(number*100) / 100
 }

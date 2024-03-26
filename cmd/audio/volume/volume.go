@@ -20,6 +20,7 @@ package volume
 import (
 	"fmt"
 	"github.com/markusressel/system-control/internal/audio"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -36,6 +37,7 @@ var VolumeCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		volume = util.RoundToTwoDecimals(volume)
 		volumeAsInt := (int)(volume * 100)
 		fmt.Println(volumeAsInt)
 		return nil

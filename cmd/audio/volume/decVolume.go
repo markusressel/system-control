@@ -20,6 +20,7 @@ package volume
 import (
 	"fmt"
 	"github.com/markusressel/system-control/internal/audio"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -55,6 +56,7 @@ var decVolumeCmd = &cobra.Command{
 			return err
 		}
 		newVolume, err := audio.GetVolumePipewire()
+		newVolume = util.RoundToTwoDecimals(newVolume)
 		volumeAsInt := (int)(newVolume * 100)
 		fmt.Println(volumeAsInt)
 		return err

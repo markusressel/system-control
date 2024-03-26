@@ -57,6 +57,7 @@ var IncVolumeCmd = &cobra.Command{
 			return err
 		}
 		newVolume, err := audio.GetVolumePipewire()
+		newVolume = util.RoundToTwoDecimals(newVolume)
 		volumeAsInt := (int)(newVolume * 100)
 		fmt.Println(volumeAsInt)
 		return err

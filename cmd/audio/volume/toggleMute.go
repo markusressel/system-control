@@ -18,6 +18,7 @@
 package volume
 
 import (
+	"fmt"
 	"github.com/markusressel/system-control/internal/audio"
 	"github.com/spf13/cobra"
 	"strconv"
@@ -28,15 +29,24 @@ var toggleMuteCmd = &cobra.Command{
 	Short: "Toggle the Mute state",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cardFlag := cmd.Flag("card")
-		card := cardFlag.Value.String()
-		cardInt, _ := strconv.Atoi(card)
+		nameFlag := cmd.Flag("name")
+		name := nameFlag.Value.String()
 
-		channelFlag := cmd.Flag("channel")
-		channel := channelFlag.Value.String()
-
-		isMuted := audio.IsMuted(cardInt, channel)
-		return audio.SetMuted(cardInt, channel, !isMuted)
+		var targetSink map[string]string
+		if name == "" {
+			targetSink = audio.GetActiveSinkPipewire()
+		} else {
+			targetSink = audio.GetSinkByName(name)
+		}
+		sinkId, err := strconv.Atoi(targetSink["id"])
+		targetSinkDeviceId, err := strconv.Atoi(targetSink["device.id"])
+		isMuted := audio.IsMutedPipewire(sinkId)
+		if err != nil {
+			return err
+		}
+		err = audio.SetMutedPipewire(targetSinkDeviceId, !isMuted)
+		fmt.Println(sinkId)
+		return nil
 	},
 }
 

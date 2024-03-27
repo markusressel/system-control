@@ -33,13 +33,20 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cardFlag := cmd.Flag("card")
-		card := cardFlag.Value.String()
-		cardInt, _ := strconv.Atoi(card)
+		nameFlag := cmd.Flag("name")
+		name := nameFlag.Value.String()
 
-		channelFlag := cmd.Flag("channel")
-		channel := channelFlag.Value.String()
-		return audio.SetMuted(cardInt, channel, true)
+		var targetSink map[string]string
+		if name == "" {
+			targetSink = audio.GetActiveSinkPipewire()
+		} else {
+			targetSink = audio.GetSinkByName(name)
+		}
+		targetSinkDeviceId, err := strconv.Atoi(targetSink["device.id"])
+		if err != nil {
+			return err
+		}
+		return audio.SetMutedPipewire(targetSinkDeviceId, true)
 	},
 }
 

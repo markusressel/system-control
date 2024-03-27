@@ -28,13 +28,20 @@ var unmuteCmd = &cobra.Command{
 	Short: "Unmute system audio",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cardFlag := cmd.Flag("card")
-		card := cardFlag.Value.String()
-		cardInt, _ := strconv.Atoi(card)
+		nameFlag := cmd.Flag("name")
+		name := nameFlag.Value.String()
 
-		channelFlag := cmd.Flag("channel")
-		channel := channelFlag.Value.String()
-		return audio.SetMuted(cardInt, channel, false)
+		var targetSink map[string]string
+		if name == "" {
+			targetSink = audio.GetActiveSinkPipewire()
+		} else {
+			targetSink = audio.GetSinkByName(name)
+		}
+		targetSinkDeviceId, err := strconv.Atoi(targetSink["device.id"])
+		if err != nil {
+			return err
+		}
+		return audio.SetMutedPipewire(targetSinkDeviceId, false)
 	},
 }
 

@@ -221,6 +221,62 @@ func SetVolumePipewire(deviceId int, volume float64) error {
 	return err
 }
 
+// SetMutedPipewire sets the given volume to the given sink using pipewire
+// volume in percent
+func SetMutedPipewire(deviceId int, muted bool) error {
+	routes, err := getNodeRoutes(deviceId)
+	if err != nil {
+		return err
+	}
+
+	// TODO: find default route of this device, since it might not be the first one
+	// TODO: which route is the correct one?
+
+	for _, route := range routes {
+		currentRoute := route
+
+		indexProperty, err := currentRoute.findParamProperty1("index")
+		if err != nil {
+			continue
+		}
+
+		deviceProperty, err := currentRoute.findParamProperty1("device")
+		if err != nil {
+			continue
+		}
+
+		//objects := getPipewireObjects(
+		//	PropertyFilter{"media.class", "Audio/Device"},
+		//	PropertyFilter{"id", strconv.Itoa(deviceId)},
+		//)
+
+		// index and deviceId are properties of the route
+		// index 2 is "analog-output-speaker" on M16
+		// device 7 is a property of the route with index 2 on M16
+		routeIndex := indexProperty.Value
+		cardProfileDevice := deviceProperty.Value
+
+		save := true
+		_, err = util.ExecCommand(
+			"pw-cli",
+			"set-param",
+			strconv.Itoa(deviceId),
+			"Route",
+			fmt.Sprintf("{ index: %d, device: %d, props: { mute: %s, save: %s }",
+				routeIndex,
+				cardProfileDevice,
+				strconv.FormatBool(muted),
+				strconv.FormatBool(save),
+			),
+		)
+		if err != nil {
+			continue
+		}
+	}
+
+	return err
+}
+
 // SetVolumePulseAudio sets the given volume to the given sink using PulseAudio
 // volume in percent
 func SetVolumePulseAudio(sinkId int, volume float64) error {
@@ -244,6 +300,10 @@ func GetSinkByName(name string) map[string]string {
 	}
 
 	return nil
+}
+
+type Sink struct {
+	properties map[string]string
 }
 
 // GetActiveSinkPipewire returns the index of the active sink
@@ -272,7 +332,7 @@ func ContainsActiveSinkPipewire(text string) int {
 	}
 }
 
-// FindSinkPipewire returns the index of a sink that contains the given text
+// FindSinkPipewire returns the sink that contains the given text
 func FindSinkPipewire(text string) map[string]string {
 	objects := getPipewireObjects(
 		PropertyFilter{"media.class", "Audio/Sink"},
@@ -284,17 +344,6 @@ func FindSinkPipewire(text string) map[string]string {
 	}
 
 	return nil
-}
-
-func SetMutedPipewire(sinkId int, channel string, muted bool) error {
-	var targetState int
-	if muted {
-		targetState = 1
-	} else {
-		targetState = 0
-	}
-	_, err := util.ExecCommand("pactl", "set-sink-mute", strconv.Itoa(sinkId), strconv.Itoa(targetState))
-	return err
 }
 
 // Switches the default sink to the target sink
@@ -341,6 +390,13 @@ func parsePipwireObjectsToMap(input string) []map[string]string {
 
 			// create a new map for the current object and fill it
 			objectMap = make(map[string]string)
+
+			//PipewireObject{
+			//	Properties: ObjectProperties{
+			//
+			//	},
+			//}
+
 			splits := strings.Split(line, ",")
 			for _, item := range splits {
 				item = strings.TrimSpace(item)
@@ -619,4 +675,16 @@ func getPairsFromLine(line string) map[string]string {
 		result[strings.TrimSpace(splits[0])] = strings.TrimSpace(splits[1])
 	}
 	return result
+}
+
+func IsMutedPipewire(sinkId int) bool {
+	nodeDetails, err := getNodeParams(sinkId)
+	if err != nil {
+		return false
+	}
+	property, err := findParamProperty(nodeDetails, "mute")
+	if err != nil {
+		return false
+	}
+	return property.Value.(bool)
 }

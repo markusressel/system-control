@@ -1,6 +1,7 @@
 package audio
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/markusressel/system-control/internal/util"
@@ -687,4 +688,78 @@ func IsMutedPipewire(sinkId int) bool {
 		return false
 	}
 	return property.Value.(bool)
+}
+
+func PwDump() error {
+	result, err := util.ExecCommand("pw-dump")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var arr []PipewireObjectJson
+	err = json.Unmarshal([]byte(result), &arr)
+	if err != nil {
+		return err
+	}
+
+	state := PipewireState{
+		Objects: arr,
+	}
+
+	fmt.Println(state)
+
+	log.Printf("Unmarshaled: %v", arr)
+	return nil
+}
+
+type PipewireState struct {
+	Objects []PipewireObjectJson
+}
+
+type PipewireObjectJson struct {
+	Id          int
+	Type        string
+	Version     int
+	Permissions []string
+	// Data Structure depends on the "Type" field
+	Info     interface{}
+	NodeInfo *PipewireInterfaceNode `json:"-,omitempty"`
+}
+
+func (o PipewireObjectJson) UnmarshalJSON(data []byte) error {
+	type Alias PipewireObjectJson
+	aux := &struct {
+		Info json.RawMessage
+		*Alias
+	}{
+		Alias: (*Alias)(&o),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	switch o.Type {
+	case "PipeWire:Interface:Node":
+		var nodeInfo PipewireInterfaceNode
+		if err := json.Unmarshal(aux.Info, &nodeInfo); err != nil {
+			return err
+		}
+		o.Info = nodeInfo
+		o.NodeInfo = &nodeInfo
+	}
+
+	return nil
+}
+
+// PipewireInterfaceNode Type: "PipeWire:Interface:Node"
+type PipewireInterfaceNode struct {
+	MaxInputPorts  int                    `json:"max-input-ports"`
+	MaxOutputPorts int                    `json:"max-output-ports"`
+	ChangeMask     []string               `json:"change-mask"`
+	NInputPorts    int                    `json:"n-input-ports"`
+	NOutputPorts   int                    `json:"n-output-ports"`
+	State          string                 `json:"state"`
+	Error          string                 `json:"error"`
+	Props          map[string]interface{} `json:"props"`
 }

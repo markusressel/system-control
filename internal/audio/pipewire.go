@@ -696,23 +696,63 @@ func PwDump() PipewireState {
 		log.Fatal(err)
 	}
 
-	var objectDataList []PipewireObject1
+	var objectDataList []PipewireStateObject
 	if err := json.NewDecoder(strings.NewReader(result)).Decode(&objectDataList); err != nil {
 		log.Fatalf("decode: %s", err)
 	}
 
 	state := PipewireState{
-		Objects: objectDataList,
+		Objects:   objectDataList,
+		Nodes:     filterByType(objectDataList, TypeNode),
+		Factories: filterByType(objectDataList, TypeFactory),
+		Modules:   filterByType(objectDataList, TypeModule),
+		Cores:     filterByType(objectDataList, TypeCore),
+		Clients:   filterByType(objectDataList, TypeClient),
+		Links:     filterByType(objectDataList, TypeLink),
+		Ports:     filterByType(objectDataList, TypePort),
+		Devices:   filterByType(objectDataList, TypeDevice),
+		Profilers: filterByType(objectDataList, TypeProfiler),
 	}
 
 	return state
 }
 
-type PipewireState struct {
-	Objects []PipewireObject1
+func filterByType(list []PipewireStateObject, t string) []PipewireStateObject {
+	result := []PipewireStateObject{}
+	for _, item := range list {
+		if item.Type == t {
+			result = append(result, item)
+		}
+	}
+	return result
 }
 
-type PipewireObject1 struct {
+const (
+	TypeNode     = "PipeWire:Interface:Node"
+	TypeFactory  = "PipeWire:Interface:Factory"
+	TypeModule   = "PipeWire:Interface:Module"
+	TypeCore     = "PipeWire:Interface:Core"
+	TypeClient   = "PipeWire:Interface:Client"
+	TypeLink     = "PipeWire:Interface:Link"
+	TypePort     = "PipeWire:Interface:Port"
+	TypeDevice   = "PipeWire:Interface:Device"
+	TypeProfiler = "PipeWire:Interface:Profiler"
+)
+
+type PipewireState struct {
+	Objects   []PipewireStateObject
+	Nodes     []PipewireStateObject
+	Factories []PipewireStateObject
+	Modules   []PipewireStateObject
+	Cores     []PipewireStateObject
+	Clients   []PipewireStateObject
+	Links     []PipewireStateObject
+	Ports     []PipewireStateObject
+	Devices   []PipewireStateObject
+	Profilers []PipewireStateObject
+}
+
+type PipewireStateObject struct {
 	Id          int                    `json:"id"`
 	Type        string                 `json:"type"`
 	Version     int                    `json:"version"`
@@ -722,7 +762,7 @@ type PipewireObject1 struct {
 	Metadata    []interface{}          `json:"metadata,omitempty"`
 }
 
-func (o *PipewireObject1) UnmarshalJSON(data []byte) error {
+func (o *PipewireStateObject) UnmarshalJSON(data []byte) error {
 	// Unmarshall common data
 	temp := new(struct {
 		Id          int                    `json:"id"`
@@ -746,63 +786,63 @@ func (o *PipewireObject1) UnmarshalJSON(data []byte) error {
 
 	if temp.Info != nil {
 		switch temp.Type {
-		case "PipeWire:Interface:Node":
+		case TypeNode:
 			info := PipewireInterfaceNode{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
-		case "PipeWire:Interface:Factory":
+		case TypeFactory:
 			info := PipewireInterfaceFactory{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
-		case "PipeWire:Interface:Module":
+		case TypeModule:
 			info := PipewireInterfaceModule{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
-		case "PipeWire:Interface:Core":
+		case TypeCore:
 			info := PipewireInterfaceCore{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
-		case "PipeWire:Interface:Client":
+		case TypeClient:
 			info := PipewireInterfaceClient{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
-		case "PipeWire:Interface:Link":
+		case TypeLink:
 			info := PipewireInterfaceLink{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
-		case "PipeWire:Interface:Port":
+		case TypePort:
 			info := PipewireInterfacePort{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
-		case "PipeWire:Interface:Device":
+		case TypeDevice:
 			info := PipewireInterfaceDevice{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
-		case "PipeWire:Interface:Profiler":
+		case TypeProfiler:
 			info := PipewireInterfaceProfiler{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {

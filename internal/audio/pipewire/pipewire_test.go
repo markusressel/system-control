@@ -1,4 +1,4 @@
-package audio
+package pipewire
 
 import (
 	"github.com/stretchr/testify/assert"

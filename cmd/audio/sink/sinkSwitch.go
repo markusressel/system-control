@@ -18,7 +18,7 @@
 package sink
 
 import (
-	"github.com/markusressel/system-control/internal/audio"
+	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/spf13/cobra"
 )
 
@@ -36,8 +36,8 @@ You can specify the audio sink using its index, but also using other strings tha
 		searchString := args[0]
 		//sinkIdx := findSinkPulse(searchString)
 		//switchSinkPulse(sinkIdx)
-		sink := audio.FindSinkPipewire(searchString)
-		audio.SwitchSinkPipewire(sink)
+		sink := pipewire.FindSinkPipewire(searchString)
+		pipewire.SwitchSinkPipewire(sink)
 	},
 }
 

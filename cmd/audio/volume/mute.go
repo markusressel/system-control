@@ -18,7 +18,7 @@
 package volume
 
 import (
-	"github.com/markusressel/system-control/internal/audio"
+	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -38,15 +38,15 @@ to quickly create a Cobra application.`,
 
 		var targetSink map[string]string
 		if name == "" {
-			targetSink = audio.GetActiveSinkPipewire()
+			targetSink = pipewire.GetActiveSinkPipewire()
 		} else {
-			targetSink = audio.GetSinkByName(name)
+			targetSink = pipewire.GetSinkByName(name)
 		}
 		targetSinkDeviceId, err := strconv.Atoi(targetSink["device.id"])
 		if err != nil {
 			return err
 		}
-		return audio.SetMutedPipewire(targetSinkDeviceId, true)
+		return pipewire.SetMutedPipewire(targetSinkDeviceId, true)
 	},
 }
 

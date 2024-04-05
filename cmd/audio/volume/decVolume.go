@@ -20,6 +20,7 @@ package volume
 import (
 	"fmt"
 	"github.com/markusressel/system-control/internal/audio"
+	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 	"strconv"
@@ -33,7 +34,7 @@ var decVolumeCmd = &cobra.Command{
 		nameFlag := cmd.Flag("name")
 		name := nameFlag.Value.String()
 
-		volume, err := audio.GetVolumePipewireByName(name)
+		volume, err := pipewire.GetVolumePipewireByName(name)
 		if err != nil {
 			return err
 		}
@@ -41,9 +42,9 @@ var decVolumeCmd = &cobra.Command{
 
 		var targetSink map[string]string
 		if name == "" {
-			targetSink = audio.GetActiveSinkPipewire()
+			targetSink = pipewire.GetActiveSinkPipewire()
 		} else {
-			targetSink = audio.GetSinkByName(name)
+			targetSink = pipewire.GetSinkByName(name)
 		}
 
 		targetSinkDeviceId, err := strconv.Atoi(targetSink["device.id"])
@@ -51,11 +52,11 @@ var decVolumeCmd = &cobra.Command{
 			return err
 		}
 		targetVolume := volume - change
-		err = audio.SetVolumePipewire(targetSinkDeviceId, targetVolume)
+		err = pipewire.SetVolumePipewire(targetSinkDeviceId, targetVolume)
 		if err != nil {
 			return err
 		}
-		newVolume, err := audio.GetVolumePipewire()
+		newVolume, err := pipewire.GetVolumePipewire()
 		newVolume = util.RoundToTwoDecimals(newVolume)
 		volumeAsInt := (int)(newVolume * 100)
 		fmt.Println(volumeAsInt)

@@ -19,7 +19,7 @@ package volume
 
 import (
 	"fmt"
-	"github.com/markusressel/system-control/internal/audio"
+	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
@@ -33,7 +33,7 @@ var VolumeCmd = &cobra.Command{
 		nameFlag := cmd.Flag("name")
 		name := nameFlag.Value.String()
 
-		volume, err := audio.GetVolumePipewireByName(name)
+		volume, err := pipewire.GetVolumePipewireByName(name)
 		if err != nil {
 			return err
 		}

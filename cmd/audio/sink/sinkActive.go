@@ -19,7 +19,7 @@ package sink
 
 import (
 	"fmt"
-	"github.com/markusressel/system-control/internal/audio"
+	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/spf13/cobra"
 )
 
@@ -41,9 +41,9 @@ var activeCmd = &cobra.Command{
 		}
 
 		if len(searchString) > 0 {
-			fmt.Println(audio.ContainsActiveSinkPipewire(searchString))
+			fmt.Println(pipewire.ContainsActiveSinkPipewire(searchString))
 		} else {
-			sink := audio.GetActiveSinkPipewire()
+			sink := pipewire.GetActiveSinkPipewire()
 			fmt.Println(sink["id"])
 		}
 	},

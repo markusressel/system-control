@@ -19,7 +19,7 @@ package volume
 
 import (
 	"fmt"
-	"github.com/markusressel/system-control/internal/audio"
+	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -34,17 +34,17 @@ var toggleMuteCmd = &cobra.Command{
 
 		var targetSink map[string]string
 		if name == "" {
-			targetSink = audio.GetActiveSinkPipewire()
+			targetSink = pipewire.GetActiveSinkPipewire()
 		} else {
-			targetSink = audio.GetSinkByName(name)
+			targetSink = pipewire.GetSinkByName(name)
 		}
 		sinkId, err := strconv.Atoi(targetSink["id"])
 		targetSinkDeviceId, err := strconv.Atoi(targetSink["device.id"])
-		isMuted := audio.IsMutedPipewire(sinkId)
+		isMuted := pipewire.IsMutedPipewire(sinkId)
 		if err != nil {
 			return err
 		}
-		err = audio.SetMutedPipewire(targetSinkDeviceId, !isMuted)
+		err = pipewire.SetMutedPipewire(targetSinkDeviceId, !isMuted)
 		fmt.Println(sinkId)
 		return nil
 	},

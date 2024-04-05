@@ -1,7 +1,6 @@
-package audio
+package pipewire
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/markusressel/system-control/internal/util"
@@ -690,268 +689,6 @@ func IsMutedPipewire(sinkId int) bool {
 	return property.Value.(bool)
 }
 
-func PwDump() PipewireState {
-	result, err := util.ExecCommand("pw-dump")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var objectDataList []PipewireStateObject
-	if err := json.NewDecoder(strings.NewReader(result)).Decode(&objectDataList); err != nil {
-		log.Fatalf("decode: %s", err)
-	}
-
-	state := PipewireState{
-		Objects:   objectDataList,
-		Nodes:     filterByType(objectDataList, TypeNode),
-		Factories: filterByType(objectDataList, TypeFactory),
-		Modules:   filterByType(objectDataList, TypeModule),
-		Cores:     filterByType(objectDataList, TypeCore),
-		Clients:   filterByType(objectDataList, TypeClient),
-		Links:     filterByType(objectDataList, TypeLink),
-		Ports:     filterByType(objectDataList, TypePort),
-		Devices:   filterByType(objectDataList, TypeDevice),
-		Profilers: filterByType(objectDataList, TypeProfiler),
-		Metadatas: filterByType(objectDataList, TypeMetadata),
-	}
-
-	defaultSinkName, err := state.GetDefaultSink()
-	fmt.Println("Default sink: ", defaultSinkName)
-
-	defaultSourceName, err := state.GetDefaultSource()
-	fmt.Println("Default source: ", defaultSourceName)
-
-	return state
-}
-
-func filterByType(list []PipewireStateObject, t string) []PipewireStateObject {
-	result := []PipewireStateObject{}
-	for _, item := range list {
-		if item.Type == t {
-			result = append(result, item)
-		}
-	}
-	return result
-}
-
-const (
-	TypeNode     = "PipeWire:Interface:Node"
-	TypeFactory  = "PipeWire:Interface:Factory"
-	TypeModule   = "PipeWire:Interface:Module"
-	TypeCore     = "PipeWire:Interface:Core"
-	TypeClient   = "PipeWire:Interface:Client"
-	TypeLink     = "PipeWire:Interface:Link"
-	TypePort     = "PipeWire:Interface:Port"
-	TypeDevice   = "PipeWire:Interface:Device"
-	TypeProfiler = "PipeWire:Interface:Profiler"
-	TypeMetadata = "PipeWire:Interface:Metadata"
-)
-
-type PipewireState struct {
-	Objects   []PipewireStateObject
-	Nodes     []PipewireStateObject
-	Factories []PipewireStateObject
-	Modules   []PipewireStateObject
-	Cores     []PipewireStateObject
-	Clients   []PipewireStateObject
-	Links     []PipewireStateObject
-	Ports     []PipewireStateObject
-	Devices   []PipewireStateObject
-	Profilers []PipewireStateObject
-	Metadatas []PipewireStateObject
-}
-
-type PipewireStateObject struct {
-	Id          int                      `json:"id"`
-	Type        string                   `json:"type"`
-	Version     int                      `json:"version"`
-	Permissions []string                 `json:"permissions"`
-	Info        PipewireObjectInfo       `json:"info,omitempty"`
-	Props       map[string]interface{}   `json:"props,omitempty"`
-	Metadata    []map[string]interface{} `json:"metadata,omitempty"`
-}
-
-func (o *PipewireStateObject) UnmarshalJSON(data []byte) error {
-	// Unmarshall common data
-	temp := new(struct {
-		Id          int                      `json:"id"`
-		Type        string                   `json:"type"`
-		Version     int                      `json:"version"`
-		Permissions []string                 `json:"permissions"`
-		Info        json.RawMessage          `json:"info,omitempty"`
-		Props       map[string]interface{}   `json:"props,omitempty"`
-		Metadata    []map[string]interface{} `json:"metadata,omitempty"`
-	})
-	if err := json.Unmarshal(data, temp); err != nil {
-		return err
-	}
-
-	o.Id = temp.Id
-	o.Type = temp.Type
-	o.Version = temp.Version
-	o.Permissions = temp.Permissions
-	o.Props = temp.Props
-	o.Metadata = temp.Metadata
-
-	if temp.Info != nil {
-		switch temp.Type {
-		case TypeNode:
-			info := PipewireInterfaceNode{}
-			err := json.Unmarshal(temp.Info, &info)
-			if err != nil {
-				return err
-			}
-			o.Info = info
-		case TypeFactory:
-			info := PipewireInterfaceFactory{}
-			err := json.Unmarshal(temp.Info, &info)
-			if err != nil {
-				return err
-			}
-			o.Info = info
-		case TypeModule:
-			info := PipewireInterfaceModule{}
-			err := json.Unmarshal(temp.Info, &info)
-			if err != nil {
-				return err
-			}
-			o.Info = info
-		case TypeCore:
-			info := PipewireInterfaceCore{}
-			err := json.Unmarshal(temp.Info, &info)
-			if err != nil {
-				return err
-			}
-			o.Info = info
-		case TypeClient:
-			info := PipewireInterfaceClient{}
-			err := json.Unmarshal(temp.Info, &info)
-			if err != nil {
-				return err
-			}
-			o.Info = info
-		case TypeLink:
-			info := PipewireInterfaceLink{}
-			err := json.Unmarshal(temp.Info, &info)
-			if err != nil {
-				return err
-			}
-			o.Info = info
-		case TypePort:
-			info := PipewireInterfacePort{}
-			err := json.Unmarshal(temp.Info, &info)
-			if err != nil {
-				return err
-			}
-			o.Info = info
-		case TypeDevice:
-			info := PipewireInterfaceDevice{}
-			err := json.Unmarshal(temp.Info, &info)
-			if err != nil {
-				return err
-			}
-			o.Info = info
-		case TypeProfiler:
-			info := PipewireInterfaceProfiler{}
-			err := json.Unmarshal(temp.Info, &info)
-			if err != nil {
-				return err
-			}
-			o.Info = info
-		default:
-			fmt.Println("Unknown type: ", temp.Type)
-			o.Info = nil
-		}
-	}
-
-	return nil
-}
-
-type PipewireObjectInfo interface{}
-
-// PipewireInterfaceNode Type: "PipeWire:Interface:Node"
-type PipewireInterfaceNode struct {
-	MaxInputPorts  int                    `json:"max-input-ports"`
-	MaxOutputPorts int                    `json:"max-output-ports"`
-	ChangeMask     []string               `json:"change-mask"`
-	NInputPorts    int                    `json:"n-input-ports"`
-	NOutputPorts   int                    `json:"n-output-ports"`
-	State          string                 `json:"state"`
-	Error          string                 `json:"error"`
-	Props          map[string]interface{} `json:"props"`
-}
-
-// PipewireInterfaceFactory Type: "PipeWire:Interface:Factory"
-type PipewireInterfaceFactory struct {
-	Name       string                 `json:"name"`
-	Type       string                 `json:"type"`
-	Version    int                    `json:"version"`
-	ChangeMask []string               `json:"change-mask"`
-	Props      map[string]interface{} `json:"props"`
-}
-
-// PipewireInterfaceModule Type: "PipeWire:Interface:Module"
-type PipewireInterfaceModule struct {
-	Name       string                 `json:"name"`
-	Filename   string                 `json:"filename"`
-	Args       interface{}            `json:"args"`
-	ChangeMask []string               `json:"change-mask"`
-	Props      map[string]interface{} `json:"props"`
-}
-
-// PipewireInterfaceCore Type: "PipeWire:Interface:Core"
-type PipewireInterfaceCore struct {
-	Cookie     int                    `json:"cookie"`
-	UserName   string                 `json:"user-name"`
-	HostName   string                 `json:"host-name"`
-	Version    string                 `json:"version"`
-	Name       string                 `json:"name"`
-	ChangeMask []string               `json:"change-mask"`
-	Props      map[string]interface{} `json:"props"`
-}
-
-// PipewireInterfaceClient Type: "PipeWire:Interface:Client"
-type PipewireInterfaceClient struct {
-	ChangeMask []string               `json:"change-mask"`
-	Props      map[string]interface{} `json:"props"`
-}
-
-// PipewireInterfaceLink Type: "PipeWire:Interface:Link"
-type PipewireInterfaceLink struct {
-	OutputNodeId int         `json:"output-node-id"`
-	OutputPortId int         `json:"output-port-id"`
-	InputNodeId  int         `json:"input-node-id"`
-	InputPortId  int         `json:"input-port-id"`
-	ChangeMask   []string    `json:"change-mask"`
-	State        string      `json:"state"`
-	Error        interface{} `json:"error"`
-	Format       struct {
-		MediaType    string `json:"mediaType"`
-		MediaSubtype string `json:"mediaSubtype"`
-		Format       string `json:"format"`
-	} `json:"format"`
-	Props map[string]interface{} `json:"props"`
-}
-
-// PipewireInterfacePort Type: "PipeWire:Interface:Port"
-type PipewireInterfacePort struct {
-	Direction  string                 `json:"direction"`
-	ChangeMask []string               `json:"change-mask"`
-	Props      map[string]interface{} `json:"props"`
-	Params     map[string]interface{} `json:"params"`
-}
-
-// PipewireInterfaceDevice Type: "PipeWire:Interface:Device"
-type PipewireInterfaceDevice struct {
-	ChangeMask []string               `json:"change-mask"`
-	Props      map[string]interface{} `json:"props"`
-	Params     map[string]interface{} `json:"params"`
-}
-
-// PipewireInterfaceProfiler Type: "PipeWire:Interface:Profiler"
-type PipewireInterfaceProfiler struct {
-}
-
 func (state PipewireState) GetDefaultSink() (string, error) {
 	for _, item := range state.Metadatas {
 		if item.Props["metadata.name"] != "default" {
@@ -981,27 +718,41 @@ func (state PipewireState) GetDefaultSource() (string, error) {
 	return node.GetName()
 }
 
-func (state PipewireState) GetNodeByName(name string) (PipewireStateObject, error) {
+func (state PipewireState) GetNodeByName(name string) (PipewireInterfaceNode, error) {
 	for _, node := range state.Nodes {
-		infoProps, ok := node.Info.(PipewireInterfaceNode)
-		if !ok {
-			continue
-		}
-		if infoProps.Props["node.name"] == name {
-			objectId := infoProps.Props["object.id"].(float64)
-			deviceId := infoProps.Props["device.id"].(float64)
-			clientId := infoProps.Props["client.id"].(float64)
-			cardProfileDevice := infoProps.Props["card.profile.device"].(float64)
-			deviceRoutes := infoProps.Props["device.routes"].(float64)
+		nodeInfoProperties := node.Info.Props
+		if nodeInfoProperties["node.name"] == name {
+			objectId := nodeInfoProperties["object.id"].(float64)
+			deviceId := nodeInfoProperties["device.id"].(float64)
+			clientId := nodeInfoProperties["client.id"].(float64)
+			cardProfileDevice := nodeInfoProperties["card.profile.device"].(float64)
+			deviceRoutes := nodeInfoProperties["device.routes"].(float64)
 			fmt.Println("Found node: ", name, " with id: ", objectId, " device id: ", deviceId, " client id: ", clientId, " card profile device: ", cardProfileDevice, " device routes: ", deviceRoutes)
 			return node, nil
 		}
 	}
-	return PipewireStateObject{}, errors.New("node not found")
+	return PipewireInterfaceNode{}, errors.New("node not found")
+}
+
+func (state PipewireState) GetPortByName(nodeName string, name string) (PipewireStateObject, error) {
+	node, err := state.GetNodeByName(nodeName)
+	if err != nil {
+		return PipewireStateObject{}, err
+	}
+	for _, port := range state.Ports {
+		infoProps, ok := port.Info.(PipewireInterfacePortInfo)
+		if !ok {
+			continue
+		}
+		if infoProps.Props["port.name"] == name && infoProps.Props["port.node"] == node.Info.Props["object.id"] {
+			return port, nil
+		}
+	}
+	return PipewireStateObject{}, errors.New("port not found")
 }
 
 func (o *PipewireStateObject) GetName() (string, error) {
-	infoProps, ok := o.Info.(PipewireInterfaceNode)
+	infoProps, ok := o.Info.(PipewireInterfaceNodeInfo)
 	if !ok {
 		return "", errors.New("invalid object type")
 	}

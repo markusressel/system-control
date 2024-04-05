@@ -712,7 +712,14 @@ func PwDump() PipewireState {
 		Ports:     filterByType(objectDataList, TypePort),
 		Devices:   filterByType(objectDataList, TypeDevice),
 		Profilers: filterByType(objectDataList, TypeProfiler),
+		Metadatas: filterByType(objectDataList, TypeMetadata),
 	}
+
+	defaultSinkName, err := state.GetDefaultSink()
+	fmt.Println("Default sink: ", defaultSinkName)
+
+	defaultSourceName, err := state.GetDefaultSource()
+	fmt.Println("Default source: ", defaultSourceName)
 
 	return state
 }
@@ -737,6 +744,7 @@ const (
 	TypePort     = "PipeWire:Interface:Port"
 	TypeDevice   = "PipeWire:Interface:Device"
 	TypeProfiler = "PipeWire:Interface:Profiler"
+	TypeMetadata = "PipeWire:Interface:Metadata"
 )
 
 type PipewireState struct {
@@ -750,28 +758,29 @@ type PipewireState struct {
 	Ports     []PipewireStateObject
 	Devices   []PipewireStateObject
 	Profilers []PipewireStateObject
+	Metadatas []PipewireStateObject
 }
 
 type PipewireStateObject struct {
-	Id          int                    `json:"id"`
-	Type        string                 `json:"type"`
-	Version     int                    `json:"version"`
-	Permissions []string               `json:"permissions"`
-	Info        PipewireObjectInfo     `json:"info,omitempty"`
-	Props       map[string]interface{} `json:"props,omitempty"`
-	Metadata    []interface{}          `json:"metadata,omitempty"`
+	Id          int                      `json:"id"`
+	Type        string                   `json:"type"`
+	Version     int                      `json:"version"`
+	Permissions []string                 `json:"permissions"`
+	Info        PipewireObjectInfo       `json:"info,omitempty"`
+	Props       map[string]interface{}   `json:"props,omitempty"`
+	Metadata    []map[string]interface{} `json:"metadata,omitempty"`
 }
 
 func (o *PipewireStateObject) UnmarshalJSON(data []byte) error {
 	// Unmarshall common data
 	temp := new(struct {
-		Id          int                    `json:"id"`
-		Type        string                 `json:"type"`
-		Version     int                    `json:"version"`
-		Permissions []string               `json:"permissions"`
-		Info        json.RawMessage        `json:"info,omitempty"`
-		Props       map[string]interface{} `json:"props,omitempty"`
-		Metadata    []interface{}          `json:"metadata,omitempty"`
+		Id          int                      `json:"id"`
+		Type        string                   `json:"type"`
+		Version     int                      `json:"version"`
+		Permissions []string                 `json:"permissions"`
+		Info        json.RawMessage          `json:"info,omitempty"`
+		Props       map[string]interface{}   `json:"props,omitempty"`
+		Metadata    []map[string]interface{} `json:"metadata,omitempty"`
 	})
 	if err := json.Unmarshal(data, temp); err != nil {
 		return err
@@ -941,4 +950,64 @@ type PipewireInterfaceDevice struct {
 
 // PipewireInterfaceProfiler Type: "PipeWire:Interface:Profiler"
 type PipewireInterfaceProfiler struct {
+}
+
+func (state PipewireState) GetDefaultSink() (string, error) {
+	for _, item := range state.Metadatas {
+		if item.Props["metadata.name"] != "default" {
+			continue
+		}
+
+		for _, entry := range item.Metadata {
+			if entry["key"] == "default.audio.sink" {
+				return entry["value"].(map[string]interface{})["name"].(string), nil
+			}
+		}
+	}
+
+	return "", errors.New("default sink not found")
+}
+
+func (state PipewireState) GetDefaultSource() (string, error) {
+	defaultSinkName, err := state.GetDefaultSink()
+	if err != nil {
+		return "", err
+	}
+
+	node, err := state.GetNodeByName(defaultSinkName)
+	if err != nil {
+		return "", err
+	}
+	return node.GetName()
+}
+
+func (state PipewireState) GetNodeByName(name string) (PipewireStateObject, error) {
+	for _, node := range state.Nodes {
+		infoProps, ok := node.Info.(PipewireInterfaceNode)
+		if !ok {
+			continue
+		}
+		if infoProps.Props["node.name"] == name {
+			objectId := infoProps.Props["object.id"].(float64)
+			deviceId := infoProps.Props["device.id"].(float64)
+			clientId := infoProps.Props["client.id"].(float64)
+			cardProfileDevice := infoProps.Props["card.profile.device"].(float64)
+			deviceRoutes := infoProps.Props["device.routes"].(float64)
+			fmt.Println("Found node: ", name, " with id: ", objectId, " device id: ", deviceId, " client id: ", clientId, " card profile device: ", cardProfileDevice, " device routes: ", deviceRoutes)
+			return node, nil
+		}
+	}
+	return PipewireStateObject{}, errors.New("node not found")
+}
+
+func (o *PipewireStateObject) GetName() (string, error) {
+	infoProps, ok := o.Info.(PipewireInterfaceNode)
+	if !ok {
+		return "", errors.New("invalid object type")
+	}
+	nodeName, ok := infoProps.Props["node.name"].(string)
+	if !ok {
+		return "", errors.New("node name not found")
+	}
+	return nodeName, nil
 }

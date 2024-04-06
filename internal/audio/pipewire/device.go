@@ -36,32 +36,6 @@ func (i DeviceInfoParams) GetOutputRoutes() []DeviceRoute {
 	return outputRoutes
 }
 
-type DeviceProfile struct {
-	Index       int           `json:"index"`
-	Name        string        `json:"name"`
-	Description string        `json:"description"`
-	Available   string        `json:"available"`
-	Priority    int           `json:"priority"`
-	Classes     []interface{} `json:"classes"`
-	Save        bool          `json:"save,omitempty"`
-}
-
-type DeviceRoute struct {
-	Index       int                    `json:"index"`
-	Direction   string                 `json:"direction"`
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	Priority    int                    `json:"priority"`
-	Available   string                 `json:"available"`
-	Info        []interface{}          `json:"info"`
-	Profiles    []int                  `json:"profiles"`
-	Device      int                    `json:"device"`
-	Props       map[string]interface{} `json:"props"`
-	Save        bool                   `json:"save,omitempty"`
-	Devices     []int                  `json:"devices"`
-	Profile     int                    `json:"profile"`
-}
-
 func (d PipewireInterfaceDevice) SetParameter(params map[string]interface{}) error {
 	outputRoutes := d.Info.Params.GetOutputRoutes()
 
@@ -89,4 +63,10 @@ func (d PipewireInterfaceDevice) SetParameter(params map[string]interface{}) err
 	}
 
 	return nil
+}
+
+func (d PipewireInterfaceDevice) SetMuted(muted bool) error {
+	return d.SetParameter(map[string]interface{}{
+		"mute": muted, "save": true,
+	})
 }

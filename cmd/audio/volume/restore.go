@@ -19,6 +19,7 @@ package volume
 
 import (
 	"github.com/markusressel/system-control/internal/audio"
+	"github.com/markusressel/system-control/internal/audio/pulseaudio"
 	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/spf13/cobra"
 	"strconv"
@@ -45,8 +46,8 @@ var restoreCmd = &cobra.Command{
 			return err
 		}
 
-		err = audio.SetMuted(cardInt, channel, data.Muted)
-		err = audio.SetVolume(cardInt, channel, data.Volume)
+		err = pulseaudio.SetMuted(cardInt, channel, data.Muted)
+		err = pulseaudio.SetVolume(cardInt, channel, data.Volume)
 
 		return err
 	},

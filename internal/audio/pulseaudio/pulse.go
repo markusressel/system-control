@@ -1,6 +1,7 @@
-package audio
+package pulseaudio
 
 import (
+	"fmt"
 	"github.com/markusressel/system-control/internal/util"
 	"log"
 	"regexp"
@@ -189,4 +190,16 @@ func findSinkPulse(text string) int {
 	}
 
 	return index
+}
+
+// SetVolumePulseAudio sets the given volume to the given sink using PulseAudio
+// volume in percent
+func SetVolumePulseAudio(sinkId int, volume float64) error {
+	_, err := util.ExecCommand(
+		"pactl",
+		"set-sink-volume",
+		strconv.Itoa(sinkId),
+		fmt.Sprint(volume),
+	)
+	return err
 }

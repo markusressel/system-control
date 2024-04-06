@@ -18,7 +18,7 @@
 package volume
 
 import (
-	"github.com/markusressel/system-control/internal/audio"
+	"github.com/markusressel/system-control/internal/audio/pulseaudio"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -40,7 +40,7 @@ var setVolumeCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return audio.SetVolume(cardInt, channel, volume)
+		return pulseaudio.SetVolume(cardInt, channel, volume)
 	},
 }
 

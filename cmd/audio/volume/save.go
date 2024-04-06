@@ -19,6 +19,7 @@ package volume
 
 import (
 	"github.com/markusressel/system-control/internal/audio"
+	"github.com/markusressel/system-control/internal/audio/pulseaudio"
 	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/spf13/cobra"
 	"strconv"
@@ -44,8 +45,8 @@ var saveCmd = &cobra.Command{
 		channelFlag := cmd.Flag("channel")
 		channel := channelFlag.Value.String()
 
-		currentVolume := audio.GetVolume(cardInt, channel)
-		muted := audio.IsMuted(cardInt, channel)
+		currentVolume := pulseaudio.GetVolume(cardInt, channel)
+		muted := pulseaudio.IsMuted(cardInt, channel)
 
 		key := computeKey(audio.IsHeadphoneConnected(), card, channel)
 		data := audioState{

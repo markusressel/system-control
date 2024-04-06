@@ -228,18 +228,6 @@ func SetMutedPipewire(deviceId int, muted bool) error {
 	return state.SetMuted(deviceId, muted)
 }
 
-// SetVolumePulseAudio sets the given volume to the given sink using PulseAudio
-// volume in percent
-func SetVolumePulseAudio(sinkId int, volume float64) error {
-	_, err := util.ExecCommand(
-		"pactl",
-		"set-sink-volume",
-		strconv.Itoa(sinkId),
-		fmt.Sprint(volume),
-	)
-	return err
-}
-
 func GetSinkByName(name string) map[string]string {
 	objects := getPipewireObjects(
 		PropertyFilter{"media.class", "Audio/Sink"},

@@ -110,23 +110,7 @@ func (state PipewireState) SetMuted(deviceId int, muted bool) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Device: ", device.Id)
-
-	err = device.SetParameter(map[string]interface{}{
-		"mute": muted, "save": true,
-	})
-
-	//routeIndex := device.Info.Params.Route[0].Index
-	//deviceIndex := device.Info.Params.Route[0].Device
-
-	//device.SetMuted(muted)
-
-	//_, err = state.GetNodeById(deviceId)
-	//if err != nil {
-	//	return err
-	//}
-	//return node.SetMuted(muted)
-	return err
+	return device.SetMuted(muted)
 }
 
 func (state PipewireState) GetDefaultSink() (string, error) {

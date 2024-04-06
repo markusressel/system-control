@@ -18,7 +18,6 @@
 package volume
 
 import (
-	"fmt"
 	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/spf13/cobra"
 	"strconv"
@@ -51,7 +50,6 @@ var toggleMuteCmd = &cobra.Command{
 			return err
 		}
 		err = pipewire.SetMutedPipewire(targetSinkDeviceId, !isMuted)
-		fmt.Println(sinkId)
 		return nil
 	},
 }

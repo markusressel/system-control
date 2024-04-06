@@ -310,3 +310,85 @@ func (state *GraphState) GetStreamNodes() []InterfaceNode {
 	}
 	return result
 }
+
+// SwitchSinkTo switches the default sink to the given node and moves
+// all existing streams on the currently active sink to the new default sink
+func (state *GraphState) SwitchSinkTo(node InterfaceNode) error {
+	nodeName, err := node.GetName()
+	if err != nil {
+		return err
+	}
+
+	err = setDefaultSink(nodeName)
+	if err != nil {
+		return err
+	}
+
+	streams := state.GetStreamNodes()
+
+	for _, stream := range streams {
+		err = moveStreamToNode(stream.Id, node.Id)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetVolumeByName returns the volume of the with the given name.
+// The name must be part of the "node.name" or "node.description" property.
+// If the name is empty, the volume of the active sink is returned.
+// The volume is returned as a float value in [0..1]
+func (state *GraphState) GetVolumeByName(name string) (float64, error) {
+	var node InterfaceNode
+	if name == "" {
+		activeSink, err := state.GetDefaultNode()
+		if err != nil {
+			return -1, err
+		}
+		node = activeSink
+	} else {
+		nodeByName, err := state.GetNodeByName(name)
+		if err != nil {
+			return -1, err
+		}
+		node = nodeByName
+	}
+	channelVolumes := node.GetVolume()
+	// use left channel for now
+	return channelVolumes[0], nil
+}
+
+// GetDefaultNode returns the index of the active device
+func (state *GraphState) GetDefaultNode() (InterfaceNode, error) {
+	currentDefaultSinkName, err := util.ExecCommand("pactl", "get-default-sink")
+	if err != nil {
+		return InterfaceNode{}, err
+	}
+	return state.GetNodeByName(currentDefaultSinkName)
+}
+
+// ContainsActiveSink returns
+// 0: if the given text is NOT found in the active sink
+// 1: if the given text IS found in the active sink
+func (state *GraphState) ContainsActiveSink(text string) int {
+	node, err := state.GetDefaultNode()
+	if err != nil {
+		return 0
+	}
+
+	nodeName := node.Info.Props["node.name"].(string)
+	nodeDescription := node.Info.Props["node.description"].(string)
+
+	if util.ContainsIgnoreCase(nodeName, text) || util.ContainsIgnoreCase(nodeDescription, text) {
+		return 1
+	} else {
+		return 0
+	}
+}
+
+// GetVolume returns the volume of the active sink
+// The volume is returned as a float value in [0..1]
+func (state *GraphState) GetVolume() (float64, error) {
+	return state.GetVolumeByName("")
+}

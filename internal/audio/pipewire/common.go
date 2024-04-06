@@ -175,6 +175,14 @@ func (n InterfaceNode) GetName() (string, error) {
 	return nodeName, nil
 }
 
+func (n InterfaceNode) GetDescription() (string, error) {
+	nodeName, ok := n.Info.Props["node.description"].(string)
+	if !ok {
+		return "", fmt.Errorf("could not get node description")
+	}
+	return nodeName, nil
+}
+
 // InterfaceFactoryInfo Type: "PipeWire:Interface:Factory"
 type InterfaceFactoryInfo struct {
 	Name       string                 `json:"name"`

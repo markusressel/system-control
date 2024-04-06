@@ -35,7 +35,7 @@ var IncVolumeCmd = &cobra.Command{
 
 		state := pipewire.PwDump()
 
-		volume, err := state.GetVolumePipewireByName(name)
+		volume, err := state.GetVolumeByName(name)
 		volume = util.RoundToTwoDecimals(volume)
 		if err != nil {
 			return err
@@ -63,7 +63,7 @@ var IncVolumeCmd = &cobra.Command{
 			return err
 		}
 
-		newVolume, err := state.GetVolumePipewireByName(name)
+		newVolume, err := state.GetVolumeByName(name)
 		if err != nil {
 			return err
 		}

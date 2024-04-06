@@ -18,7 +18,9 @@
 package volume
 
 import (
-	"github.com/markusressel/system-control/internal/audio/pulseaudio"
+	"fmt"
+	"github.com/markusressel/system-control/internal/audio/pipewire"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -29,18 +31,47 @@ var setVolumeCmd = &cobra.Command{
 	Long:  ``,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cardFlag := cmd.Flag("card")
-		card := cardFlag.Value.String()
-		cardInt, _ := strconv.Atoi(card)
-
-		channelFlag := cmd.Flag("channel")
-		channel := channelFlag.Value.String()
+		deviceFlag := cmd.Flag("device")
+		device := deviceFlag.Value.String()
 
 		volume, err := strconv.Atoi(args[0])
 		if err != nil {
 			return err
 		}
-		return pulseaudio.SetVolume(cardInt, channel, volume)
+
+		state := pipewire.PwDump()
+
+		var target pipewire.InterfaceNode
+		if device == "" {
+			target, err = state.GetDefaultNode()
+		} else {
+			target, err = state.GetNodeByName(device)
+		}
+		if err != nil {
+			return err
+		}
+
+		parentDevice, err := target.GetParentDevice()
+		if err != nil {
+			return err
+		}
+
+		targetVolume := float64(volume)
+		targetVolume = float64(volume) / 100.0
+
+		err = state.SetVolume(parentDevice.Id, targetVolume)
+		if err != nil {
+			return err
+		}
+
+		newVolume, err := state.GetVolumeByName(device)
+		if err != nil {
+			return err
+		}
+		newVolume = util.RoundToTwoDecimals(newVolume)
+		volumeAsInt := (int)(newVolume * 100)
+		fmt.Println(volumeAsInt)
+		return err
 	},
 }
 

@@ -24,18 +24,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var name string
+var device string
+var stream string
 
 var VolumeCmd = &cobra.Command{
 	Use:   "volume",
 	Short: "Show the current volume",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		nameFlag := cmd.Flag("name")
-		name := nameFlag.Value.String()
+		deviceFlag := cmd.Flag("device")
+		device := deviceFlag.Value.String()
 
 		state := pipewire.PwDump()
 
-		volume, err := state.GetVolumeByName(name)
+		volume, err := state.GetVolumeByName(device)
 		if err != nil {
 			return err
 		}
@@ -48,9 +49,16 @@ var VolumeCmd = &cobra.Command{
 
 func init() {
 	VolumeCmd.PersistentFlags().StringVarP(
-		&name,
-		"name", "N",
+		&device,
+		"device", "d",
 		"",
-		"Sink Name/Description",
+		"Device Name/Description",
+	)
+
+	VolumeCmd.PersistentFlags().StringVarP(
+		&stream,
+		"stream", "s",
+		"",
+		"Stream Name/Description",
 	)
 }

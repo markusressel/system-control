@@ -27,17 +27,16 @@ var unmuteCmd = &cobra.Command{
 	Short: "Unmute system audio",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		pipewire.PwDump()
-		nameFlag := cmd.Flag("name")
-		name := nameFlag.Value.String()
+		deviceFlag := cmd.Flag("device")
+		device := deviceFlag.Value.String()
 
 		state := pipewire.PwDump()
 
 		var target pipewire.InterfaceNode
-		if name == "" {
+		if device == "" {
 			target, err = state.GetDefaultNode()
 		} else {
-			target, err = state.GetNodeByName(name)
+			target, err = state.GetNodeByName(device)
 		}
 		if err != nil {
 			return err

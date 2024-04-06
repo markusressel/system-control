@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"github.com/markusressel/system-control/internal/configuration"
 	"github.com/markusressel/system-control/internal/util"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -34,7 +33,7 @@ func ReadInt(key string) (int64, error) {
 func SaveStruct(key string, value interface{}) error {
 	file := path.Join(BaseDir, key+".sav")
 	jsonString, _ := json.MarshalIndent(value, "", "  ")
-	return ioutil.WriteFile(file, jsonString, os.ModePerm)
+	return os.WriteFile(file, jsonString, os.ModePerm)
 }
 
 func ReadStruct(key string, target interface{}) error {

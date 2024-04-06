@@ -14,9 +14,9 @@ func PwDump() PipewireState {
 		log.Fatal(err)
 	}
 
-	var state PipewireState
-	if err := json.NewDecoder(strings.NewReader(result)).Decode(&state); err != nil {
-		log.Fatalf("decode: %s", err)
+	state, err := parsePwDumpToState(result)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	defaultSinkName, err := state.GetDefaultSink()
@@ -28,4 +28,12 @@ func PwDump() PipewireState {
 	//port, err := state.GetPortByType("PipeWire:Interface:Port", "Audio/Source")
 
 	return state
+}
+
+func parsePwDumpToState(pwDump string) (PipewireState, error) {
+	var state PipewireState
+	if err := json.NewDecoder(strings.NewReader(pwDump)).Decode(&state); err != nil {
+		return state, err
+	}
+	return state, nil
 }

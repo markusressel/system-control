@@ -25,7 +25,7 @@ func RotateActiveSinkPipewire(reverse bool) error {
 
 	var indexOfNextSink = indexOfActiveSink
 	if reverse {
-		indexOfNextSink = len(allSinks) + (indexOfActiveSink-1)%(len(allSinks))
+		indexOfNextSink = (len(allSinks) + (indexOfActiveSink - 1)) % (len(allSinks))
 	} else {
 		indexOfNextSink = (indexOfActiveSink + 1) % (len(allSinks))
 	}

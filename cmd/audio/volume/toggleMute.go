@@ -20,36 +20,37 @@ package volume
 import (
 	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
 var toggleMuteCmd = &cobra.Command{
 	Use:   "toggle-mute",
 	Short: "Toggle the Mute state",
 	Long:  ``,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		nameFlag := cmd.Flag("name")
 		name := nameFlag.Value.String()
 
-		var targetSink map[string]string
+		var target pipewire.InterfaceNode
 		if name == "" {
-			targetSink = pipewire.GetActiveSinkPipewire()
+			target, err = pipewire.GetDefaultNode()
 		} else {
-			targetSink = pipewire.GetSinkByName(name)
+			target, err = pipewire.GetNodeByName(name)
 		}
-		sinkId, err := strconv.Atoi(targetSink["id"])
 		if err != nil {
 			return err
 		}
-		targetSinkDeviceId, err := strconv.Atoi(targetSink["device.id"])
+
+		parentDevice, err := target.GetParentDevice()
 		if err != nil {
 			return err
 		}
+
+		sinkId := target.Id
 		isMuted, err := pipewire.IsMutedPipewire(sinkId)
 		if err != nil {
 			return err
 		}
-		err = pipewire.SetMutedPipewire(targetSinkDeviceId, !isMuted)
+		err = pipewire.SetMutedPipewire(parentDevice.Id, !isMuted)
 		return nil
 	},
 }

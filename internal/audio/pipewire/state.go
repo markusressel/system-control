@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/markusressel/system-control/internal/util"
 	"log"
 	"strings"
 )
@@ -113,7 +114,9 @@ func (state *GraphState) SetMuted(deviceId int, muted bool) error {
 	return device.SetMuted(muted)
 }
 
-func (state *GraphState) GetDefaultSink() (string, error) {
+// GetDefaultSinkNodeName returns the "node.name" value of the InterfaceNode that is
+// currently used as the default "audio.sink".
+func (state *GraphState) GetDefaultSinkNodeName() (string, error) {
 	for _, item := range state.Metadatas {
 		if item.Props["metadata.name"] != "default" {
 			continue
@@ -130,7 +133,7 @@ func (state *GraphState) GetDefaultSink() (string, error) {
 }
 
 func (state *GraphState) GetDefaultSource() (string, error) {
-	defaultSinkName, err := state.GetDefaultSink()
+	defaultSinkName, err := state.GetDefaultSinkNodeName()
 	if err != nil {
 		return "", err
 	}
@@ -154,6 +157,18 @@ func (state *GraphState) GetNodeById(id int) (InterfaceNode, error) {
 func (state *GraphState) GetDeviceById(id int) (InterfaceDevice, error) {
 	for _, device := range state.Devices {
 		if device.Id == id {
+			return device, nil
+		}
+	}
+	return InterfaceDevice{}, errors.New("device not found")
+}
+
+func (state *GraphState) GetDeviceByName(name string) (InterfaceDevice, error) {
+	for _, device := range state.Devices {
+		infoProps := device.Info.Props
+		deviceName := infoProps["device.name"].(string)
+		deviceDescription := infoProps["device.description"].(string)
+		if util.ContainsIgnoreCase(deviceName, name) || util.ContainsIgnoreCase(deviceDescription, name) {
 			return device, nil
 		}
 	}
@@ -208,13 +223,9 @@ func (state *GraphState) GetModuleById(id int) (InterfaceModule, error) {
 func (state *GraphState) GetNodeByName(name string) (InterfaceNode, error) {
 	for _, node := range state.Nodes {
 		nodeInfoProperties := node.Info.Props
-		if nodeInfoProperties["node.name"] == name {
-			objectId := nodeInfoProperties["object.id"].(float64)
-			deviceId := nodeInfoProperties["device.id"].(float64)
-			clientId := nodeInfoProperties["client.id"].(float64)
-			cardProfileDevice := nodeInfoProperties["card.profile.device"].(float64)
-			deviceRoutes := nodeInfoProperties["device.routes"].(float64)
-			fmt.Println("Found node: ", name, " with id: ", objectId, " device id: ", deviceId, " client id: ", clientId, " card profile device: ", cardProfileDevice, " device routes: ", deviceRoutes)
+		nodeName := nodeInfoProperties["node.name"].(string)
+		nodeDescription := nodeInfoProperties["node.description"].(string)
+		if util.ContainsIgnoreCase(nodeName, name) || util.ContainsIgnoreCase(nodeDescription, name) {
 			return node, nil
 		}
 	}
@@ -241,6 +252,16 @@ func (state *GraphState) SetVolume(deviceId int, volume float64) error {
 		return err
 	}
 	return node.SetVolume(volume)
+}
+
+func (state *GraphState) GetNodesOfDevice(deviceId int) []InterfaceNode {
+	result := make([]InterfaceNode, 0)
+	for _, node := range state.Nodes {
+		if node.Info.Props["device.id"] == deviceId {
+			result = append(result, node)
+		}
+	}
+	return result
 }
 
 func (o *GraphObject) GetName() (string, error) {

@@ -34,7 +34,7 @@ var activeCmd = &cobra.Command{
 > system-control audio sink active
 3`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		searchString := ""
 		if len(args) > 0 {
 			searchString = args[0]
@@ -43,9 +43,14 @@ var activeCmd = &cobra.Command{
 		if len(searchString) > 0 {
 			fmt.Println(pipewire.ContainsActiveSinkPipewire(searchString))
 		} else {
-			sink := pipewire.GetActiveSinkPipewire()
-			fmt.Println(sink["id"])
+			node, err := pipewire.GetDefaultNode()
+			if err != nil {
+				return err
+			}
+			fmt.Println(node.Id)
 		}
+
+		return nil
 	},
 }
 

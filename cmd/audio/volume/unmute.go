@@ -20,29 +20,33 @@ package volume
 import (
 	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
 var unmuteCmd = &cobra.Command{
 	Use:   "unmute",
 	Short: "Unmute system audio",
 	Long:  ``,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		pipewire.PwDump()
 		nameFlag := cmd.Flag("name")
 		name := nameFlag.Value.String()
 
-		var targetSink map[string]string
+		var target pipewire.InterfaceNode
 		if name == "" {
-			targetSink = pipewire.GetActiveSinkPipewire()
+			target, err = pipewire.GetDefaultNode()
 		} else {
-			targetSink = pipewire.GetSinkByName(name)
+			target, err = pipewire.GetNodeByName(name)
 		}
-		targetSinkDeviceId, err := strconv.Atoi(targetSink["device.id"])
 		if err != nil {
 			return err
 		}
-		return pipewire.SetMutedPipewire(targetSinkDeviceId, false)
+
+		parentDevice, err := target.GetParentDevice()
+		if err != nil {
+			return err
+		}
+
+		return pipewire.SetMutedPipewire(parentDevice.Id, false)
 	},
 }
 

@@ -20,7 +20,6 @@ package volume
 import (
 	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
 var muteCmd = &cobra.Command{
@@ -32,21 +31,25 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		nameFlag := cmd.Flag("name")
 		name := nameFlag.Value.String()
 
-		var targetSink map[string]string
+		var target pipewire.InterfaceNode
 		if name == "" {
-			targetSink = pipewire.GetActiveSinkPipewire()
+			target, err = pipewire.GetDefaultNode()
 		} else {
-			targetSink = pipewire.GetSinkByName(name)
+			target, err = pipewire.GetNodeByName(name)
 		}
-		targetSinkDeviceId, err := strconv.Atoi(targetSink["device.id"])
 		if err != nil {
 			return err
 		}
-		return pipewire.SetMutedPipewire(targetSinkDeviceId, true)
+
+		parentDevice, err := target.GetParentDevice()
+		if err != nil {
+			return err
+		}
+		return pipewire.SetMutedPipewire(parentDevice.Id, true)
 	},
 }
 

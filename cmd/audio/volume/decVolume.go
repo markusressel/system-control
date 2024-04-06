@@ -23,7 +23,6 @@ import (
 	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
 var decVolumeCmd = &cobra.Command{
@@ -40,23 +39,31 @@ var decVolumeCmd = &cobra.Command{
 		}
 		change := audio.CalculateAppropriateVolumeChange(volume*100, false) / 100.0
 
-		var targetSink map[string]string
+		var target pipewire.InterfaceNode
 		if name == "" {
-			targetSink = pipewire.GetActiveSinkPipewire()
+			target, err = pipewire.GetDefaultNode()
 		} else {
-			targetSink = pipewire.GetSinkByName(name)
+			target, err = pipewire.GetNodeByName(name)
+		}
+		if err != nil {
+			return err
 		}
 
-		targetSinkDeviceId, err := strconv.Atoi(targetSink["device.id"])
+		parentDevice, err := target.GetParentDevice()
 		if err != nil {
 			return err
 		}
+
 		targetVolume := volume - change
-		err = pipewire.SetVolumePipewire(targetSinkDeviceId, targetVolume)
+		err = pipewire.SetVolumePipewire(parentDevice.Id, targetVolume)
 		if err != nil {
 			return err
 		}
-		newVolume, err := pipewire.GetVolumePipewire()
+
+		newVolume, err := pipewire.GetVolumePipewireByName(name)
+		if err != nil {
+			return err
+		}
 		newVolume = util.RoundToTwoDecimals(newVolume)
 		volumeAsInt := (int)(newVolume * 100)
 		fmt.Println(volumeAsInt)

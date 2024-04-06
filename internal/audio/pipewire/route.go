@@ -23,7 +23,7 @@ type DeviceRoute struct {
 	Profile     int                    `json:"profile"`
 }
 
-func (r DeviceRoute) SetParameter(deviceId int, params map[string]interface{}) error {
+func (r DeviceRoute) SetProps(deviceId int, params map[string]interface{}) error {
 	formattedParams := ""
 	for key, value := range params {
 		formattedParams += fmt.Sprintf("%v: %v, ", key, value)

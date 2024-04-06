@@ -38,7 +38,7 @@ func (d InterfaceDevice) SetMuted(muted bool) error {
 	outputRoutes := d.Info.Params.GetOutputRoutes()
 
 	for _, route := range outputRoutes {
-		err := route.SetParameter(d.Id, map[string]interface{}{
+		err := route.SetProps(d.Id, map[string]interface{}{
 			"mute": muted,
 		})
 		if err != nil {
@@ -60,7 +60,7 @@ func (d InterfaceDevice) SetVolume(volume float64) error {
 	volumeCubicRoot := math.Pow(volume, 3)
 
 	for _, route := range outputRoutes {
-		err := route.SetParameter(d.Id, map[string]interface{}{
+		err := route.SetProps(d.Id, map[string]interface{}{
 			"muted":          false,
 			"channelVolumes": []float64{volumeCubicRoot, volumeCubicRoot},
 			"save":           true,

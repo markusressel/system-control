@@ -127,19 +127,6 @@ func (o *GraphObject) UnmarshalJSON(data []byte) error {
 
 type GraphObjectInfo interface{}
 
-// InterfaceNodeInfo Type: "PipeWire:Interface:Node"
-type InterfaceNodeInfo struct {
-	MaxInputPorts  int                    `json:"max-input-ports"`
-	MaxOutputPorts int                    `json:"max-output-ports"`
-	ChangeMask     []string               `json:"change-mask"`
-	NInputPorts    int                    `json:"n-input-ports"`
-	NOutputPorts   int                    `json:"n-output-ports"`
-	State          string                 `json:"state"`
-	Error          string                 `json:"error"`
-	Props          map[string]interface{} `json:"props"`
-	Params         map[string]interface{} `json:"params"`
-}
-
 type InterfaceFactory struct {
 	CommonData
 	Info InterfaceFactoryInfo

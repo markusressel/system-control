@@ -17,23 +17,42 @@ type PropertyFilter struct {
 
 // RotateActiveSinkPipewire switches the default sink and moves all existing sink inputs to the next available sink in the list
 func RotateActiveSinkPipewire(reverse bool) {
-	activeSink := GetActiveSinkPipewire()
+	state := PwDump()
+	fmt.Println("State: ", state)
+
+	activeNode, _ := GetDefaultNode()
+	fmt.Println("Active node: ", activeNode)
+	//activeNode := GetActiveNodePipewire()
+
+	//nodes, err := state.GetNodesOfDevice(activeNode.Id)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//for _, node := range nodes {
+	//	mediaClass := node.Props["media.class"].(string)
+	//	if mediaClass == "Audio/Sink" {
+	//		activeNode = node
+	//	} else {
+	//		continue
+	//	}
+	//}
 
 	objects := getPipewireObjects(
 		PropertyFilter{"media.class", "Audio/Sink"},
 	)
+	fmt.Println("Active sink: ", objects)
 
-	for idx, item := range objects {
-		if item["id"] == activeSink["id"] {
-			offset := 1
-			if reverse {
-				offset = -1
-			}
-			nextIndex := (len(objects) + (idx + offset)) % len(objects)
-			nextSink := objects[nextIndex]
-			SwitchSinkPipewire(nextSink)
-		}
-	}
+	//for idx, item := range objects {
+	//	if item["id"] == activeSink.Id {
+	//		offset := 1
+	//		if reverse {
+	//			offset = -1
+	//		}
+	//		nextIndex := (len(objects) + (idx + offset)) % len(objects)
+	//		nextSink := objects[nextIndex]
+	//		SwitchSinkPipewire(nextSink)
+	//	}
+	//}
 
 	log.Fatal("Active sink not found")
 }
@@ -70,27 +89,23 @@ func moveStreamToNode(streamId string, nodeId int) {
 // If the name is empty, the volume of the active sink is returned.
 // The volume is returned as a float value in [0..1]
 func GetVolumePipewireByName(name string) (float64, error) {
-	var sinkId int
+	var node InterfaceNode
 	if name == "" {
-		activeSink := GetActiveSinkPipewire()
-		activeSinkId, err := strconv.Atoi(activeSink["id"])
+		activeSink, err := GetDefaultNode()
 		if err != nil {
 			return -1, err
 		}
-		sinkId = activeSinkId
+		node = activeSink
 	} else {
-		sink := FindSinkPipewire(name)
-		if sink == nil {
-			return -1, errors.New("sink not found")
-		}
-		targetSinkId, err := strconv.Atoi(sink["id"])
+		nodeByName, err := GetNodeByName(name)
 		if err != nil {
 			return -1, err
 		}
-		sinkId = targetSinkId
+		node = nodeByName
 	}
-
-	return GetVolumePipewireBySink(sinkId)
+	channelVolumes := node.GetVolume()
+	// use left channel for now
+	return channelVolumes[0], nil
 }
 
 // GetVolumePipewireBySink returns the volume of the sink with the given sinkId
@@ -169,43 +184,56 @@ func SetMutedPipewire(deviceId int, muted bool) error {
 	return state.SetMuted(deviceId, muted)
 }
 
-func GetSinkByName(name string) map[string]string {
-	objects := getPipewireObjects(
-		PropertyFilter{"media.class", "Audio/Sink"},
-	)
-	for _, item := range objects {
-		if util.ContainsIgnoreCase(item["node.name"], name) || util.ContainsIgnoreCase(item["node.description"], name) {
-			return item
-		}
+func GetDeviceByName(name string) (InterfaceDevice, error) {
+	state := PwDump()
+	node, err := state.GetDeviceByName(name)
+	if err != nil {
+		return InterfaceDevice{}, err
 	}
+	return node, nil
+}
 
-	return nil
+func GetNodeByName(name string) (InterfaceNode, error) {
+	state := PwDump()
+	node, err := state.GetNodeByName(name)
+	if err != nil {
+		return InterfaceNode{}, err
+	}
+	return node, nil
 }
 
 type Sink struct {
 	properties map[string]string
 }
 
-// GetActiveSinkPipewire returns the index of the active sink
-func GetActiveSinkPipewire() map[string]string {
+// GetDefaultNode returns the index of the active device
+func GetDefaultNode() (InterfaceNode, error) {
 	currentDefaultSinkName, err := util.ExecCommand("pactl", "get-default-sink")
 	if err != nil {
 		log.Fatal(err)
 	}
-	return GetSinkByName(currentDefaultSinkName)
+	state := PwDump()
+	for _, node := range state.Nodes {
+		if node.Info.Props["node.name"].(string) == currentDefaultSinkName {
+			return node, nil
+		}
+	}
+	return InterfaceNode{}, errors.New("default node not found")
 }
 
 // ContainsActiveSinkPipewire returns
 // 0: if the given text is NOT found in the active sink
 // 1: if the given text IS found in the active sink
 func ContainsActiveSinkPipewire(text string) int {
-	sink := GetActiveSinkPipewire()
-	if sink == nil {
+	node, err := GetDefaultNode()
+	if err != nil {
 		return 0
 	}
 
-	if util.ContainsIgnoreCase(sink["node.name"], text) ||
-		util.ContainsIgnoreCase(sink["node.description"], text) {
+	nodeName := node.Info.Props["node.name"].(string)
+	nodeDescription := node.Info.Props["node.description"].(string)
+
+	if util.ContainsIgnoreCase(nodeName, text) || util.ContainsIgnoreCase(nodeDescription, text) {
 		return 1
 	} else {
 		return 0

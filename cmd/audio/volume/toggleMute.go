@@ -27,9 +27,6 @@ var toggleMuteCmd = &cobra.Command{
 	Short: "Toggle the Mute state",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		deviceFlag := cmd.Flag("device")
-		device := deviceFlag.Value.String()
-
 		state := pipewire.PwDump()
 
 		var target pipewire.InterfaceNode

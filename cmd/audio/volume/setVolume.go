@@ -31,8 +31,8 @@ var setVolumeCmd = &cobra.Command{
 	Long:  ``,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		deviceFlag := cmd.Flag("device")
-		device := deviceFlag.Value.String()
+		fmt.Println(device)
+		fmt.Println(stream)
 
 		volume, err := strconv.Atoi(args[0])
 		if err != nil {

@@ -31,9 +31,6 @@ var VolumeCmd = &cobra.Command{
 	Use:   "volume",
 	Short: "Show the current volume",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		deviceFlag := cmd.Flag("device")
-		device := deviceFlag.Value.String()
-
 		state := pipewire.PwDump()
 
 		volume, err := state.GetVolumeByName(device)

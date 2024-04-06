@@ -30,9 +30,6 @@ var decVolumeCmd = &cobra.Command{
 	Short: "Decrement audio volume",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		deviceFlag := cmd.Flag("device")
-		device := deviceFlag.Value.String()
-
 		state := pipewire.PwDump()
 
 		volume, err := state.GetVolumeByName(device)

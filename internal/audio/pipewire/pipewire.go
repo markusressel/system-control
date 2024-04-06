@@ -485,7 +485,6 @@ func parsePipwireParamsToMap(input string) []PipewireObject {
 }
 
 func parsePipewireObjects(lines []string, endIndentation int) ([]PipewireObject, int) {
-	var err error
 	var consumedLines int
 	result := make([]PipewireObject, 0, 1000)
 
@@ -519,10 +518,6 @@ func parsePipewireObjects(lines []string, endIndentation int) ([]PipewireObject,
 		}
 
 		i++
-	}
-
-	if err != nil {
-		panic(err)
 	}
 
 	return result, consumedLines

@@ -39,8 +39,7 @@ func (d InterfaceDevice) SetMuted(muted bool) error {
 
 	for _, route := range outputRoutes {
 		err := route.SetParameter(d.Id, map[string]interface{}{
-			"muted": muted,
-			"save":  true,
+			"mute": muted,
 		})
 		if err != nil {
 			return err

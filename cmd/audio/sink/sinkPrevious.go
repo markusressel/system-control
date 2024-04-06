@@ -29,8 +29,8 @@ var previousCmd = &cobra.Command{
 
 > system-control audio sink previous`,
 	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		pipewire.RotateActiveSinkPipewire(true)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return pipewire.RotateActiveSinkPipewire(true)
 	},
 }
 

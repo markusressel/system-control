@@ -24,11 +24,11 @@ func ExecCommand(command string, args ...string) (string, error) {
 
 	if err != nil {
 		fmt.Println(err.Error())
-		fmt.Println(string(stderr.Bytes()))
+		fmt.Println(stderr.String())
 		return "", err
 	}
 
-	result := string(stdout.Bytes())
+	result := stdout.String()
 	result = strings.TrimSpace(result)
 
 	return result, nil
@@ -57,12 +57,14 @@ func ExecCommandEnv(env []string, attach bool, command string, args ...string) (
 		err = cmd.Process.Release()
 	}
 
+	stdoutText := stdout.String()
+
 	if err != nil {
 		fmt.Println(err.Error())
-		fmt.Println(string(stderr.Bytes()))
+		fmt.Println(stderr.String())
 		log.Fatal(stderr)
 		return "", err
 	}
 
-	return string(stdout.Bytes()), nil
+	return stdoutText, nil
 }

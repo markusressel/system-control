@@ -18,20 +18,6 @@ const (
 	TypeMetadata = "PipeWire:Interface:Metadata"
 )
 
-type PipewireState struct {
-	Objects   []PipewireStateObject
-	Nodes     []PipewireInterfaceNode
-	Factories []PipewireStateObject
-	Modules   []PipewireStateObject
-	Cores     []PipewireStateObject
-	Clients   []PipewireStateObject
-	Links     []PipewireStateObject
-	Ports     []PipewireStateObject
-	Devices   []PipewireStateObject
-	Profilers []PipewireStateObject
-	Metadatas []PipewireStateObject
-}
-
 type CommonData struct {
 	Id          int                      `json:"id"`
 	Type        string                   `json:"type"`
@@ -47,36 +33,21 @@ type PipewireGraphObject struct {
 }
 
 type PipewireStateObject struct {
-	Id          int                      `json:"id"`
-	Type        string                   `json:"type"`
-	Version     int                      `json:"version"`
-	Permissions []string                 `json:"permissions"`
-	Info        PipewireObjectInfo       `json:"info,omitempty"`
-	Props       map[string]interface{}   `json:"props,omitempty"`
-	Metadata    []map[string]interface{} `json:"metadata,omitempty"`
+	CommonData
+	Info PipewireObjectInfo `json:"info,omitempty"`
 }
 
 func (o *PipewireStateObject) UnmarshalJSON(data []byte) error {
 	// Unmarshall common data
 	temp := new(struct {
-		Id          int                      `json:"id"`
-		Type        string                   `json:"type"`
-		Version     int                      `json:"version"`
-		Permissions []string                 `json:"permissions"`
-		Info        json.RawMessage          `json:"info,omitempty"`
-		Props       map[string]interface{}   `json:"props,omitempty"`
-		Metadata    []map[string]interface{} `json:"metadata,omitempty"`
+		CommonData
+		Info json.RawMessage `json:"info,omitempty"`
 	})
 	if err := json.Unmarshal(data, temp); err != nil {
 		return err
 	}
 
-	o.Id = temp.Id
-	o.Type = temp.Type
-	o.Version = temp.Version
-	o.Permissions = temp.Permissions
-	o.Props = temp.Props
-	o.Metadata = temp.Metadata
+	o.CommonData = temp.CommonData
 
 	if temp.Info != nil {
 		switch temp.Type {
@@ -137,7 +108,14 @@ func (o *PipewireStateObject) UnmarshalJSON(data []byte) error {
 			}
 			o.Info = info
 		case TypeProfiler:
-			info := PipewireInterfaceProfilerInfo{}
+			info := PipewireInterfaceProfilerInfo(&map[string]interface{}{})
+			err := json.Unmarshal(temp.Info, &info)
+			if err != nil {
+				return err
+			}
+			o.Info = info
+		case TypeMetadata:
+			info := PipewireInterfaceMetadataInfo{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
@@ -169,6 +147,51 @@ type PipewireInterfaceNodeInfo struct {
 type PipewireInterfaceNode struct {
 	CommonData
 	Info PipewireInterfaceNodeInfo
+}
+
+type PipewireInterfaceFactory struct {
+	CommonData
+	Info PipewireInterfaceFactoryInfo
+}
+
+type PipewireInterfaceModule struct {
+	CommonData
+	Info PipewireInterfaceModuleInfo
+}
+
+type PipewireInterfaceCore struct {
+	CommonData
+	Info PipewireInterfaceCoreInfo
+}
+
+type PipewireInterfaceClient struct {
+	CommonData
+	Info PipewireInterfaceClientInfo
+}
+
+type PipewireInterfaceLink struct {
+	CommonData
+	Info PipewireInterfaceLinkInfo
+}
+
+type PipewireInterfacePort struct {
+	CommonData
+	Info PipewireInterfacePortInfo
+}
+
+type PipewireInterfaceDevice struct {
+	CommonData
+	Info PipewireInterfaceDeviceInfo
+}
+
+type PipewireInterfaceProfiler struct {
+	CommonData
+	Info PipewireInterfaceProfilerInfo
+}
+
+type PipewireInterfaceMetadata struct {
+	CommonData
+	Info map[string]interface{}
 }
 
 func (n PipewireInterfaceNode) GetName() (string, error) {
@@ -247,5 +270,6 @@ type PipewireInterfaceDeviceInfo struct {
 }
 
 // PipewireInterfaceProfilerInfo Type: "PipeWire:Interface:Profiler"
-type PipewireInterfaceProfilerInfo struct {
-}
+type PipewireInterfaceProfilerInfo *map[string]interface{}
+
+type PipewireInterfaceMetadataInfo map[string]interface{}

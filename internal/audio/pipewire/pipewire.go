@@ -734,21 +734,18 @@ func (state PipewireState) GetNodeByName(name string) (PipewireInterfaceNode, er
 	return PipewireInterfaceNode{}, errors.New("node not found")
 }
 
-func (state PipewireState) GetPortByName(nodeName string, name string) (PipewireStateObject, error) {
+func (state PipewireState) GetPortByName(nodeName string, name string) (PipewireInterfacePort, error) {
 	node, err := state.GetNodeByName(nodeName)
 	if err != nil {
-		return PipewireStateObject{}, err
+		return PipewireInterfacePort{}, err
 	}
 	for _, port := range state.Ports {
-		infoProps, ok := port.Info.(PipewireInterfacePortInfo)
-		if !ok {
-			continue
-		}
+		infoProps := port.Info
 		if infoProps.Props["port.name"] == name && infoProps.Props["port.node"] == node.Info.Props["object.id"] {
 			return port, nil
 		}
 	}
-	return PipewireStateObject{}, errors.New("port not found")
+	return PipewireInterfacePort{}, errors.New("port not found")
 }
 
 func (o *PipewireStateObject) GetName() (string, error) {

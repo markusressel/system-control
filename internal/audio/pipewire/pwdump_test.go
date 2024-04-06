@@ -8,7 +8,7 @@ import (
 
 func TestParsePwDumpToPipewireState(t *testing.T) {
 	// GIVEN
-	input, err := os.ReadFile("../../test/pipewire/pw.dump")
+	input, err := os.ReadFile("../../../test/pipewire/pw.dump")
 	assert.NoError(t, err)
 
 	// WHEN

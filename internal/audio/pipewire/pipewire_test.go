@@ -8,7 +8,7 @@ import (
 
 func TestParsePipwireParamsToMap(t *testing.T) {
 	// GIVEN
-	input, err := os.ReadFile("../../test/pipewire/pw-cli_enum-params.txt")
+	input, err := os.ReadFile("../../../test/pipewire/pw-cli_enum-params.txt")
 	assert.NoError(t, err)
 
 	// WHEN
@@ -21,7 +21,7 @@ func TestParsePipwireParamsToMap(t *testing.T) {
 
 func TestFilterPipewireObjects(t *testing.T) {
 	// GIVEN
-	input, err := os.ReadFile("../../test/pipewire/pw-cli_list-objects.txt")
+	input, err := os.ReadFile("../../../test/pipewire/pw-cli_list-objects.txt")
 	assert.NoError(t, err)
 	filters := []PropertyFilter{
 		{key: "media.class", value: "Audio/Device"},

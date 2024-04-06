@@ -5,11 +5,6 @@ import (
 	"strconv"
 )
 
-type PropertyFilter struct {
-	key   string
-	value string
-}
-
 // RotateActiveSinkPipewire switches the default sink and moves all existing sink inputs to the next available sink in the list
 func RotateActiveSinkPipewire(reverse bool) error {
 	state := PwDump()

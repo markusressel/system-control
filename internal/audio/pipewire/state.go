@@ -2,6 +2,7 @@ package pipewire
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -93,4 +94,93 @@ func (state *PipewireState) UnmarshalJSON(data []byte) error {
 	}
 
 	return nil
+}
+
+func (state PipewireState) IsMuted(sinkId int) (bool, error) {
+	node, err := state.GetNodeBySinkId(sinkId)
+	if err != nil {
+		return false, err
+	}
+	muted := node.GetMuted()
+	return muted, err
+}
+
+func (state PipewireState) GetDefaultSink() (string, error) {
+	for _, item := range state.Metadatas {
+		if item.Props["metadata.name"] != "default" {
+			continue
+		}
+
+		for _, entry := range item.Metadata {
+			if entry["key"] == "default.audio.sink" {
+				return entry["value"].(map[string]interface{})["name"].(string), nil
+			}
+		}
+	}
+
+	return "", errors.New("default sink not found")
+}
+
+func (state PipewireState) GetDefaultSource() (string, error) {
+	defaultSinkName, err := state.GetDefaultSink()
+	if err != nil {
+		return "", err
+	}
+
+	node, err := state.GetNodeByName(defaultSinkName)
+	if err != nil {
+		return "", err
+	}
+	return node.GetName()
+}
+
+func (state PipewireState) GetNodeBySinkId(sinkId int) (PipewireInterfaceNode, error) {
+	for _, node := range state.Nodes {
+		if node.Id == sinkId {
+			return node, nil
+		}
+	}
+	return PipewireInterfaceNode{}, errors.New("node not found")
+}
+
+func (state PipewireState) GetNodeByName(name string) (PipewireInterfaceNode, error) {
+	for _, node := range state.Nodes {
+		nodeInfoProperties := node.Info.Props
+		if nodeInfoProperties["node.name"] == name {
+			objectId := nodeInfoProperties["object.id"].(float64)
+			deviceId := nodeInfoProperties["device.id"].(float64)
+			clientId := nodeInfoProperties["client.id"].(float64)
+			cardProfileDevice := nodeInfoProperties["card.profile.device"].(float64)
+			deviceRoutes := nodeInfoProperties["device.routes"].(float64)
+			fmt.Println("Found node: ", name, " with id: ", objectId, " device id: ", deviceId, " client id: ", clientId, " card profile device: ", cardProfileDevice, " device routes: ", deviceRoutes)
+			return node, nil
+		}
+	}
+	return PipewireInterfaceNode{}, errors.New("node not found")
+}
+
+func (state PipewireState) GetPortByName(nodeName string, name string) (PipewireInterfacePort, error) {
+	node, err := state.GetNodeByName(nodeName)
+	if err != nil {
+		return PipewireInterfacePort{}, err
+	}
+	for _, port := range state.Ports {
+		infoProps := port.Info
+		if infoProps.Props["port.name"] == name && infoProps.Props["port.node"] == node.Info.Props["object.id"] {
+			return port, nil
+		}
+	}
+	return PipewireInterfacePort{}, errors.New("port not found")
+}
+
+func (o *PipewireStateObject) GetName() (string, error) {
+	infoProps, ok := o.Info.(PipewireInterfaceNodeInfo)
+	if !ok {
+		return "", errors.New("invalid object type")
+	}
+	nodeName, ok := infoProps.Props["node.name"].(string)
+	if !ok {
+		return "", errors.New("node name not found")
+	}
+	return nodeName, nil
 }

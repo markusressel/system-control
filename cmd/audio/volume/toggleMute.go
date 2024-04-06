@@ -39,8 +39,14 @@ var toggleMuteCmd = &cobra.Command{
 			targetSink = pipewire.GetSinkByName(name)
 		}
 		sinkId, err := strconv.Atoi(targetSink["id"])
+		if err != nil {
+			return err
+		}
 		targetSinkDeviceId, err := strconv.Atoi(targetSink["device.id"])
-		isMuted := pipewire.IsMutedPipewire(sinkId)
+		if err != nil {
+			return err
+		}
+		isMuted, err := pipewire.IsMutedPipewire(sinkId)
 		if err != nil {
 			return err
 		}

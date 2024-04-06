@@ -142,11 +142,7 @@ type PipewireInterfaceNodeInfo struct {
 	State          string                 `json:"state"`
 	Error          string                 `json:"error"`
 	Props          map[string]interface{} `json:"props"`
-}
-
-type PipewireInterfaceNode struct {
-	CommonData
-	Info PipewireInterfaceNodeInfo
+	Params         map[string]interface{} `json:"params"`
 }
 
 type PipewireInterfaceFactory struct {

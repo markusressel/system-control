@@ -30,11 +30,13 @@ var toggleMuteCmd = &cobra.Command{
 		nameFlag := cmd.Flag("name")
 		name := nameFlag.Value.String()
 
+		state := pipewire.PwDump()
+
 		var target pipewire.InterfaceNode
 		if name == "" {
-			target, err = pipewire.GetDefaultNode()
+			target, err = state.GetDefaultNode()
 		} else {
-			target, err = pipewire.GetNodeByName(name)
+			target, err = state.GetNodeByName(name)
 		}
 		if err != nil {
 			return err
@@ -46,11 +48,11 @@ var toggleMuteCmd = &cobra.Command{
 		}
 
 		sinkId := target.Id
-		isMuted, err := pipewire.IsMutedPipewire(sinkId)
+		isMuted, err := state.IsMuted(sinkId)
 		if err != nil {
 			return err
 		}
-		err = pipewire.SetMutedPipewire(parentDevice.Id, !isMuted)
+		err = state.SetMuted(parentDevice.Id, !isMuted)
 		return nil
 	},
 }

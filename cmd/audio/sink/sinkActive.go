@@ -40,10 +40,12 @@ var activeCmd = &cobra.Command{
 			searchString = args[0]
 		}
 
+		state := pipewire.PwDump()
+
 		if len(searchString) > 0 {
-			fmt.Println(pipewire.ContainsActiveSinkPipewire(searchString))
+			fmt.Println(state.ContainsActiveSinkPipewire(searchString))
 		} else {
-			node, err := pipewire.GetDefaultNode()
+			node, err := state.GetDefaultNode()
 			if err != nil {
 				return err
 			}

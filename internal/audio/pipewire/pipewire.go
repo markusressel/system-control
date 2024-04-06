@@ -19,7 +19,7 @@ type PropertyFilter struct {
 func RotateActiveSinkPipewire(reverse bool) error {
 	state := PwDump()
 	allSinks := state.GetSinkNodes()
-	activeNode, err := GetDefaultNode()
+	activeNode, err := state.GetDefaultNode()
 	if err != nil {
 		return err
 	}
@@ -40,12 +40,12 @@ func RotateActiveSinkPipewire(reverse bool) error {
 	}
 
 	nextSink := allSinks[indexOfNextSink]
-	return SwitchSinkTo(nextSink)
+	return state.SwitchSinkTo(nextSink)
 }
 
 // SwitchSinkTo switches the default sink to the given node and moves
 // all existing streams on the currently active sink to the new default sink
-func SwitchSinkTo(node InterfaceNode) error {
+func (state *GraphState) SwitchSinkTo(node InterfaceNode) error {
 	nodeName, err := node.GetName()
 	if err != nil {
 		return err
@@ -56,7 +56,6 @@ func SwitchSinkTo(node InterfaceNode) error {
 		return err
 	}
 
-	state := PwDump()
 	streams := state.GetStreamNodes()
 
 	for _, stream := range streams {
@@ -81,16 +80,16 @@ func moveStreamToNode(streamId int, nodeId int) error {
 // The name must be part of the "node.name" or "node.description" property.
 // If the name is empty, the volume of the active sink is returned.
 // The volume is returned as a float value in [0..1]
-func GetVolumePipewireByName(name string) (float64, error) {
+func (state *GraphState) GetVolumePipewireByName(name string) (float64, error) {
 	var node InterfaceNode
 	if name == "" {
-		activeSink, err := GetDefaultNode()
+		activeSink, err := state.GetDefaultNode()
 		if err != nil {
 			return -1, err
 		}
 		node = activeSink
 	} else {
-		nodeByName, err := GetNodeByName(name)
+		nodeByName, err := state.GetNodeByName(name)
 		if err != nil {
 			return -1, err
 		}
@@ -141,8 +140,8 @@ func GetVolumePipewireBySink(sinkId int) (float64, error) {
 
 // GetVolumePipewire returns the volume of the active sink
 // The volume is returned as a float value in [0..1]
-func GetVolumePipewire() (float64, error) {
-	return GetVolumePipewireByName("")
+func (state *GraphState) GetVolumePipewire() (float64, error) {
+	return state.GetVolumePipewireByName("")
 }
 
 func findParamProperty(details []PipewireObject, s string) (PipewireProperty, error) {
@@ -163,49 +162,24 @@ func (p *PipewireObject) findParamProperty1(s string) (*PipewireProperty, error)
 	return p.GetProperty(s)
 }
 
-// SetVolumePipewire sets the given volume to the given sink using pipewire
-// volume in percent
-func SetVolumePipewire(deviceId int, volume float64) error {
-	state := PwDump()
-	return state.SetVolume(deviceId, volume)
-}
-
-// SetMutedPipewire sets the given volume to the given sink using pipewire
-// volume in percent
-func SetMutedPipewire(deviceId int, muted bool) error {
-	state := PwDump()
-	return state.SetMuted(deviceId, muted)
-}
-
-func GetDeviceByName(name string) (InterfaceDevice, error) {
-	state := PwDump()
-	return state.GetDeviceByName(name)
-}
-
-func GetNodeByName(name string) (InterfaceNode, error) {
-	state := PwDump()
-	return state.GetNodeByName(name)
-}
-
 type Sink struct {
 	properties map[string]string
 }
 
 // GetDefaultNode returns the index of the active device
-func GetDefaultNode() (InterfaceNode, error) {
+func (state *GraphState) GetDefaultNode() (InterfaceNode, error) {
 	currentDefaultSinkName, err := util.ExecCommand("pactl", "get-default-sink")
 	if err != nil {
 		return InterfaceNode{}, err
 	}
-	state := PwDump()
 	return state.GetNodeByName(currentDefaultSinkName)
 }
 
 // ContainsActiveSinkPipewire returns
 // 0: if the given text is NOT found in the active sink
 // 1: if the given text IS found in the active sink
-func ContainsActiveSinkPipewire(text string) int {
-	node, err := GetDefaultNode()
+func (state *GraphState) ContainsActiveSinkPipewire(text string) int {
+	node, err := state.GetDefaultNode()
 	if err != nil {
 		return 0
 	}
@@ -557,9 +531,4 @@ func getPairsFromLine(line string) map[string]string {
 		result[strings.TrimSpace(splits[0])] = strings.TrimSpace(splits[1])
 	}
 	return result
-}
-
-func IsMutedPipewire(sinkId int) (bool, error) {
-	state := PwDump()
-	return state.IsMuted(sinkId)
 }

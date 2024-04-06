@@ -118,6 +118,8 @@ func (state *GraphState) IsMuted(sinkId int) (bool, error) {
 	return muted, err
 }
 
+// SetMuted sets the given volume to the given sink using pipewire
+// volume in percent
 func (state *GraphState) SetMuted(deviceId int, muted bool) error {
 	device, err := state.GetDeviceById(deviceId)
 	if err != nil {
@@ -261,6 +263,8 @@ func (state *GraphState) GetPortByName(nodeName string, name string) (InterfaceP
 	return InterfacePort{}, errors.New("port not found")
 }
 
+// SetVolume sets the given volume to the given sink using pipewire
+// volume in percent
 func (state *GraphState) SetVolume(deviceId int, volume float64) error {
 	node, err := state.GetDeviceById(deviceId)
 	if err != nil {

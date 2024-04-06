@@ -33,7 +33,9 @@ var decVolumeCmd = &cobra.Command{
 		nameFlag := cmd.Flag("name")
 		name := nameFlag.Value.String()
 
-		volume, err := pipewire.GetVolumePipewireByName(name)
+		state := pipewire.PwDump()
+
+		volume, err := state.GetVolumePipewireByName(name)
 		if err != nil {
 			return err
 		}
@@ -41,9 +43,9 @@ var decVolumeCmd = &cobra.Command{
 
 		var target pipewire.InterfaceNode
 		if name == "" {
-			target, err = pipewire.GetDefaultNode()
+			target, err = state.GetDefaultNode()
 		} else {
-			target, err = pipewire.GetNodeByName(name)
+			target, err = state.GetNodeByName(name)
 		}
 		if err != nil {
 			return err
@@ -55,12 +57,12 @@ var decVolumeCmd = &cobra.Command{
 		}
 
 		targetVolume := volume - change
-		err = pipewire.SetVolumePipewire(parentDevice.Id, targetVolume)
+		err = state.SetVolume(parentDevice.Id, targetVolume)
 		if err != nil {
 			return err
 		}
 
-		newVolume, err := pipewire.GetVolumePipewireByName(name)
+		newVolume, err := state.GetVolumePipewireByName(name)
 		if err != nil {
 			return err
 		}

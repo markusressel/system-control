@@ -33,7 +33,9 @@ var VolumeCmd = &cobra.Command{
 		nameFlag := cmd.Flag("name")
 		name := nameFlag.Value.String()
 
-		volume, err := pipewire.GetVolumePipewireByName(name)
+		state := pipewire.PwDump()
+
+		volume, err := state.GetVolumePipewireByName(name)
 		if err != nil {
 			return err
 		}

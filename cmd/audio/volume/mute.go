@@ -35,11 +35,13 @@ to quickly create a Cobra application.`,
 		nameFlag := cmd.Flag("name")
 		name := nameFlag.Value.String()
 
+		state := pipewire.PwDump()
+
 		var target pipewire.InterfaceNode
 		if name == "" {
-			target, err = pipewire.GetDefaultNode()
+			target, err = state.GetDefaultNode()
 		} else {
-			target, err = pipewire.GetNodeByName(name)
+			target, err = state.GetNodeByName(name)
 		}
 		if err != nil {
 			return err
@@ -49,7 +51,7 @@ to quickly create a Cobra application.`,
 		if err != nil {
 			return err
 		}
-		return pipewire.SetMutedPipewire(parentDevice.Id, true)
+		return state.SetMuted(parentDevice.Id, true)
 	},
 }
 

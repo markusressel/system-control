@@ -36,11 +36,14 @@ You can specify the audio sink using its index, but also using other strings tha
 		searchString := args[0]
 		//sinkIdx := findSinkPulse(searchString)
 		//switchSinkPulse(sinkIdx)
-		sink, err := pipewire.GetNodeByName(searchString)
+
+		state := pipewire.PwDump()
+
+		sink, err := state.GetNodeByName(searchString)
 		if err != nil {
 			return err
 		}
-		return pipewire.SwitchSinkTo(sink)
+		return state.SwitchSinkTo(sink)
 	},
 }
 

@@ -1,10 +1,7 @@
 package pipewire
 
 import (
-	"fmt"
-	"github.com/markusressel/system-control/internal/util"
 	"math"
-	"strconv"
 	"strings"
 )
 
@@ -37,27 +34,14 @@ func (i DeviceInfoParams) GetOutputRoutes() []DeviceRoute {
 	return outputRoutes
 }
 
-func (d InterfaceDevice) SetParameter(params map[string]interface{}) error {
+func (d InterfaceDevice) SetMuted(muted bool) error {
 	outputRoutes := d.Info.Params.GetOutputRoutes()
 
-	formattedParams := ""
-	for key, value := range params {
-		formattedParams += fmt.Sprintf("%v: %v, ", key, value)
-	}
-	formattedParams = strings.TrimRight(formattedParams, ", ")
-
 	for _, route := range outputRoutes {
-		_, err := util.ExecCommand(
-			"pw-cli",
-			"set-param",
-			strconv.Itoa(d.Id),
-			"Route",
-			fmt.Sprintf("{ index: %d, device: %d, props: { %s }",
-				route.Index,
-				route.Device,
-				formattedParams,
-			),
-		)
+		err := route.SetParameter(d.Id, map[string]interface{}{
+			"muted": muted,
+			"save":  true,
+		})
 		if err != nil {
 			return err
 		}
@@ -66,14 +50,9 @@ func (d InterfaceDevice) SetParameter(params map[string]interface{}) error {
 	return nil
 }
 
-func (d InterfaceDevice) SetMuted(muted bool) error {
-	return d.SetParameter(map[string]interface{}{
-		"mute": muted,
-		"save": true,
-	})
-}
-
 func (d InterfaceDevice) SetVolume(volume float64) error {
+	outputRoutes := d.Info.Params.GetOutputRoutes()
+
 	if volume < 0 {
 		volume = 0
 	} else if volume > 1 {
@@ -81,9 +60,16 @@ func (d InterfaceDevice) SetVolume(volume float64) error {
 	}
 	volumeCubicRoot := math.Pow(volume, 3)
 
-	return d.SetParameter(map[string]interface{}{
-		"muted":          false,
-		"channelVolumes": []float64{volumeCubicRoot, volumeCubicRoot},
-		"save":           true,
-	})
+	for _, route := range outputRoutes {
+		err := route.SetParameter(d.Id, map[string]interface{}{
+			"muted":          false,
+			"channelVolumes": []float64{volumeCubicRoot, volumeCubicRoot},
+			"save":           true,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

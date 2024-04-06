@@ -28,16 +28,11 @@ type CommonData struct {
 }
 
 type PipewireGraphObject struct {
-	CommonData CommonData
-	Info       PipewireObjectInfo
-}
-
-type PipewireStateObject struct {
 	CommonData
 	Info PipewireObjectInfo `json:"info,omitempty"`
 }
 
-func (o *PipewireStateObject) UnmarshalJSON(data []byte) error {
+func (o *PipewireGraphObject) UnmarshalJSON(data []byte) error {
 	// Unmarshall common data
 	temp := new(struct {
 		CommonData

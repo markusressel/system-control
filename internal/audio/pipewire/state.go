@@ -23,7 +23,7 @@ type PipewireState struct {
 
 func (state *PipewireState) UnmarshalJSON(data []byte) error {
 
-	var objectDataList []PipewireStateObject
+	var objectDataList []PipewireGraphObject
 	if err := json.NewDecoder(strings.NewReader(string(data))).Decode(&objectDataList); err != nil {
 		log.Fatalf("decode: %s", err)
 	}
@@ -235,7 +235,7 @@ func (state PipewireState) GetPortByName(nodeName string, name string) (Pipewire
 	return PipewireInterfacePort{}, errors.New("port not found")
 }
 
-func (o *PipewireStateObject) GetName() (string, error) {
+func (o *PipewireGraphObject) GetName() (string, error) {
 	infoProps, ok := o.Info.(PipewireInterfaceNodeInfo)
 	if !ok {
 		return "", errors.New("invalid object type")

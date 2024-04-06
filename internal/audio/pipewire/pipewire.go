@@ -81,7 +81,7 @@ func GetVolumePipewireByName(name string) (float64, error) {
 	} else {
 		sink := FindSinkPipewire(name)
 		if sink == nil {
-			return -1, errors.New("Sink not found")
+			return -1, errors.New("sink not found")
 		}
 		targetSinkId, err := strconv.Atoi(sink["id"])
 		if err != nil {
@@ -412,7 +412,7 @@ func (p *PipewireObject) GetProperty(name string) (*PipewireProperty, error) {
 			return &property, nil
 		}
 	}
-	return nil, errors.New("Property not found")
+	return nil, errors.New("property not found")
 }
 
 type ObjectProperties map[string]PipewireProperty

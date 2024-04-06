@@ -97,6 +97,18 @@ func (state *GraphState) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (o *GraphObject) GetName() (string, error) {
+	infoProps, ok := o.Info.(InterfaceNodeInfo)
+	if !ok {
+		return "", errors.New("invalid object type")
+	}
+	nodeName, ok := infoProps.Props["node.name"].(string)
+	if !ok {
+		return "", errors.New("node name not found")
+	}
+	return nodeName, nil
+}
+
 func (state *GraphState) IsMuted(sinkId int) (bool, error) {
 	node, err := state.GetNodeById(sinkId)
 	if err != nil {
@@ -224,7 +236,10 @@ func (state *GraphState) GetNodeByName(name string) (InterfaceNode, error) {
 	for _, node := range state.Nodes {
 		nodeInfoProperties := node.Info.Props
 		nodeName := nodeInfoProperties["node.name"].(string)
-		nodeDescription := nodeInfoProperties["node.description"].(string)
+		nodeDescription, ok := nodeInfoProperties["node.description"].(string)
+		if !ok {
+			nodeDescription = ""
+		}
 		if util.ContainsIgnoreCase(nodeName, name) || util.ContainsIgnoreCase(nodeDescription, name) {
 			return node, nil
 		}
@@ -264,14 +279,30 @@ func (state *GraphState) GetNodesOfDevice(deviceId int) []InterfaceNode {
 	return result
 }
 
-func (o *GraphObject) GetName() (string, error) {
-	infoProps, ok := o.Info.(InterfaceNodeInfo)
-	if !ok {
-		return "", errors.New("invalid object type")
+func (state *GraphState) GetSinkNodes() []InterfaceNode {
+	var result []InterfaceNode
+	for _, node := range state.Nodes {
+		mediaClass, ok := node.Info.Props["media.class"].(string)
+		if !ok {
+			continue
+		}
+		if mediaClass == "Audio/Sink" {
+			result = append(result, node)
+		}
 	}
-	nodeName, ok := infoProps.Props["node.name"].(string)
-	if !ok {
-		return "", errors.New("node name not found")
+	return result
+}
+
+func (state *GraphState) GetStreamNodes() []InterfaceNode {
+	var result []InterfaceNode
+	for _, node := range state.Nodes {
+		mediaClass, ok := node.Info.Props["media.class"].(string)
+		if !ok {
+			continue
+		}
+		if mediaClass == "Stream/Output/Audio" {
+			result = append(result, node)
+		}
 	}
-	return nodeName, nil
+	return result
 }

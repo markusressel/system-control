@@ -16,72 +16,65 @@ type PropertyFilter struct {
 }
 
 // RotateActiveSinkPipewire switches the default sink and moves all existing sink inputs to the next available sink in the list
-func RotateActiveSinkPipewire(reverse bool) {
+func RotateActiveSinkPipewire(reverse bool) error {
 	state := PwDump()
-	fmt.Println("State: ", state)
+	allSinks := state.GetSinkNodes()
+	activeNode, err := GetDefaultNode()
+	if err != nil {
+		return err
+	}
 
-	activeNode, _ := GetDefaultNode()
-	fmt.Println("Active node: ", activeNode)
-	//activeNode := GetActiveNodePipewire()
+	indexOfActiveSink := -1
+	for idx, sink := range allSinks {
+		if sink.Id == activeNode.Id {
+			indexOfActiveSink = idx
+			break
+		}
+	}
 
-	//nodes, err := state.GetNodesOfDevice(activeNode.Id)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//for _, node := range nodes {
-	//	mediaClass := node.Props["media.class"].(string)
-	//	if mediaClass == "Audio/Sink" {
-	//		activeNode = node
-	//	} else {
-	//		continue
-	//	}
-	//}
+	var indexOfNextSink = indexOfActiveSink
+	if reverse {
+		indexOfNextSink = len(allSinks) + (indexOfActiveSink-1)%(len(allSinks))
+	} else {
+		indexOfNextSink = (indexOfActiveSink + 1) % (len(allSinks))
+	}
 
-	objects := getPipewireObjects(
-		PropertyFilter{"media.class", "Audio/Sink"},
-	)
-	fmt.Println("Active sink: ", objects)
-
-	//for idx, item := range objects {
-	//	if item["id"] == activeSink.Id {
-	//		offset := 1
-	//		if reverse {
-	//			offset = -1
-	//		}
-	//		nextIndex := (len(objects) + (idx + offset)) % len(objects)
-	//		nextSink := objects[nextIndex]
-	//		SwitchSinkPipewire(nextSink)
-	//	}
-	//}
-
-	log.Fatal("Active sink not found")
+	nextSink := allSinks[indexOfNextSink]
+	return SwitchSinkTo(nextSink)
 }
 
-// SwitchSinkPipewire switches the default sink and moves all existing sink inputs to the target sink
-func SwitchSinkPipewire(node map[string]string) {
-	nodeName := node["node.name"]
-	nodeId, err := strconv.Atoi(node["id"])
+// SwitchSinkTo switches the default sink to the given node and moves
+// all existing streams on the currently active sink to the new default sink
+func SwitchSinkTo(node InterfaceNode) error {
+	nodeName, err := node.GetName()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+
 	err = setDefaultSinkPipewire(nodeName)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	var streams = getPipewireObjects(
-		PropertyFilter{"media.class", "Stream/Output/Audio"},
-	)
+	state := PwDump()
+	streams := state.GetStreamNodes()
+
 	for _, stream := range streams {
-		moveStreamToNode(stream["id"], nodeId)
+		err = moveStreamToNode(stream.Id, node.Id)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func moveStreamToNode(streamId string, nodeId int) {
-	_, err := util.ExecCommand("pw-metadata", streamId, "target.node", strconv.Itoa(nodeId))
-	if err != nil {
-		log.Fatal(err)
-	}
+func moveStreamToNode(streamId int, nodeId int) error {
+	_, err := util.ExecCommand(
+		"pw-metadata",
+		strconv.Itoa(streamId),
+		"target.node", strconv.Itoa(nodeId),
+	)
+	return err
 }
 
 // GetVolumePipewireByName returns the volume of the with the given name.
@@ -186,20 +179,12 @@ func SetMutedPipewire(deviceId int, muted bool) error {
 
 func GetDeviceByName(name string) (InterfaceDevice, error) {
 	state := PwDump()
-	node, err := state.GetDeviceByName(name)
-	if err != nil {
-		return InterfaceDevice{}, err
-	}
-	return node, nil
+	return state.GetDeviceByName(name)
 }
 
 func GetNodeByName(name string) (InterfaceNode, error) {
 	state := PwDump()
-	node, err := state.GetNodeByName(name)
-	if err != nil {
-		return InterfaceNode{}, err
-	}
-	return node, nil
+	return state.GetNodeByName(name)
 }
 
 type Sink struct {
@@ -210,15 +195,10 @@ type Sink struct {
 func GetDefaultNode() (InterfaceNode, error) {
 	currentDefaultSinkName, err := util.ExecCommand("pactl", "get-default-sink")
 	if err != nil {
-		log.Fatal(err)
+		return InterfaceNode{}, err
 	}
 	state := PwDump()
-	for _, node := range state.Nodes {
-		if node.Info.Props["node.name"].(string) == currentDefaultSinkName {
-			return node, nil
-		}
-	}
-	return InterfaceNode{}, errors.New("default node not found")
+	return state.GetNodeByName(currentDefaultSinkName)
 }
 
 // ContainsActiveSinkPipewire returns
@@ -277,7 +257,6 @@ func getPipewireObjects(filters ...PropertyFilter) (objects []map[string]string)
 				return false
 			}
 		}
-
 		return true
 	})
 

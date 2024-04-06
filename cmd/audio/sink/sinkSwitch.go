@@ -32,12 +32,15 @@ You can specify the audio sink using its index, but also using other strings tha
 
 > system-control audio sink switch "NVIDIA"`,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		searchString := args[0]
 		//sinkIdx := findSinkPulse(searchString)
 		//switchSinkPulse(sinkIdx)
-		sink := pipewire.FindSinkPipewire(searchString)
-		pipewire.SwitchSinkPipewire(sink)
+		sink, err := pipewire.GetNodeByName(searchString)
+		if err != nil {
+			return err
+		}
+		return pipewire.SwitchSinkTo(sink)
 	},
 }
 

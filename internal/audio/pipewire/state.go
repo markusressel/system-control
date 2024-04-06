@@ -311,6 +311,22 @@ func (state *GraphState) GetStreamNodes() []InterfaceNode {
 	return result
 }
 
+func (state *GraphState) GetStreamNode(name string) (InterfaceNode, error) {
+	streamNodes := state.GetStreamNodes()
+	for _, node := range streamNodes {
+		nodeInfoProperties := node.Info.Props
+		nodeName := nodeInfoProperties["node.name"].(string)
+		nodeDescription, ok := nodeInfoProperties["node.description"].(string)
+		if !ok {
+			nodeDescription = ""
+		}
+		if util.ContainsIgnoreCase(nodeName, name) || util.ContainsIgnoreCase(nodeDescription, name) {
+			return node, nil
+		}
+	}
+	return InterfaceNode{}, errors.New("stream not found")
+}
+
 // SwitchSinkTo switches the default sink to the given node and moves
 // all existing streams on the currently active sink to the new default sink
 func (state *GraphState) SwitchSinkTo(node InterfaceNode) error {
@@ -342,7 +358,7 @@ func (state *GraphState) SwitchSinkTo(node InterfaceNode) error {
 func (state *GraphState) GetVolumeByName(name string) (float64, error) {
 	var node InterfaceNode
 	if name == "" {
-		activeSink, err := state.GetDefaultNode()
+		activeSink, err := state.GetDefaultSinkNode()
 		if err != nil {
 			return -1, err
 		}
@@ -359,8 +375,8 @@ func (state *GraphState) GetVolumeByName(name string) (float64, error) {
 	return channelVolumes[0], nil
 }
 
-// GetDefaultNode returns the index of the active device
-func (state *GraphState) GetDefaultNode() (InterfaceNode, error) {
+// GetDefaultSinkNode returns the index of the active device
+func (state *GraphState) GetDefaultSinkNode() (InterfaceNode, error) {
 	currentDefaultSinkName, err := util.ExecCommand("pactl", "get-default-sink")
 	if err != nil {
 		return InterfaceNode{}, err
@@ -372,7 +388,7 @@ func (state *GraphState) GetDefaultNode() (InterfaceNode, error) {
 // 0: if the given text is NOT found in the active sink
 // 1: if the given text IS found in the active sink
 func (state *GraphState) ContainsActiveSink(text string) int {
-	node, err := state.GetDefaultNode()
+	node, err := state.GetDefaultSinkNode()
 	if err != nil {
 		return 0
 	}

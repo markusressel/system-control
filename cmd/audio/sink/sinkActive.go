@@ -45,7 +45,7 @@ var activeCmd = &cobra.Command{
 		if len(searchString) > 0 {
 			fmt.Println(state.ContainsActiveSink(searchString))
 		} else {
-			node, err := state.GetDefaultNode()
+			node, err := state.GetDefaultSinkNode()
 			if err != nil {
 				return err
 			}

@@ -31,27 +31,7 @@ var setVolumeCmd = &cobra.Command{
 	Long:  ``,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println(device)
-		fmt.Println(stream)
-
 		volume, err := strconv.Atoi(args[0])
-		if err != nil {
-			return err
-		}
-
-		state := pipewire.PwDump()
-
-		var target pipewire.InterfaceNode
-		if device == "" {
-			target, err = state.GetDefaultNode()
-		} else {
-			target, err = state.GetNodeByName(device)
-		}
-		if err != nil {
-			return err
-		}
-
-		parentDevice, err := target.GetParentDevice()
 		if err != nil {
 			return err
 		}
@@ -59,7 +39,21 @@ var setVolumeCmd = &cobra.Command{
 		targetVolume := float64(volume)
 		targetVolume = float64(volume) / 100.0
 
-		err = state.SetVolume(parentDevice.Id, targetVolume)
+		state := pipewire.PwDump()
+
+		var target pipewire.InterfaceNode
+		if stream != "" {
+			target, err = state.GetStreamNode(stream)
+		} else if device != "" {
+			target, err = state.GetNodeByName(device)
+		} else {
+			target, err = state.GetDefaultSinkNode()
+		}
+		if err != nil {
+			return err
+		}
+
+		err = pipewire.WpCtlSetVolume(target.Id, targetVolume)
 		if err != nil {
 			return err
 		}

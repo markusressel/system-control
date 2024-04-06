@@ -30,27 +30,18 @@ var toggleMuteCmd = &cobra.Command{
 		state := pipewire.PwDump()
 
 		var target pipewire.InterfaceNode
-		if device == "" {
-			target, err = state.GetDefaultNode()
-		} else {
+		if stream != "" {
+			target, err = state.GetStreamNode(stream)
+		} else if device != "" {
 			target, err = state.GetNodeByName(device)
+		} else {
+			target, err = state.GetDefaultSinkNode()
 		}
 		if err != nil {
 			return err
 		}
 
-		parentDevice, err := target.GetParentDevice()
-		if err != nil {
-			return err
-		}
-
-		sinkId := target.Id
-		isMuted, err := state.IsMuted(sinkId)
-		if err != nil {
-			return err
-		}
-		err = state.SetMuted(parentDevice.Id, !isMuted)
-		return nil
+		return pipewire.WpCtlToggleMute(target.Id)
 	},
 }
 

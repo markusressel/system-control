@@ -103,14 +103,14 @@ TODO: not yet implemented
 
 ### Audio
 
-system-control is optimized for pipewire. If currently you are not using pipewire already, I strongly recommend you to
+system-control is optimized for pipewire. If currently you are not using pipewire already, I strongly recommend to
 consider it.
 
 **Requirements:**
 
-* `pactl`
+* `pw-dump`
 * `pw-cli`
-* `amixer`
+* `wpctl`
 
 #### Volume
 

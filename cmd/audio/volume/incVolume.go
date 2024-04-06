@@ -40,22 +40,19 @@ var IncVolumeCmd = &cobra.Command{
 		change := audio.CalculateAppropriateVolumeChange(volume*100, true) / 100.0
 
 		var target pipewire.InterfaceNode
-		if device == "" {
-			target, err = state.GetDefaultNode()
-		} else {
+		if stream != "" {
+			target, err = state.GetStreamNode(stream)
+		} else if device != "" {
 			target, err = state.GetNodeByName(device)
+		} else {
+			target, err = state.GetDefaultSinkNode()
 		}
-		if err != nil {
-			return err
-		}
-
-		parentDevice, err := target.GetParentDevice()
 		if err != nil {
 			return err
 		}
 
 		targetVolume := volume + change
-		err = state.SetVolume(parentDevice.Id, targetVolume)
+		err = pipewire.WpCtlSetVolume(target.Id, targetVolume)
 		if err != nil {
 			return err
 		}

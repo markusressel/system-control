@@ -30,21 +30,18 @@ var unmuteCmd = &cobra.Command{
 		state := pipewire.PwDump()
 
 		var target pipewire.InterfaceNode
-		if device == "" {
-			target, err = state.GetDefaultNode()
-		} else {
+		if stream != "" {
+			target, err = state.GetStreamNode(stream)
+		} else if device != "" {
 			target, err = state.GetNodeByName(device)
+		} else {
+			target, err = state.GetDefaultSinkNode()
 		}
 		if err != nil {
 			return err
 		}
 
-		parentDevice, err := target.GetParentDevice()
-		if err != nil {
-			return err
-		}
-
-		return state.SetMuted(parentDevice.Id, false)
+		return pipewire.WpCtlSetMute(target.Id, false)
 	},
 }
 

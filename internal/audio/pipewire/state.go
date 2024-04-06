@@ -152,11 +152,14 @@ func (state *GraphState) GetDefaultSource() (string, error) {
 		return "", err
 	}
 
-	node, err := state.GetNodeByName(defaultSinkName)
-	if err != nil {
-		return "", err
+	node := state.FindNodesByName(defaultSinkName)
+	if len(node) <= 0 {
+		return "", errors.New("default sink not found")
 	}
-	return node.GetName()
+	if len(node) > 1 {
+		return "", errors.New("multiple default sinks found")
+	}
+	return node[0].GetName()
 }
 
 func (state *GraphState) GetNodeById(id int) (InterfaceNode, error) {
@@ -234,7 +237,8 @@ func (state *GraphState) GetModuleById(id int) (InterfaceModule, error) {
 	return InterfaceModule{}, errors.New("module not found")
 }
 
-func (state *GraphState) GetNodeByName(name string) (InterfaceNode, error) {
+func (state *GraphState) FindNodesByName(name string) []InterfaceNode {
+	result := make([]InterfaceNode, 0)
 	for _, node := range state.Nodes {
 		nodeInfoProperties := node.Info.Props
 		nodeName := nodeInfoProperties["node.name"].(string)
@@ -243,17 +247,22 @@ func (state *GraphState) GetNodeByName(name string) (InterfaceNode, error) {
 			nodeDescription = ""
 		}
 		if util.ContainsIgnoreCase(nodeName, name) || util.ContainsIgnoreCase(nodeDescription, name) {
-			return node, nil
+			result = append(result, node)
 		}
 	}
-	return InterfaceNode{}, errors.New("node not found")
+	return result
 }
 
 func (state *GraphState) GetPortByName(nodeName string, name string) (InterfacePort, error) {
-	node, err := state.GetNodeByName(nodeName)
-	if err != nil {
-		return InterfacePort{}, err
+	nodes := state.FindNodesByName(nodeName)
+	if len(nodes) <= 0 {
+		return InterfacePort{}, errors.New("node not found")
 	}
+	if len(nodes) > 1 {
+		return InterfacePort{}, errors.New("ambiguous node name")
+	}
+	node := nodes[0]
+
 	for _, port := range state.Ports {
 		infoProps := port.Info
 		if infoProps.Props["port.name"] == name && infoProps.Props["port.node"] == node.Info.Props["object.id"] {
@@ -311,7 +320,8 @@ func (state *GraphState) GetStreamNodes() []InterfaceNode {
 	return result
 }
 
-func (state *GraphState) GetStreamNode(name string) (InterfaceNode, error) {
+func (state *GraphState) FindStreamNodes(name string) []InterfaceNode {
+	result := make([]InterfaceNode, 0)
 	streamNodes := state.GetStreamNodes()
 	for _, node := range streamNodes {
 		nodeInfoProperties := node.Info.Props
@@ -321,10 +331,10 @@ func (state *GraphState) GetStreamNode(name string) (InterfaceNode, error) {
 			nodeDescription = ""
 		}
 		if util.ContainsIgnoreCase(nodeName, name) || util.ContainsIgnoreCase(nodeDescription, name) {
-			return node, nil
+			result = append(result, node)
 		}
 	}
-	return InterfaceNode{}, errors.New("stream not found")
+	return result
 }
 
 // SwitchSinkTo switches the default sink to the given node and moves
@@ -364,11 +374,14 @@ func (state *GraphState) GetVolumeByName(name string) (float64, error) {
 		}
 		node = activeSink
 	} else {
-		nodeByName, err := state.GetNodeByName(name)
-		if err != nil {
-			return -1, err
+		nodes := state.FindNodesByName(name)
+		if len(nodes) <= 0 {
+			return -1, errors.New("node not found")
 		}
-		node = nodeByName
+		if len(nodes) > 1 {
+			return -1, errors.New("ambiguous node name")
+		}
+		node = nodes[0]
 	}
 	channelVolumes := node.GetVolume()
 	// use left channel for now
@@ -381,7 +394,14 @@ func (state *GraphState) GetDefaultSinkNode() (InterfaceNode, error) {
 	if err != nil {
 		return InterfaceNode{}, err
 	}
-	return state.GetNodeByName(currentDefaultSinkName)
+	nodes := state.FindNodesByName(currentDefaultSinkName)
+	if len(nodes) <= 0 {
+		return InterfaceNode{}, errors.New("node not found")
+	}
+	if len(nodes) > 1 {
+		return InterfaceNode{}, errors.New("ambiguous node name")
+	}
+	return nodes[0], nil
 }
 
 // ContainsActiveSink returns

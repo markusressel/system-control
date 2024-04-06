@@ -29,19 +29,27 @@ var toggleMuteCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		state := pipewire.PwDump()
 
-		var target pipewire.InterfaceNode
+		var targets []pipewire.InterfaceNode
 		if stream != "" {
-			target, err = state.GetStreamNode(stream)
+			targets = state.FindStreamNodes(stream)
 		} else if device != "" {
-			target, err = state.GetNodeByName(device)
+			targets = state.FindNodesByName(device)
 		} else {
-			target, err = state.GetDefaultSinkNode()
-		}
-		if err != nil {
-			return err
+			target, err := state.GetDefaultSinkNode()
+			if err != nil {
+				return err
+			}
+			targets = append(targets, target)
 		}
 
-		return pipewire.WpCtlToggleMute(target.Id)
+		for _, target := range targets {
+			err = pipewire.WpCtlToggleMute(target.Id)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
 	},
 }
 

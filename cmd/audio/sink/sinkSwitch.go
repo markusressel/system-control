@@ -18,6 +18,7 @@
 package sink
 
 import (
+	"errors"
 	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/spf13/cobra"
 )
@@ -39,11 +40,15 @@ You can specify the audio sink using its index, but also using other strings tha
 
 		state := pipewire.PwDump()
 
-		sink, err := state.GetNodeByName(searchString)
-		if err != nil {
-			return err
+		nodes := state.FindNodesByName(searchString)
+		if len(nodes) <= 0 {
+			return errors.New("no sink found")
 		}
-		return state.SwitchSinkTo(sink)
+		if len(nodes) > 1 {
+			return errors.New("ambiguous sink name")
+		}
+		node := nodes[0]
+		return state.SwitchSinkTo(node)
 	},
 }
 

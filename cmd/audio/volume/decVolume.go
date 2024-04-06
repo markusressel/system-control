@@ -38,31 +38,35 @@ var decVolumeCmd = &cobra.Command{
 		}
 		change := audio.CalculateAppropriateVolumeChange(volume*100, false) / 100.0
 
-		var target pipewire.InterfaceNode
+		var targets []pipewire.InterfaceNode
 		if stream != "" {
-			target, err = state.GetStreamNode(stream)
+			targets = state.FindStreamNodes(stream)
 		} else if device != "" {
-			target, err = state.GetNodeByName(device)
+			targets = state.FindNodesByName(device)
 		} else {
-			target, err = state.GetDefaultSinkNode()
-		}
-		if err != nil {
-			return err
+			target, err := state.GetDefaultSinkNode()
+			if err != nil {
+				return err
+			}
+			targets = append(targets, target)
 		}
 
 		targetVolume := volume - change
-		err = pipewire.WpCtlSetVolume(target.Id, targetVolume)
-		if err != nil {
-			return err
-		}
+		for _, target := range targets {
+			err = pipewire.WpCtlSetVolume(target.Id, targetVolume)
+			if err != nil {
+				return err
+			}
 
-		newVolume, err := state.GetVolumeByName(device)
-		if err != nil {
-			return err
+			state = pipewire.PwDump()
+			newVolume, err := state.GetVolumeByName(device)
+			if err != nil {
+				return err
+			}
+			newVolume = util.RoundToTwoDecimals(newVolume)
+			volumeAsInt := (int)(newVolume * 100)
+			fmt.Println(volumeAsInt)
 		}
-		newVolume = util.RoundToTwoDecimals(newVolume)
-		volumeAsInt := (int)(newVolume * 100)
-		fmt.Println(volumeAsInt)
 		return err
 	},
 }

@@ -97,12 +97,36 @@ func (state *PipewireState) UnmarshalJSON(data []byte) error {
 }
 
 func (state PipewireState) IsMuted(sinkId int) (bool, error) {
-	node, err := state.GetNodeBySinkId(sinkId)
+	node, err := state.GetNodeById(sinkId)
 	if err != nil {
 		return false, err
 	}
 	muted := node.GetMuted()
 	return muted, err
+}
+
+func (state PipewireState) SetMuted(deviceId int, muted bool) error {
+	device, err := state.GetDeviceById(deviceId)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Device: ", device.Id)
+
+	err = device.SetParameter(map[string]interface{}{
+		"mute": muted, "save": true,
+	})
+
+	//routeIndex := device.Info.Params.Route[0].Index
+	//deviceIndex := device.Info.Params.Route[0].Device
+
+	//device.SetMuted(muted)
+
+	//_, err = state.GetNodeById(deviceId)
+	//if err != nil {
+	//	return err
+	//}
+	//return node.SetMuted(muted)
+	return err
 }
 
 func (state PipewireState) GetDefaultSink() (string, error) {
@@ -134,13 +158,67 @@ func (state PipewireState) GetDefaultSource() (string, error) {
 	return node.GetName()
 }
 
-func (state PipewireState) GetNodeBySinkId(sinkId int) (PipewireInterfaceNode, error) {
+func (state PipewireState) GetNodeById(id int) (PipewireInterfaceNode, error) {
 	for _, node := range state.Nodes {
-		if node.Id == sinkId {
+		if node.Id == id {
 			return node, nil
 		}
 	}
 	return PipewireInterfaceNode{}, errors.New("node not found")
+}
+
+func (state PipewireState) GetDeviceById(id int) (PipewireInterfaceDevice, error) {
+	for _, device := range state.Devices {
+		if device.Id == id {
+			return device, nil
+		}
+	}
+	return PipewireInterfaceDevice{}, errors.New("device not found")
+}
+
+func (state PipewireState) getClientById(id int) (PipewireInterfaceClient, error) {
+	for _, client := range state.Clients {
+		if client.Id == id {
+			return client, nil
+		}
+	}
+	return PipewireInterfaceClient{}, errors.New("client not found")
+}
+
+func (state PipewireState) GetLinkById(id int) (PipewireInterfaceLink, error) {
+	for _, link := range state.Links {
+		if link.Id == id {
+			return link, nil
+		}
+	}
+	return PipewireInterfaceLink{}, errors.New("link not found")
+}
+
+func (state PipewireState) GetPortById(id int) (PipewireInterfacePort, error) {
+	for _, port := range state.Ports {
+		if port.Id == id {
+			return port, nil
+		}
+	}
+	return PipewireInterfacePort{}, errors.New("port not found")
+}
+
+func (state PipewireState) GetFactoryById(id int) (PipewireInterfaceFactory, error) {
+	for _, factory := range state.Factories {
+		if factory.Id == id {
+			return factory, nil
+		}
+	}
+	return PipewireInterfaceFactory{}, errors.New("factory not found")
+}
+
+func (state PipewireState) GetModuleById(id int) (PipewireInterfaceModule, error) {
+	for _, module := range state.Modules {
+		if module.Id == id {
+			return module, nil
+		}
+	}
+	return PipewireInterfaceModule{}, errors.New("module not found")
 }
 
 func (state PipewireState) GetNodeByName(name string) (PipewireInterfaceNode, error) {

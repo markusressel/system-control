@@ -175,11 +175,6 @@ type PipewireInterfacePort struct {
 	Info PipewireInterfacePortInfo
 }
 
-type PipewireInterfaceDevice struct {
-	CommonData
-	Info PipewireInterfaceDeviceInfo
-}
-
 type PipewireInterfaceProfiler struct {
 	CommonData
 	Info PipewireInterfaceProfilerInfo
@@ -253,13 +248,6 @@ type PipewireInterfaceLinkInfo struct {
 // PipewireInterfacePortInfo Type: "PipeWire:Interface:Port"
 type PipewireInterfacePortInfo struct {
 	Direction  string                 `json:"direction"`
-	ChangeMask []string               `json:"change-mask"`
-	Props      map[string]interface{} `json:"props"`
-	Params     map[string]interface{} `json:"params"`
-}
-
-// PipewireInterfaceDeviceInfo Type: "PipeWire:Interface:Device"
-type PipewireInterfaceDeviceInfo struct {
 	ChangeMask []string               `json:"change-mask"`
 	Props      map[string]interface{} `json:"props"`
 	Params     map[string]interface{} `json:"params"`

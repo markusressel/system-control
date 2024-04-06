@@ -1,11 +1,11 @@
 package pipewire
 
-type PipewireInterfaceNode struct {
+type InterfaceNode struct {
 	CommonData
-	Info PipewireInterfaceNodeInfo
+	Info InterfaceNodeInfo
 }
 
-func (n PipewireInterfaceNode) GetMuted() bool {
+func (n InterfaceNode) GetMuted() bool {
 	params := n.Info.Params
 	props := params["Props"].([]interface{})
 	firstProp := props[0].(map[string]interface{})

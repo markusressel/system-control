@@ -158,67 +158,8 @@ func (p *PipewireObject) findParamProperty1(s string) (*PipewireProperty, error)
 // SetVolumePipewire sets the given volume to the given sink using pipewire
 // volume in percent
 func SetVolumePipewire(deviceId int, volume float64) error {
-	routes, err := getNodeRoutes(deviceId)
-	if err != nil {
-		return err
-	}
-
-	// TODO: find default route of this device, since it might not be the first one
-	// TODO: which route is the correct one?
-
-	for _, route := range routes {
-		currentRoute := route
-
-		indexProperty, err := currentRoute.findParamProperty1("index")
-		if err != nil {
-			continue
-		}
-
-		deviceProperty, err := currentRoute.findParamProperty1("device")
-		if err != nil {
-			continue
-		}
-
-		//objects := getPipewireObjects(
-		//	PropertyFilter{"media.class", "Audio/Device"},
-		//	PropertyFilter{"id", strconv.Itoa(deviceId)},
-		//)
-
-		// index and deviceId are properties of the route
-		// index 2 is "analog-output-speaker" on M16
-		// device 7 is a property of the route with index 2 on M16
-		routeIndex := indexProperty.Value
-		cardProfileDevice := deviceProperty.Value
-
-		if volume < 0 {
-			volume = 0
-		} else if volume > 1 {
-			volume = 1
-		}
-		volumeCubicRoot := math.Pow(volume, 3)
-
-		muted := false
-		save := true
-		_, err = util.ExecCommand(
-			"pw-cli",
-			"set-param",
-			strconv.Itoa(deviceId),
-			"Route",
-			fmt.Sprintf("{ index: %d, device: %d, props: { mute: %s, channelVolumes: [ %f, %f ] }, save: %s }",
-				routeIndex,
-				cardProfileDevice,
-				strconv.FormatBool(muted),
-				volumeCubicRoot,
-				volumeCubicRoot,
-				strconv.FormatBool(save),
-			),
-		)
-		if err != nil {
-			continue
-		}
-	}
-
-	return err
+	state := PwDump()
+	return state.SetVolume(deviceId, volume)
 }
 
 // SetMutedPipewire sets the given volume to the given sink using pipewire

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func PwDump() PipewireState {
+func PwDump() GraphState {
 	result, err := util.ExecCommand("pw-dump")
 	if err != nil {
 		log.Fatal(err)
@@ -21,8 +21,8 @@ func PwDump() PipewireState {
 	return state
 }
 
-func parsePwDumpToState(pwDump string) (PipewireState, error) {
-	var state PipewireState
+func parsePwDumpToState(pwDump string) (GraphState, error) {
+	var state GraphState
 	if err := json.NewDecoder(strings.NewReader(pwDump)).Decode(&state); err != nil {
 		return state, err
 	}

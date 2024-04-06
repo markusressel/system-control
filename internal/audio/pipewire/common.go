@@ -27,12 +27,12 @@ type CommonData struct {
 	Metadata    []map[string]interface{} `json:"metadata,omitempty"`
 }
 
-type PipewireGraphObject struct {
+type GraphObject struct {
 	CommonData
-	Info PipewireObjectInfo `json:"info,omitempty"`
+	Info GraphObjectInfo `json:"info,omitempty"`
 }
 
-func (o *PipewireGraphObject) UnmarshalJSON(data []byte) error {
+func (o *GraphObject) UnmarshalJSON(data []byte) error {
 	// Unmarshall common data
 	temp := new(struct {
 		CommonData
@@ -47,70 +47,70 @@ func (o *PipewireGraphObject) UnmarshalJSON(data []byte) error {
 	if temp.Info != nil {
 		switch temp.Type {
 		case TypeNode:
-			info := PipewireInterfaceNodeInfo{}
+			info := InterfaceNodeInfo{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
 		case TypeFactory:
-			info := PipewireInterfaceFactoryInfo{}
+			info := InterfaceFactoryInfo{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
 		case TypeModule:
-			info := PipewireInterfaceModuleInfo{}
+			info := InterfaceModuleInfo{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
 		case TypeCore:
-			info := PipewireInterfaceCoreInfo{}
+			info := InterfaceCoreInfo{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
 		case TypeClient:
-			info := PipewireInterfaceClientInfo{}
+			info := InterfaceClientInfo{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
 		case TypeLink:
-			info := PipewireInterfaceLinkInfo{}
+			info := InterfaceLinkInfo{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
 		case TypePort:
-			info := PipewireInterfacePortInfo{}
+			info := InterfacePortInfo{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
 		case TypeDevice:
-			info := PipewireInterfaceDeviceInfo{}
+			info := InterfaceDeviceInfo{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
 		case TypeProfiler:
-			info := PipewireInterfaceProfilerInfo(&map[string]interface{}{})
+			info := InterfaceProfilerInfo(&map[string]interface{}{})
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
 			}
 			o.Info = info
 		case TypeMetadata:
-			info := PipewireInterfaceMetadataInfo{}
+			info := InterfaceMetadataInfo{}
 			err := json.Unmarshal(temp.Info, &info)
 			if err != nil {
 				return err
@@ -125,10 +125,10 @@ func (o *PipewireGraphObject) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type PipewireObjectInfo interface{}
+type GraphObjectInfo interface{}
 
-// PipewireInterfaceNodeInfo Type: "PipeWire:Interface:Node"
-type PipewireInterfaceNodeInfo struct {
+// InterfaceNodeInfo Type: "PipeWire:Interface:Node"
+type InterfaceNodeInfo struct {
 	MaxInputPorts  int                    `json:"max-input-ports"`
 	MaxOutputPorts int                    `json:"max-output-ports"`
 	ChangeMask     []string               `json:"change-mask"`
@@ -140,47 +140,47 @@ type PipewireInterfaceNodeInfo struct {
 	Params         map[string]interface{} `json:"params"`
 }
 
-type PipewireInterfaceFactory struct {
+type InterfaceFactory struct {
 	CommonData
-	Info PipewireInterfaceFactoryInfo
+	Info InterfaceFactoryInfo
 }
 
-type PipewireInterfaceModule struct {
+type InterfaceModule struct {
 	CommonData
-	Info PipewireInterfaceModuleInfo
+	Info InterfaceModuleInfo
 }
 
-type PipewireInterfaceCore struct {
+type InterfaceCore struct {
 	CommonData
-	Info PipewireInterfaceCoreInfo
+	Info InterfaceCoreInfo
 }
 
-type PipewireInterfaceClient struct {
+type InterfaceClient struct {
 	CommonData
-	Info PipewireInterfaceClientInfo
+	Info InterfaceClientInfo
 }
 
-type PipewireInterfaceLink struct {
+type InterfaceLink struct {
 	CommonData
-	Info PipewireInterfaceLinkInfo
+	Info InterfaceLinkInfo
 }
 
-type PipewireInterfacePort struct {
+type InterfacePort struct {
 	CommonData
-	Info PipewireInterfacePortInfo
+	Info InterfacePortInfo
 }
 
-type PipewireInterfaceProfiler struct {
+type InterfaceProfiler struct {
 	CommonData
-	Info PipewireInterfaceProfilerInfo
+	Info InterfaceProfilerInfo
 }
 
-type PipewireInterfaceMetadata struct {
+type InterfaceMetadata struct {
 	CommonData
 	Info map[string]interface{}
 }
 
-func (n PipewireInterfaceNode) GetName() (string, error) {
+func (n InterfaceNode) GetName() (string, error) {
 	nodeName, ok := n.Info.Props["node.name"].(string)
 	if !ok {
 		return "", fmt.Errorf("could not get node name")
@@ -188,8 +188,8 @@ func (n PipewireInterfaceNode) GetName() (string, error) {
 	return nodeName, nil
 }
 
-// PipewireInterfaceFactoryInfo Type: "PipeWire:Interface:Factory"
-type PipewireInterfaceFactoryInfo struct {
+// InterfaceFactoryInfo Type: "PipeWire:Interface:Factory"
+type InterfaceFactoryInfo struct {
 	Name       string                 `json:"name"`
 	Type       string                 `json:"type"`
 	Version    int                    `json:"version"`
@@ -197,8 +197,8 @@ type PipewireInterfaceFactoryInfo struct {
 	Props      map[string]interface{} `json:"props"`
 }
 
-// PipewireInterfaceModuleInfo Type: "PipeWire:Interface:Module"
-type PipewireInterfaceModuleInfo struct {
+// InterfaceModuleInfo Type: "PipeWire:Interface:Module"
+type InterfaceModuleInfo struct {
 	Name       string                 `json:"name"`
 	Filename   string                 `json:"filename"`
 	Args       interface{}            `json:"args"`
@@ -206,8 +206,8 @@ type PipewireInterfaceModuleInfo struct {
 	Props      map[string]interface{} `json:"props"`
 }
 
-// PipewireInterfaceCoreInfo Type: "PipeWire:Interface:Core"
-type PipewireInterfaceCoreInfo struct {
+// InterfaceCoreInfo Type: "PipeWire:Interface:Core"
+type InterfaceCoreInfo struct {
 	Cookie     int                    `json:"cookie"`
 	UserName   string                 `json:"user-name"`
 	HostName   string                 `json:"host-name"`
@@ -217,14 +217,14 @@ type PipewireInterfaceCoreInfo struct {
 	Props      map[string]interface{} `json:"props"`
 }
 
-// PipewireInterfaceClientInfo Type: "PipeWire:Interface:Client"
-type PipewireInterfaceClientInfo struct {
+// InterfaceClientInfo Type: "PipeWire:Interface:Client"
+type InterfaceClientInfo struct {
 	ChangeMask []string               `json:"change-mask"`
 	Props      map[string]interface{} `json:"props"`
 }
 
-// PipewireInterfaceLinkInfo Type: "PipeWire:Interface:Link"
-type PipewireInterfaceLinkInfo struct {
+// InterfaceLinkInfo Type: "PipeWire:Interface:Link"
+type InterfaceLinkInfo struct {
 	OutputNodeId int         `json:"output-node-id"`
 	OutputPortId int         `json:"output-port-id"`
 	InputNodeId  int         `json:"input-node-id"`
@@ -240,15 +240,15 @@ type PipewireInterfaceLinkInfo struct {
 	Props map[string]interface{} `json:"props"`
 }
 
-// PipewireInterfacePortInfo Type: "PipeWire:Interface:Port"
-type PipewireInterfacePortInfo struct {
+// InterfacePortInfo Type: "PipeWire:Interface:Port"
+type InterfacePortInfo struct {
 	Direction  string                 `json:"direction"`
 	ChangeMask []string               `json:"change-mask"`
 	Props      map[string]interface{} `json:"props"`
 	Params     map[string]interface{} `json:"params"`
 }
 
-// PipewireInterfaceProfilerInfo Type: "PipeWire:Interface:Profiler"
-type PipewireInterfaceProfilerInfo *map[string]interface{}
+// InterfaceProfilerInfo Type: "PipeWire:Interface:Profiler"
+type InterfaceProfilerInfo *map[string]interface{}
 
-type PipewireInterfaceMetadataInfo map[string]interface{}
+type InterfaceMetadataInfo map[string]interface{}

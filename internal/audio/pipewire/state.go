@@ -8,22 +8,22 @@ import (
 	"strings"
 )
 
-type PipewireState struct {
-	Nodes     []PipewireInterfaceNode
-	Factories []PipewireInterfaceFactory
-	Modules   []PipewireInterfaceModule
-	Cores     []PipewireInterfaceCore
-	Clients   []PipewireInterfaceClient
-	Links     []PipewireInterfaceLink
-	Ports     []PipewireInterfacePort
-	Devices   []PipewireInterfaceDevice
-	Profilers []PipewireInterfaceProfiler
-	Metadatas []PipewireInterfaceMetadata
+type GraphState struct {
+	Nodes     []InterfaceNode
+	Factories []InterfaceFactory
+	Modules   []InterfaceModule
+	Cores     []InterfaceCore
+	Clients   []InterfaceClient
+	Links     []InterfaceLink
+	Ports     []InterfacePort
+	Devices   []InterfaceDevice
+	Profilers []InterfaceProfiler
+	Metadatas []InterfaceMetadata
 }
 
-func (state *PipewireState) UnmarshalJSON(data []byte) error {
+func (state *GraphState) UnmarshalJSON(data []byte) error {
 
-	var objectDataList []PipewireGraphObject
+	var objectDataList []GraphObject
 	if err := json.NewDecoder(strings.NewReader(string(data))).Decode(&objectDataList); err != nil {
 		log.Fatalf("decode: %s", err)
 	}
@@ -31,60 +31,60 @@ func (state *PipewireState) UnmarshalJSON(data []byte) error {
 	for _, object := range objectDataList {
 		switch object.CommonData.Type {
 		case TypeNode:
-			state.Nodes = append(state.Nodes, PipewireInterfaceNode{
+			state.Nodes = append(state.Nodes, InterfaceNode{
 				CommonData: object.CommonData,
-				Info:       object.Info.(PipewireInterfaceNodeInfo),
+				Info:       object.Info.(InterfaceNodeInfo),
 			})
 		case TypeFactory:
-			state.Factories = append(state.Factories, PipewireInterfaceFactory{
+			state.Factories = append(state.Factories, InterfaceFactory{
 				CommonData: object.CommonData,
-				Info:       object.Info.(PipewireInterfaceFactoryInfo),
+				Info:       object.Info.(InterfaceFactoryInfo),
 			})
 		case TypeModule:
-			state.Modules = append(state.Modules, PipewireInterfaceModule{
+			state.Modules = append(state.Modules, InterfaceModule{
 				CommonData: object.CommonData,
-				Info:       object.Info.(PipewireInterfaceModuleInfo),
+				Info:       object.Info.(InterfaceModuleInfo),
 			})
 		case TypeCore:
-			state.Cores = append(state.Cores, PipewireInterfaceCore{
+			state.Cores = append(state.Cores, InterfaceCore{
 				CommonData: object.CommonData,
-				Info:       object.Info.(PipewireInterfaceCoreInfo),
+				Info:       object.Info.(InterfaceCoreInfo),
 			})
 		case TypeClient:
-			state.Clients = append(state.Clients, PipewireInterfaceClient{
+			state.Clients = append(state.Clients, InterfaceClient{
 				CommonData: object.CommonData,
-				Info:       object.Info.(PipewireInterfaceClientInfo),
+				Info:       object.Info.(InterfaceClientInfo),
 			})
 		case TypeLink:
-			state.Links = append(state.Links, PipewireInterfaceLink{
+			state.Links = append(state.Links, InterfaceLink{
 				CommonData: object.CommonData,
-				Info:       object.Info.(PipewireInterfaceLinkInfo),
+				Info:       object.Info.(InterfaceLinkInfo),
 			})
 		case TypePort:
-			state.Ports = append(state.Ports, PipewireInterfacePort{
+			state.Ports = append(state.Ports, InterfacePort{
 				CommonData: object.CommonData,
-				Info:       object.Info.(PipewireInterfacePortInfo),
+				Info:       object.Info.(InterfacePortInfo),
 			})
 		case TypeDevice:
-			state.Devices = append(state.Devices, PipewireInterfaceDevice{
+			state.Devices = append(state.Devices, InterfaceDevice{
 				CommonData: object.CommonData,
-				Info:       object.Info.(PipewireInterfaceDeviceInfo),
+				Info:       object.Info.(InterfaceDeviceInfo),
 			})
 		case TypeProfiler:
-			var info PipewireInterfaceProfilerInfo = nil
+			var info InterfaceProfilerInfo = nil
 			if object.Info != nil {
-				info = object.Info.(PipewireInterfaceProfilerInfo)
+				info = object.Info.(InterfaceProfilerInfo)
 			}
-			state.Profilers = append(state.Profilers, PipewireInterfaceProfiler{
+			state.Profilers = append(state.Profilers, InterfaceProfiler{
 				CommonData: object.CommonData,
 				Info:       info,
 			})
 		case TypeMetadata:
-			var info PipewireInterfaceMetadataInfo = nil
+			var info InterfaceMetadataInfo = nil
 			if object.Info != nil {
-				info = object.Info.(PipewireInterfaceMetadataInfo)
+				info = object.Info.(InterfaceMetadataInfo)
 			}
-			state.Metadatas = append(state.Metadatas, PipewireInterfaceMetadata{
+			state.Metadatas = append(state.Metadatas, InterfaceMetadata{
 				CommonData: object.CommonData,
 				Info:       info,
 			})
@@ -96,7 +96,7 @@ func (state *PipewireState) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (state PipewireState) IsMuted(sinkId int) (bool, error) {
+func (state *GraphState) IsMuted(sinkId int) (bool, error) {
 	node, err := state.GetNodeById(sinkId)
 	if err != nil {
 		return false, err
@@ -105,7 +105,7 @@ func (state PipewireState) IsMuted(sinkId int) (bool, error) {
 	return muted, err
 }
 
-func (state PipewireState) SetMuted(deviceId int, muted bool) error {
+func (state *GraphState) SetMuted(deviceId int, muted bool) error {
 	device, err := state.GetDeviceById(deviceId)
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func (state PipewireState) SetMuted(deviceId int, muted bool) error {
 	return device.SetMuted(muted)
 }
 
-func (state PipewireState) GetDefaultSink() (string, error) {
+func (state *GraphState) GetDefaultSink() (string, error) {
 	for _, item := range state.Metadatas {
 		if item.Props["metadata.name"] != "default" {
 			continue
@@ -129,7 +129,7 @@ func (state PipewireState) GetDefaultSink() (string, error) {
 	return "", errors.New("default sink not found")
 }
 
-func (state PipewireState) GetDefaultSource() (string, error) {
+func (state *GraphState) GetDefaultSource() (string, error) {
 	defaultSinkName, err := state.GetDefaultSink()
 	if err != nil {
 		return "", err
@@ -142,70 +142,70 @@ func (state PipewireState) GetDefaultSource() (string, error) {
 	return node.GetName()
 }
 
-func (state PipewireState) GetNodeById(id int) (PipewireInterfaceNode, error) {
+func (state *GraphState) GetNodeById(id int) (InterfaceNode, error) {
 	for _, node := range state.Nodes {
 		if node.Id == id {
 			return node, nil
 		}
 	}
-	return PipewireInterfaceNode{}, errors.New("node not found")
+	return InterfaceNode{}, errors.New("node not found")
 }
 
-func (state PipewireState) GetDeviceById(id int) (PipewireInterfaceDevice, error) {
+func (state *GraphState) GetDeviceById(id int) (InterfaceDevice, error) {
 	for _, device := range state.Devices {
 		if device.Id == id {
 			return device, nil
 		}
 	}
-	return PipewireInterfaceDevice{}, errors.New("device not found")
+	return InterfaceDevice{}, errors.New("device not found")
 }
 
-func (state PipewireState) getClientById(id int) (PipewireInterfaceClient, error) {
+func (state *GraphState) getClientById(id int) (InterfaceClient, error) {
 	for _, client := range state.Clients {
 		if client.Id == id {
 			return client, nil
 		}
 	}
-	return PipewireInterfaceClient{}, errors.New("client not found")
+	return InterfaceClient{}, errors.New("client not found")
 }
 
-func (state PipewireState) GetLinkById(id int) (PipewireInterfaceLink, error) {
+func (state *GraphState) GetLinkById(id int) (InterfaceLink, error) {
 	for _, link := range state.Links {
 		if link.Id == id {
 			return link, nil
 		}
 	}
-	return PipewireInterfaceLink{}, errors.New("link not found")
+	return InterfaceLink{}, errors.New("link not found")
 }
 
-func (state PipewireState) GetPortById(id int) (PipewireInterfacePort, error) {
+func (state *GraphState) GetPortById(id int) (InterfacePort, error) {
 	for _, port := range state.Ports {
 		if port.Id == id {
 			return port, nil
 		}
 	}
-	return PipewireInterfacePort{}, errors.New("port not found")
+	return InterfacePort{}, errors.New("port not found")
 }
 
-func (state PipewireState) GetFactoryById(id int) (PipewireInterfaceFactory, error) {
+func (state *GraphState) GetFactoryById(id int) (InterfaceFactory, error) {
 	for _, factory := range state.Factories {
 		if factory.Id == id {
 			return factory, nil
 		}
 	}
-	return PipewireInterfaceFactory{}, errors.New("factory not found")
+	return InterfaceFactory{}, errors.New("factory not found")
 }
 
-func (state PipewireState) GetModuleById(id int) (PipewireInterfaceModule, error) {
+func (state *GraphState) GetModuleById(id int) (InterfaceModule, error) {
 	for _, module := range state.Modules {
 		if module.Id == id {
 			return module, nil
 		}
 	}
-	return PipewireInterfaceModule{}, errors.New("module not found")
+	return InterfaceModule{}, errors.New("module not found")
 }
 
-func (state PipewireState) GetNodeByName(name string) (PipewireInterfaceNode, error) {
+func (state *GraphState) GetNodeByName(name string) (InterfaceNode, error) {
 	for _, node := range state.Nodes {
 		nodeInfoProperties := node.Info.Props
 		if nodeInfoProperties["node.name"] == name {
@@ -218,13 +218,13 @@ func (state PipewireState) GetNodeByName(name string) (PipewireInterfaceNode, er
 			return node, nil
 		}
 	}
-	return PipewireInterfaceNode{}, errors.New("node not found")
+	return InterfaceNode{}, errors.New("node not found")
 }
 
-func (state PipewireState) GetPortByName(nodeName string, name string) (PipewireInterfacePort, error) {
+func (state *GraphState) GetPortByName(nodeName string, name string) (InterfacePort, error) {
 	node, err := state.GetNodeByName(nodeName)
 	if err != nil {
-		return PipewireInterfacePort{}, err
+		return InterfacePort{}, err
 	}
 	for _, port := range state.Ports {
 		infoProps := port.Info
@@ -232,11 +232,19 @@ func (state PipewireState) GetPortByName(nodeName string, name string) (Pipewire
 			return port, nil
 		}
 	}
-	return PipewireInterfacePort{}, errors.New("port not found")
+	return InterfacePort{}, errors.New("port not found")
 }
 
-func (o *PipewireGraphObject) GetName() (string, error) {
-	infoProps, ok := o.Info.(PipewireInterfaceNodeInfo)
+func (state *GraphState) SetVolume(deviceId int, volume float64) error {
+	node, err := state.GetDeviceById(deviceId)
+	if err != nil {
+		return err
+	}
+	return node.SetVolume(volume)
+}
+
+func (o *GraphObject) GetName() (string, error) {
+	infoProps, ok := o.Info.(InterfaceNodeInfo)
 	if !ok {
 		return "", errors.New("invalid object type")
 	}

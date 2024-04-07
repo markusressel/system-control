@@ -3,8 +3,6 @@ package util
 import (
 	"bytes"
 	"fmt"
-	"log"
-	"os"
 	"os/exec"
 	"strings"
 )
@@ -32,39 +30,4 @@ func ExecCommand(command string, args ...string) (string, error) {
 	result = strings.TrimSpace(result)
 
 	return result, nil
-}
-
-// ExecCommandEnv is like ExecCommand but with the possibility to add environment variables
-// to the executed process.
-func ExecCommandEnv(env []string, attach bool, command string, args ...string) (string, error) {
-	//log.Printf("Executing command: %s %s", command, args)
-	cmd := exec.Command(command, args...)
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, env...)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	var err error
-	if attach {
-		err = cmd.Run()
-	} else {
-		err = cmd.Start()
-		if err != nil {
-			fmt.Println(err.Error())
-			return "", err
-		}
-		err = cmd.Process.Release()
-	}
-
-	stdoutText := stdout.String()
-
-	if err != nil {
-		fmt.Println(err.Error())
-		fmt.Println(stderr.String())
-		log.Fatal(stderr)
-		return "", err
-	}
-
-	return stdoutText, nil
 }

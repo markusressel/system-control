@@ -60,8 +60,8 @@ var redshiftCmd = &cobra.Command{
 
 // SetRedshiftCBG sets the redshift color temperature, brightness and gamma
 // colorTemperature: the color temperature in Kelvin, between 1000 and 25000 (-1 to ignore)
-// brightness: the brightness value between 0.1 and 1.0 (1.0 to ignore)
-// gamma: the gamma value between 0.1 and 1.0 (1.0 to ignore)
+// brightness: the brightness value between 0.1 and 1.0 (-1 to ignore)
+// gamma: the gamma value between 0.1 and 1.0 (-1 to ignore)
 // immediate: apply the changes immediately, without transition
 func SetRedshiftCBG(colorTemperature int, brightness float64, gamma float64, immediate bool) error {
 	args := []string{

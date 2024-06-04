@@ -18,7 +18,6 @@
 package display
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
 )
 
@@ -26,11 +25,8 @@ var redshiftResetCmd = &cobra.Command{
 	Use:   "reset",
 	Short: "Reset the currently applied redshift",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		err := ResetRedshift()
-		if err != nil {
-			fmt.Println(err)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return ResetRedshift()
 	},
 }
 

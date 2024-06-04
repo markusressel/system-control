@@ -33,22 +33,22 @@ var redshiftCmd = &cobra.Command{
 	Use:   "redshift",
 	Short: "Apply the given redshift",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 
 		if colorTemperature != -1 && (colorTemperature < 1000 || colorTemperature > 25000) {
-			fmt.Println("Color temperature must be between 1000 and 25000")
-			return
+			return errors.New("Color temperature must be between 1000 and 25000")
 		}
 
 		if brightness < 0.1 || brightness > 1.0 {
-			fmt.Println("Brightness must be between 0.1 and 1.0")
-			return
+			return errors.New("Brightness must be between 0.1 and 1.0")
 		}
 
 		err := SetRedshiftCBG(colorTemperature, brightness, gamma)
 		if err != nil {
-			fmt.Println(err)
+			return err
 		}
+
+		return nil
 	},
 }
 

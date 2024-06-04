@@ -28,7 +28,6 @@ import (
 var colorTemperature int
 var brightness float64
 var gamma float64
-var immediate bool
 
 var redshiftCmd = &cobra.Command{
 	Use:   "redshift",
@@ -46,12 +45,7 @@ var redshiftCmd = &cobra.Command{
 			return
 		}
 
-		var err error
-		//err = ResetRedshift()
-		//if err != nil {
-		//	fmt.Println(err)
-		//}
-		err = SetRedshiftCBG(colorTemperature, brightness, gamma, immediate)
+		err := SetRedshiftCBG(colorTemperature, brightness, gamma)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -63,11 +57,10 @@ var redshiftCmd = &cobra.Command{
 // brightness: the brightness value between 0.1 and 1.0 (-1 to ignore)
 // gamma: the gamma value between 0.1 and 1.0 (-1 to ignore)
 // immediate: apply the changes immediately, without transition
-func SetRedshiftCBG(colorTemperature int, brightness float64, gamma float64, immediate bool) error {
+func SetRedshiftCBG(colorTemperature int, brightness float64, gamma float64) error {
 	args := []string{
 		"-x", // reset previous "mode"
 		"-P", // reset previous gamma ramps
-		"-r", // apply immediately
 		"-o", // one shot mode
 	}
 
@@ -84,10 +77,6 @@ func SetRedshiftCBG(colorTemperature int, brightness float64, gamma float64, imm
 	if gamma != -1 {
 		// set gamma
 		args = append(args, "-g", strconv.FormatFloat(gamma, 'f', -1, 64))
-	}
-
-	if immediate {
-		args = append(args, "-r")
 	}
 
 	if len(args) == 0 {
@@ -127,13 +116,6 @@ func init() {
 		"gamma", "g",
 		-1,
 		"Gamma",
-	)
-
-	redshiftCmd.PersistentFlags().BoolVarP(
-		&immediate,
-		"immediate", "i",
-		false,
-		"Apply changes immediately",
 	)
 
 	Command.AddCommand(redshiftCmd)

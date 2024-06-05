@@ -33,7 +33,7 @@ const (
 )
 
 var (
-	colorTemperature int
+	colorTemperature int64
 	brightness       float64
 	gamma            float64
 )
@@ -48,11 +48,11 @@ var redshiftCmd = &cobra.Command{
 			return errors.New("color temperature must be between 1000 and 25000")
 		}
 
-		if brightness < 0.1 || brightness > 1.0 {
+		if brightness != -1 && (brightness < 0.1 || brightness > 1.0) {
 			return errors.New("brightness must be between 0.1 and 1.0")
 		}
 
-		if gamma < 0.1 || gamma > 2.0 {
+		if gamma != -1 && (gamma < 0.1 || gamma > 2.0) {
 			return errors.New("gamma must be between 0.1 and 2.0")
 		}
 
@@ -69,17 +69,21 @@ var redshiftCmd = &cobra.Command{
 			lastSetGamma = -1
 		}
 
-		// print current values
-		fmt.Println("Current values:")
-		fmt.Printf("Color Temperature: %d\n", lastSetColorTemperature)
-		fmt.Printf("Brightness: %.2f\n", lastSetBrightness)
-		fmt.Printf("Gamma: %.2f\n", lastSetGamma)
+		if colorTemperature == -1 {
+			colorTemperature = lastSetColorTemperature
+		}
+		if brightness == -1 {
+			brightness = lastSetBrightness
+		}
+		if gamma == -1 {
+			gamma = lastSetGamma
+		}
 
 		err = SetRedshiftCBG(colorTemperature, brightness, gamma)
 		if err != nil {
 			return err
 		}
-		if err := persistence.SaveInt(KeyRedshiftColorTemp, colorTemperature); err != nil {
+		if err := persistence.SaveInt(KeyRedshiftColorTemp, int(colorTemperature)); err != nil {
 			return err
 		}
 		if err := persistence.SaveFloat(KeyRedshiftBrightness, brightness); err != nil {
@@ -88,6 +92,11 @@ var redshiftCmd = &cobra.Command{
 		if err := persistence.SaveFloat(KeyRedshiftGamma, gamma); err != nil {
 			return err
 		}
+
+		// print current values
+		fmt.Printf("Color Temperature: %d -> %d\n", lastSetColorTemperature, colorTemperature)
+		fmt.Printf("Brightness: %.2f -> %.2f\n", lastSetBrightness, brightness)
+		fmt.Printf("Gamma: %.2f -> %.2f\n", lastSetGamma, gamma)
 
 		return nil
 	},
@@ -98,7 +107,7 @@ var redshiftCmd = &cobra.Command{
 // brightness: the brightness value between 0.1 and 1.0 (-1 to ignore, 1.0 is default)
 // gamma: the gamma value between 0.1 and 1.0 (-1 to ignore, 1.0 is default)
 // immediate: apply the changes immediately, without transition
-func SetRedshiftCBG(colorTemperature int, brightness float64, gamma float64) error {
+func SetRedshiftCBG(colorTemperature int64, brightness float64, gamma float64) error {
 	args := []string{
 		"-x", // reset previous "mode"
 		"-P", // reset previous gamma ramps
@@ -138,7 +147,7 @@ func ResetRedshift() error {
 }
 
 func init() {
-	redshiftCmd.PersistentFlags().IntVarP(
+	redshiftCmd.PersistentFlags().Int64VarP(
 		&colorTemperature,
 		"temperature", "t",
 		-1,

@@ -20,14 +20,23 @@ package display
 import (
 	"errors"
 	"fmt"
+	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 	"strconv"
 )
 
-var colorTemperature int
-var brightness float64
-var gamma float64
+const (
+	KeyRedshiftColorTemp  = "redshift.colorTemperature"
+	KeyRedshiftBrightness = "redshift.brightness"
+	KeyRedshiftGamma      = "redshift.gamma"
+)
+
+var (
+	colorTemperature int
+	brightness       float64
+	gamma            float64
+)
 
 var redshiftCmd = &cobra.Command{
 	Use:   "redshift",
@@ -36,15 +45,47 @@ var redshiftCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		if colorTemperature != -1 && (colorTemperature < 1000 || colorTemperature > 25000) {
-			return errors.New("Color temperature must be between 1000 and 25000")
+			return errors.New("color temperature must be between 1000 and 25000")
 		}
 
 		if brightness < 0.1 || brightness > 1.0 {
-			return errors.New("Brightness must be between 0.1 and 1.0")
+			return errors.New("brightness must be between 0.1 and 1.0")
 		}
 
-		err := SetRedshiftCBG(colorTemperature, brightness, gamma)
+		if gamma < 0.1 || gamma > 2.0 {
+			return errors.New("gamma must be between 0.1 and 2.0")
+		}
+
+		lastSetColorTemperature, err := persistence.ReadInt(KeyRedshiftColorTemp)
 		if err != nil {
+			lastSetColorTemperature = -1
+		}
+		lastSetBrightness, err := persistence.ReadFloat(KeyRedshiftBrightness)
+		if err != nil {
+			lastSetBrightness = -1
+		}
+		lastSetGamma, err := persistence.ReadFloat(KeyRedshiftGamma)
+		if err != nil {
+			lastSetGamma = -1
+		}
+
+		// print current values
+		fmt.Println("Current values:")
+		fmt.Printf("Color Temperature: %d\n", lastSetColorTemperature)
+		fmt.Printf("Brightness: %.2f\n", lastSetBrightness)
+		fmt.Printf("Gamma: %.2f\n", lastSetGamma)
+
+		err = SetRedshiftCBG(colorTemperature, brightness, gamma)
+		if err != nil {
+			return err
+		}
+		if err := persistence.SaveInt(KeyRedshiftColorTemp, colorTemperature); err != nil {
+			return err
+		}
+		if err := persistence.SaveFloat(KeyRedshiftBrightness, brightness); err != nil {
+			return err
+		}
+		if err := persistence.SaveFloat(KeyRedshiftGamma, gamma); err != nil {
 			return err
 		}
 

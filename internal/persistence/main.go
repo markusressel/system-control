@@ -30,6 +30,16 @@ func ReadInt(key string) (int64, error) {
 	return util.ReadIntFromFile(file)
 }
 
+func SaveFloat(key string, value float64) error {
+	file := path.Join(BaseDir, key+".sav")
+	return util.WriteFloatToFile(value, file)
+}
+
+func ReadFloat(key string) (float64, error) {
+	file := path.Join(BaseDir, key+".sav")
+	return util.ReadFloatFromFile(file)
+}
+
 func SaveStruct(key string, value interface{}) error {
 	file := path.Join(BaseDir, key+".sav")
 	jsonString, _ := json.MarshalIndent(value, "", "  ")

@@ -56,11 +56,9 @@ var redshiftCmd = &cobra.Command{
 			return errors.New("gamma must be between 0.1 and 2.0")
 		}
 
-		lastSetColorTemperature := getLastSetColorTemperature("DisplayPort-1")
-		lastSetBrightness := getLastSetBrightness("DisplayPort-1")
-		lastSetGamma := getLastSetGamma("DisplayPort-1")
-
-		display := "DisplayPort-1"
+		lastSetColorTemperature := getLastSetColorTemperature(display)
+		lastSetBrightness := getLastSetBrightness(display)
+		lastSetGamma := getLastSetGamma(display)
 
 		if colorTemperature == -1 {
 			colorTemperature = getLastSetColorTemperature(display)
@@ -72,7 +70,7 @@ var redshiftCmd = &cobra.Command{
 			gamma = getLastSetGamma(display)
 		}
 
-		err := SetRedshiftCBG(colorTemperature, brightness, gamma)
+		err := ApplyRedshift(display, colorTemperature, brightness, gamma)
 		if err != nil {
 			return err
 		}
@@ -100,6 +98,14 @@ func getLastSetBrightness(display string) float64 {
 	lastSetBrightness, err := persistence.ReadFloat(key)
 	if err != nil {
 		lastSetBrightness = -1
+	}
+	if lastSetBrightness < 0.1 {
+		lastSetBrightness = 0.1
+		saveLastSetBrightness(display, lastSetBrightness)
+	}
+	if lastSetBrightness > 1.0 {
+		lastSetBrightness = 1.0
+		saveLastSetBrightness(display, lastSetBrightness)
 	}
 	return lastSetBrightness
 }
@@ -129,8 +135,6 @@ func saveLastSetGamma(display string, gamma float64) error {
 }
 
 func ApplyRedshift(display string, colorTemperature int64, brightness float64, gamma float64) error {
-	display = "DisplayPort-1"
-
 	if colorTemperature == -1 {
 		colorTemperature = getLastSetColorTemperature(display)
 	}
@@ -141,7 +145,14 @@ func ApplyRedshift(display string, colorTemperature int64, brightness float64, g
 		gamma = getLastSetGamma(display)
 	}
 
-	err := SetRedshiftCBG(colorTemperature, brightness, gamma)
+	displayIndex := -1
+	if display == "DisplayPort-1" {
+		displayIndex = 1
+	} else if display == "DisplayPort-2" {
+		displayIndex = 0
+	}
+
+	err := SetRedshiftCBG(displayIndex, colorTemperature, brightness, gamma)
 	if err != nil {
 		return err
 	}
@@ -167,11 +178,16 @@ func ApplyRedshift(display string, colorTemperature int64, brightness float64, g
 // brightness: the brightness value between 0.1 and 1.0 (-1 to ignore, 1.0 is default)
 // gamma: the gamma value between 0.1 and 1.0 (-1 to ignore, 1.0 is default)
 // immediate: apply the changes immediately, without transition
-func SetRedshiftCBG(colorTemperature int64, brightness float64, gamma float64) error {
+func SetRedshiftCBG(display int, colorTemperature int64, brightness float64, gamma float64) error {
 	args := []string{
 		"-x", // reset previous "mode"
 		"-P", // reset previous gamma ramps
 		"-o", // one shot mode
+	}
+
+	if display > -1 {
+		// -m randr:crtc=1
+		args = append(args, "-m", fmt.Sprintf("randr:crtc=%d", display))
 	}
 
 	if colorTemperature != -1 {

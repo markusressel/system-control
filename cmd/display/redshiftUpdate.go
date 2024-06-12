@@ -29,6 +29,8 @@ import (
 	"time"
 )
 
+var display string
+
 var redshiftUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update the currently applied redshift based on the current time of day.",
@@ -57,25 +59,10 @@ var redshiftUpdateCmd = &cobra.Command{
 			return errors.New("color temperature must be between 1000 and 25000")
 		}
 
-		//if brightness != -1 && (brightness < 0.1 || brightness > 1.0) {
-		//	return errors.New("brightness must be between 0.1 and 1.0")
-		//}
-
-		display := "DisplayPort-1"
-
 		err = ApplyRedshift(display, colorTemperature, -1, -1)
 		if err != nil {
 			return err
 		}
-		//if err := persistence.SaveInt(KeyRedshiftColorTemp, int(colorTemperature)); err != nil {
-		//	return err
-		//}
-		//if err := persistence.SaveFloat(KeyRedshiftBrightness, brightness); err != nil {
-		//	return err
-		//}
-		//if err := persistence.SaveFloat(KeyRedshiftGamma, gamma); err != nil {
-		//	return err
-		//}
 
 		// print current values
 		//fmt.Printf("Color Temperature: %d -> %d\n", lastSetColorTemperature, colorTemperature)
@@ -161,5 +148,12 @@ func CalculateTargetColorTemperature(
 }
 
 func init() {
+	redshiftUpdateCmd.PersistentFlags().StringVarP(
+		&display,
+		"display", "d",
+		"",
+		"Color Temperature",
+	)
+
 	redshiftCmd.AddCommand(redshiftUpdateCmd)
 }

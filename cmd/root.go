@@ -22,9 +22,11 @@ import (
 	"github.com/markusressel/system-control/cmd/audio"
 	"github.com/markusressel/system-control/cmd/battery"
 	"github.com/markusressel/system-control/cmd/display"
+	"github.com/markusressel/system-control/cmd/global"
 	"github.com/markusressel/system-control/cmd/keyboard"
 	"github.com/markusressel/system-control/cmd/touchpad"
 	"github.com/markusressel/system-control/cmd/video"
+	"github.com/markusressel/system-control/internal/configuration"
 	"github.com/spf13/cobra"
 	"os"
 
@@ -52,6 +54,10 @@ to quickly create a Cobra application.`,
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the RootCmd.
 func Execute() {
+	cobra.OnInitialize(func() {
+		configuration.InitConfig(global.CfgFile)
+	})
+
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

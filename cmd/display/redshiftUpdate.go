@@ -19,6 +19,7 @@ package display
 
 import (
 	"errors"
+	"github.com/markusressel/system-control/internal/configuration"
 	"github.com/nathan-osman/go-sunrise"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
@@ -34,12 +35,21 @@ var redshiftUpdateCmd = &cobra.Command{
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 
+		configPath := configuration.DetectAndReadConfigFile()
+		//ui.Info("Using configuration file at: %s", configPath)
+		config := configuration.LoadConfig()
+		err := configuration.Validate(configPath)
+		if err != nil {
+			//ui.FatalWithoutStacktrace(err.Error())
+		}
+
 		redshiftConfig, err := readRedshiftConfig()
 		if err != nil {
 			return err
 		}
 
 		colorTemperature := CalculateTargetColorTemperature(
+			config.Redshift,
 			redshiftConfig,
 		)
 
@@ -51,7 +61,9 @@ var redshiftUpdateCmd = &cobra.Command{
 		//	return errors.New("brightness must be between 0.1 and 1.0")
 		//}
 
-		err = SetRedshiftCBG(colorTemperature, brightness, gamma)
+		display := "DisplayPort-1"
+
+		err = ApplyRedshift(display, colorTemperature, -1, -1)
 		if err != nil {
 			return err
 		}
@@ -122,10 +134,12 @@ func readRedshiftConfig() (RedshiftConfig, error) {
 }
 
 const (
-	THRESHOLD = 15
+	// TransitionElevationThreshold is the elevation threshold at which the color temperature should be fully transitioned.
+	TransitionElevationThreshold = 20
 )
 
 func CalculateTargetColorTemperature(
+	_redshiftConfig configuration.RedshiftConfig,
 	redshiftConfig RedshiftConfig,
 ) int64 {
 	elevation := sunrise.Elevation(
@@ -137,10 +151,10 @@ func CalculateTargetColorTemperature(
 	targetColor := redshiftConfig.Redshift.DayColorTemperature
 	if elevation < 0 {
 		targetColor = redshiftConfig.Redshift.NightColorTemperature
-	} else if elevation > THRESHOLD {
+	} else if elevation > TransitionElevationThreshold {
 		targetColor = redshiftConfig.Redshift.DayColorTemperature
 	} else {
-		targetColor = redshiftConfig.Redshift.NightColorTemperature + int64((float64(redshiftConfig.Redshift.DayColorTemperature)-float64(redshiftConfig.Redshift.NightColorTemperature))*(elevation/THRESHOLD))
+		targetColor = redshiftConfig.Redshift.NightColorTemperature + int64((float64(redshiftConfig.Redshift.DayColorTemperature)-float64(redshiftConfig.Redshift.NightColorTemperature))*(elevation/TransitionElevationThreshold))
 	}
 
 	return targetColor

@@ -30,7 +30,7 @@ func WriteIntToFile(value int, path string) error {
 func ReadFloatFromFile(path string) (float64, error) {
 	fileBuffer, err := os.ReadFile(path)
 	if err != nil {
-		log.Fatal(err)
+		return 0, err
 	}
 	value := string(fileBuffer)
 	value = strings.TrimSpace(value)

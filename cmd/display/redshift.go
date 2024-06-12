@@ -56,40 +56,24 @@ var redshiftCmd = &cobra.Command{
 			return errors.New("gamma must be between 0.1 and 2.0")
 		}
 
-		lastSetColorTemperature, err := persistence.ReadInt(KeyRedshiftColorTemp)
-		if err != nil {
-			lastSetColorTemperature = -1
-		}
-		lastSetBrightness, err := persistence.ReadFloat(KeyRedshiftBrightness)
-		if err != nil {
-			lastSetBrightness = -1
-		}
-		lastSetGamma, err := persistence.ReadFloat(KeyRedshiftGamma)
-		if err != nil {
-			lastSetGamma = -1
-		}
+		lastSetColorTemperature := getLastSetColorTemperature("DisplayPort-1")
+		lastSetBrightness := getLastSetBrightness("DisplayPort-1")
+		lastSetGamma := getLastSetGamma("DisplayPort-1")
+
+		display := "DisplayPort-1"
 
 		if colorTemperature == -1 {
-			colorTemperature = lastSetColorTemperature
+			colorTemperature = getLastSetColorTemperature(display)
 		}
 		if brightness == -1 {
-			brightness = lastSetBrightness
+			brightness = getLastSetBrightness(display)
 		}
 		if gamma == -1 {
-			gamma = lastSetGamma
+			gamma = getLastSetGamma(display)
 		}
 
-		err = SetRedshiftCBG(colorTemperature, brightness, gamma)
+		err := SetRedshiftCBG(colorTemperature, brightness, gamma)
 		if err != nil {
-			return err
-		}
-		if err := persistence.SaveInt(KeyRedshiftColorTemp, int(colorTemperature)); err != nil {
-			return err
-		}
-		if err := persistence.SaveFloat(KeyRedshiftBrightness, brightness); err != nil {
-			return err
-		}
-		if err := persistence.SaveFloat(KeyRedshiftGamma, gamma); err != nil {
 			return err
 		}
 
@@ -100,6 +84,82 @@ var redshiftCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func getLastSetColorTemperature(display string) int64 {
+	key := KeyRedshiftColorTemp + "." + display
+	lastSetColorTemperature, err := persistence.ReadInt(key)
+	if err != nil {
+		lastSetColorTemperature = -1
+	}
+	return lastSetColorTemperature
+}
+
+func getLastSetBrightness(display string) float64 {
+	key := KeyRedshiftBrightness + "." + display
+	lastSetBrightness, err := persistence.ReadFloat(key)
+	if err != nil {
+		lastSetBrightness = -1
+	}
+	return lastSetBrightness
+}
+
+func getLastSetGamma(display string) float64 {
+	key := KeyRedshiftGamma + "." + display
+	lastSetGamma, err := persistence.ReadFloat(key)
+	if err != nil {
+		lastSetGamma = -1
+	}
+	return lastSetGamma
+}
+
+func saveLastSetColorTemperature(display string, colorTemperature int64) error {
+	key := KeyRedshiftColorTemp + "." + display
+	return persistence.SaveInt(key, int(colorTemperature))
+}
+
+func saveLastSetBrightness(display string, brightness float64) error {
+	key := KeyRedshiftBrightness + "." + display
+	return persistence.SaveFloat(key, brightness)
+}
+
+func saveLastSetGamma(display string, gamma float64) error {
+	key := KeyRedshiftGamma + "." + display
+	return persistence.SaveFloat(key, gamma)
+}
+
+func ApplyRedshift(display string, colorTemperature int64, brightness float64, gamma float64) error {
+	display = "DisplayPort-1"
+
+	if colorTemperature == -1 {
+		colorTemperature = getLastSetColorTemperature(display)
+	}
+	if brightness == -1 {
+		brightness = getLastSetBrightness(display)
+	}
+	if gamma == -1 {
+		gamma = getLastSetGamma(display)
+	}
+
+	err := SetRedshiftCBG(colorTemperature, brightness, gamma)
+	if err != nil {
+		return err
+	}
+
+	err = saveLastSetColorTemperature(display, colorTemperature)
+	if err != nil {
+		return err
+	}
+	err = saveLastSetBrightness(display, brightness)
+	if err != nil {
+		return err
+	}
+	err = saveLastSetGamma(display, gamma)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // SetRedshiftCBG sets the redshift color temperature, brightness and gamma

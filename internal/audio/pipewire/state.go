@@ -10,16 +10,17 @@ import (
 )
 
 type GraphState struct {
-	Nodes     []InterfaceNode
-	Factories []InterfaceFactory
-	Modules   []InterfaceModule
-	Cores     []InterfaceCore
-	Clients   []InterfaceClient
-	Links     []InterfaceLink
-	Ports     []InterfacePort
-	Devices   []InterfaceDevice
-	Profilers []InterfaceProfiler
-	Metadatas []InterfaceMetadata
+	Nodes            []InterfaceNode
+	Factories        []InterfaceFactory
+	Modules          []InterfaceModule
+	Cores            []InterfaceCore
+	Clients          []InterfaceClient
+	Links            []InterfaceLink
+	Ports            []InterfacePort
+	Devices          []InterfaceDevice
+	Profilers        []InterfaceProfiler
+	Metadatas        []InterfaceMetadata
+	SecurityContexts []InterfaceSecurityContext
 }
 
 func (state *GraphState) UnmarshalJSON(data []byte) error {
@@ -86,6 +87,15 @@ func (state *GraphState) UnmarshalJSON(data []byte) error {
 				info = object.Info.(InterfaceMetadataInfo)
 			}
 			state.Metadatas = append(state.Metadatas, InterfaceMetadata{
+				CommonData: object.CommonData,
+				Info:       info,
+			})
+		case TypeSecurityContext:
+			var info InterfaceSecurityContextInfo = nil
+			if object.Info != nil {
+				info = object.Info.(InterfaceSecurityContextInfo)
+			}
+			state.SecurityContexts = append(state.SecurityContexts, InterfaceSecurityContext{
 				CommonData: object.CommonData,
 				Info:       info,
 			})

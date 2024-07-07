@@ -6,16 +6,17 @@ import (
 )
 
 const (
-	TypeNode     = "PipeWire:Interface:Node"
-	TypeFactory  = "PipeWire:Interface:Factory"
-	TypeModule   = "PipeWire:Interface:Module"
-	TypeCore     = "PipeWire:Interface:Core"
-	TypeClient   = "PipeWire:Interface:Client"
-	TypeLink     = "PipeWire:Interface:Link"
-	TypePort     = "PipeWire:Interface:Port"
-	TypeDevice   = "PipeWire:Interface:Device"
-	TypeProfiler = "PipeWire:Interface:Profiler"
-	TypeMetadata = "PipeWire:Interface:Metadata"
+	TypeNode            = "PipeWire:Interface:Node"
+	TypeFactory         = "PipeWire:Interface:Factory"
+	TypeModule          = "PipeWire:Interface:Module"
+	TypeCore            = "PipeWire:Interface:Core"
+	TypeClient          = "PipeWire:Interface:Client"
+	TypeLink            = "PipeWire:Interface:Link"
+	TypePort            = "PipeWire:Interface:Port"
+	TypeDevice          = "PipeWire:Interface:Device"
+	TypeProfiler        = "PipeWire:Interface:Profiler"
+	TypeMetadata        = "PipeWire:Interface:Metadata"
+	TypeSecurityContext = "PipeWire:Interface:SecurityContext"
 )
 
 type CommonData struct {
@@ -164,7 +165,12 @@ type InterfaceProfiler struct {
 
 type InterfaceMetadata struct {
 	CommonData
-	Info map[string]interface{}
+	Info InterfaceMetadataInfo
+}
+
+type InterfaceSecurityContext struct {
+	CommonData
+	Info InterfaceSecurityContextInfo
 }
 
 func (n InterfaceNode) GetName() (string, error) {
@@ -246,4 +252,8 @@ type InterfacePortInfo struct {
 // InterfaceProfilerInfo Type: "PipeWire:Interface:Profiler"
 type InterfaceProfilerInfo *map[string]interface{}
 
+// InterfaceMetadataInfo Type: "PipeWire:Interface:Metadata"
 type InterfaceMetadataInfo map[string]interface{}
+
+// InterfaceSecurityContextInfo Type: "PipeWire:Interface:SecurityContext"
+type InterfaceSecurityContextInfo map[string]interface{}

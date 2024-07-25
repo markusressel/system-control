@@ -19,6 +19,7 @@ package sink
 
 import (
 	"errors"
+	"fmt"
 	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/spf13/cobra"
 )
@@ -41,15 +42,33 @@ You can specify the audio sink using its index, but also using other strings tha
 		state := pipewire.PwDump()
 
 		nodes := state.FindNodesByName(searchString)
-		if len(nodes) <= 0 {
+		audioSinkNodes := filterByMediaClass(nodes, pipewire.MediaClassAudioSink)
+
+		if len(audioSinkNodes) <= 0 {
 			return errors.New("no sink found")
 		}
-		if len(nodes) > 1 {
-			return errors.New("ambiguous sink name")
+		if len(audioSinkNodes) > 1 {
+			nodeNames := make([]string, len(nodes))
+			for i, node := range nodes {
+				nodeNames[i], _ = node.GetName()
+			}
+
+			return errors.New(fmt.Sprintf("ambiguous sink name, found: %v", nodeNames))
 		}
-		node := nodes[0]
+		node := audioSinkNodes[0]
 		return state.SwitchSinkTo(node)
 	},
+}
+
+func filterByMediaClass(nodes []pipewire.InterfaceNode, mediaClass string) []pipewire.InterfaceNode {
+	result := make([]pipewire.InterfaceNode, 0)
+	for _, node := range nodes {
+		nodeMediaClass, _ := node.GetMediaClass()
+		if nodeMediaClass == mediaClass {
+			result = append(result, node)
+		}
+	}
+	return result
 }
 
 func init() {

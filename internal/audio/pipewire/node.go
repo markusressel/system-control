@@ -1,6 +1,9 @@
 package pipewire
 
-import "math"
+import (
+	"errors"
+	"math"
+)
 
 type InterfaceNode struct {
 	CommonData
@@ -24,6 +27,15 @@ func (n InterfaceNode) GetParentDevice() (InterfaceDevice, error) {
 	state := PwDump()
 	deviceId := n.Info.GetDeviceID()
 	return state.GetDeviceById(deviceId)
+}
+
+func (n *InterfaceNode) GetMediaClass() (string, error) {
+	infoProps := n.Info
+	mediaClass, ok := infoProps.Props["media.class"].(string)
+	if !ok {
+		return "", errors.New("media class not found")
+	}
+	return mediaClass, nil
 }
 
 func (n InterfaceNode) GetMuted() bool {

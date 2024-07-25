@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+const (
+	MediaClassAudioSink = "Audio/Sink"
+)
+
 type GraphState struct {
 	Nodes            []InterfaceNode
 	Factories        []InterfaceFactory
@@ -309,7 +313,7 @@ func (state *GraphState) GetSinkNodes() []InterfaceNode {
 		if !ok {
 			continue
 		}
-		if mediaClass == "Audio/Sink" {
+		if mediaClass == MediaClassAudioSink {
 			result = append(result, node)
 		}
 	}

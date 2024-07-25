@@ -34,11 +34,20 @@ func RotateActiveSinkPipewire(reverse bool) error {
 	return state.SwitchSinkTo(nextSink)
 }
 
-func moveStreamToNode(streamId int, nodeId int) error {
+func moveStreamToNode(streamId int, nodeId int, objectId int) error {
 	_, err := util.ExecCommand(
 		"pw-metadata",
 		strconv.Itoa(streamId),
 		"target.node", strconv.Itoa(nodeId),
+	)
+	if err != nil {
+		return err
+	}
+
+	_, err = util.ExecCommand(
+		"pw-metadata",
+		strconv.Itoa(streamId),
+		"target.object", strconv.Itoa(objectId),
 	)
 	return err
 }

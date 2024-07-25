@@ -58,6 +58,14 @@ func (n InterfaceNode) GetVolume() []float64 {
 	return result
 }
 
+func (n InterfaceNode) GetObjectSerial() (int, error) {
+	objectSerial, ok := n.Info.Props["object.serial"].(float64)
+	if !ok {
+		return 0, errors.New("object serial not found")
+	}
+	return int(objectSerial), nil
+}
+
 func (i InterfaceNodeInfo) GetObjectID() int {
 	objectId := i.Props["object.id"].(float64)
 	return int(objectId)

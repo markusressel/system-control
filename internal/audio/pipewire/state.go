@@ -359,15 +359,21 @@ func (state *GraphState) SwitchSinkTo(node InterfaceNode) error {
 		return err
 	}
 
+	streams := state.GetStreamNodes()
+
+	// figure out id of target stream
+	objectSerial, err := node.GetObjectSerial()
+	if err != nil {
+		return err
+	}
+
 	err = setDefaultSink(nodeName)
 	if err != nil {
 		return err
 	}
 
-	streams := state.GetStreamNodes()
-
 	for _, stream := range streams {
-		err = moveStreamToNode(stream.Id, node.Id)
+		err = moveStreamToNode(stream.Id, node.Id, objectSerial)
 		if err != nil {
 			return err
 		}

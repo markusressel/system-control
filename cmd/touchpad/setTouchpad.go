@@ -20,18 +20,23 @@ package touchpad
 import (
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
-var toggleTouchpadCmd = &cobra.Command{
-	Use:   "toggle",
-	Short: "Toggle the Touchpad state",
+var setTouchpadCmd = &cobra.Command{
+	Use:   "set",
+	Short: "Set the emabled state of the Touchpad",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		isTouchpadEnabled := util.IsTouchpadEnabled()
-		return util.SetTouchpadEnabled(!isTouchpadEnabled)
+		enabled, err := strconv.ParseBool(args[0])
+		if err != nil {
+			return err
+		}
+
+		return util.SetTouchpadEnabled(enabled)
 	},
 }
 
 func init() {
-	Command.AddCommand(toggleTouchpadCmd)
+	Command.AddCommand(setTouchpadCmd)
 }

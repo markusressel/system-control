@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"log"
 	"math"
 	"os"
@@ -57,7 +58,14 @@ func SetKeyboardBrightness(brightness int) int {
 
 func GetInputDevices() []string {
 	result, _ := ExecCommand("xinput", "list", "--name-only")
-	return strings.Split(result, "\n")
+	inputDeviceNames := strings.Split(result, "\n")
+	// strip leading "~ " from each entry, which indicates "disabled" state
+	for idx, inputDeviceName := range inputDeviceNames {
+		inputDeviceName = strings.TrimLeft(inputDeviceName, "∼ ")
+		inputDeviceName = strings.TrimSpace(inputDeviceName)
+		inputDeviceNames[idx] = inputDeviceName
+	}
+	return inputDeviceNames
 }
 
 func IsInputDeviceEnabled(name string) bool {
@@ -65,18 +73,14 @@ func IsInputDeviceEnabled(name string) bool {
 	return !ContainsIgnoreCase(result, "This device is disabled")
 }
 
-func EnableInputDevice(name string) {
+func EnableInputDevice(name string) error {
 	_, err := ExecCommand("xinput", "enable", name)
-	if err != nil {
-		log.Fatal(err)
-	}
+	return err
 }
 
-func DisableInputDevice(name string) {
+func DisableInputDevice(name string) error {
 	_, err := ExecCommand("xinput", "disable", name)
-	if err != nil {
-		log.Fatal(err)
-	}
+	return err
 }
 
 func GetTouchpadInputDevice() *string {
@@ -115,12 +119,15 @@ func IsTouchpadEnabled() bool {
 	return IsTouchpadEnabledSynaptics() && IsTouchpadEnabledLibinput()
 }
 
-func SetTouchpadEnabled(enabled bool) {
-	SetTouchpadEnabledSynaptics(enabled)
-	SetTouchpadEnabledLibinput(enabled)
+func SetTouchpadEnabled(enabled bool) error {
+	err := SetTouchpadEnabledSynaptics(enabled)
+	if err != nil {
+		return err
+	}
+	return SetTouchpadEnabledLibinput(enabled)
 }
 
-func SetTouchpadEnabledSynaptics(enabled bool) {
+func SetTouchpadEnabledSynaptics(enabled bool) error {
 	var enabledInt int
 	if enabled {
 		enabledInt = 0
@@ -129,20 +136,20 @@ func SetTouchpadEnabledSynaptics(enabled bool) {
 	}
 
 	_, err := ExecCommand("synclient", "TouchpadOff="+strconv.Itoa(enabledInt))
-	if err != nil {
-		log.Fatal(err)
-	}
+	return err
 }
 
-func SetTouchpadEnabledLibinput(enabled bool) {
+func SetTouchpadEnabledLibinput(enabled bool) (err error) {
 	touchpadDevice := GetTouchpadInputDevice()
 	if touchpadDevice != nil {
 		if enabled {
-			EnableInputDevice(*touchpadDevice)
+			err = EnableInputDevice(*touchpadDevice)
 		} else {
-			DisableInputDevice(*touchpadDevice)
+			err = DisableInputDevice(*touchpadDevice)
 		}
 	} else {
-		log.Fatal("no touchpad device found")
+		err = errors.New("no touchpad device found")
 	}
+
+	return err
 }

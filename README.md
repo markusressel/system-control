@@ -222,7 +222,7 @@ DisplayPort-1
 > system-control touchpad toggle
 ```
 
-## Video
+## Video (Webcam)
 
 ```shell
 > system-control video load

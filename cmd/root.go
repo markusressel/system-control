@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/markusressel/system-control/cmd/audio"
 	"github.com/markusressel/system-control/cmd/battery"
+	"github.com/markusressel/system-control/cmd/bluetooth"
 	"github.com/markusressel/system-control/cmd/display"
 	"github.com/markusressel/system-control/cmd/global"
 	"github.com/markusressel/system-control/cmd/keyboard"
@@ -67,6 +68,7 @@ func Execute() {
 func init() {
 	RootCmd.AddCommand(audio.Command)
 	RootCmd.AddCommand(battery.Command)
+	RootCmd.AddCommand(bluetooth.Command)
 	RootCmd.AddCommand(display.Command)
 	RootCmd.AddCommand(keyboard.Command)
 	RootCmd.AddCommand(touchpad.Command)

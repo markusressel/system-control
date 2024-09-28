@@ -195,16 +195,16 @@ func ApplyRedshift(display string, colorTemperature int64, brightness float64, g
 // brightness: the brightness value between 0.1 and 1.0 (-1 to ignore, 1.0 is default)
 // gamma: the gamma value between 0.1 and 1.0 (-1 to ignore, 1.0 is default)
 // immediate: apply the changes immediately, without transition
-func SetRedshiftCBG(display int, colorTemperature int64, brightness float64, gamma float64) error {
+func SetRedshiftCBG(displayIndex int, colorTemperature int64, brightness float64, gamma float64) error {
 	args := []string{
 		"-x", // reset previous "mode"
 		"-P", // reset previous gamma ramps
 		"-o", // one shot mode
 	}
 
-	if display > -1 {
+	if displayIndex > -1 {
 		// -m randr:crtc=1
-		args = append(args, "-m", fmt.Sprintf("randr:crtc=%d", display))
+		args = append(args, "-m", fmt.Sprintf("randr:crtc=%d", displayIndex))
 	}
 
 	if colorTemperature != -1 {
@@ -244,7 +244,7 @@ func ResetRedshift(display string) (err error) {
 
 	if displayIndex > -1 {
 		// -m randr:crtc=1
-		args = append(args, "-m", fmt.Sprintf("randr:crtc=%d", display))
+		args = append(args, "-m", fmt.Sprintf("randr:crtc=%d", displayIndex))
 	}
 
 	_, err = util.ExecCommand("redshift", args...)

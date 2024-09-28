@@ -56,29 +56,46 @@ var redshiftCmd = &cobra.Command{
 			return errors.New("gamma must be between 0.1 and 2.0")
 		}
 
-		lastSetColorTemperature := getLastSetColorTemperature(display)
-		lastSetBrightness := getLastSetBrightness(display)
-		lastSetGamma := getLastSetGamma(display)
-
-		if colorTemperature == -1 {
-			colorTemperature = getLastSetColorTemperature(display)
-		}
-		if brightness == -1 {
-			brightness = getLastSetBrightness(display)
-		}
-		if gamma == -1 {
-			gamma = getLastSetGamma(display)
+		var displays []string
+		if len(display) > 0 {
+			displays = []string{display}
+		} else {
+			var err error
+			displays, err = util.GetDisplays()
+			if err != nil {
+				return err
+			}
 		}
 
-		err := ApplyRedshift(display, colorTemperature, brightness, gamma)
-		if err != nil {
-			return err
-		}
+		for _, display := range displays {
 
-		// print current values
-		fmt.Printf("Color Temperature: %d -> %d\n", lastSetColorTemperature, colorTemperature)
-		fmt.Printf("Brightness: %.2f -> %.2f\n", lastSetBrightness, brightness)
-		fmt.Printf("Gamma: %.2f -> %.2f\n", lastSetGamma, gamma)
+			lastSetColorTemperature := getLastSetColorTemperature(display)
+			lastSetBrightness := getLastSetBrightness(display)
+			lastSetGamma := getLastSetGamma(display)
+
+			err := ApplyRedshift(display, colorTemperature, brightness, gamma)
+			if err != nil {
+				return err
+			}
+
+			// print current values
+			fmt.Printf("Display: %s\n", display)
+			if colorTemperature != -1 {
+				fmt.Printf("  Color Temperature: %d -> %d\n", lastSetColorTemperature, colorTemperature)
+			} else {
+				fmt.Printf("  Color Temperature: %d\n", lastSetColorTemperature)
+			}
+			if brightness != -1 {
+				fmt.Printf("  Brightness: %.2f -> %.2f\n", lastSetBrightness, brightness)
+			} else {
+				fmt.Printf("  Brightness: %.2f\n", lastSetBrightness)
+			}
+			if gamma != -1 {
+				fmt.Printf("  Gamma: %.2f -> %.2f\n", lastSetGamma, gamma)
+			} else {
+				fmt.Printf("  Gamma: %.2f\n", lastSetGamma)
+			}
+		}
 
 		return nil
 	},

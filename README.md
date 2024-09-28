@@ -14,14 +14,21 @@ In most cases these actions either require knowledge about a specific shell tool
 This project aims to simplify that by providing a command line tool that can do all the things mentioned above with a
 simple and easy to understand syntax.
 
+## Highly opinionated
+
+This project is highly opinionated and only supports the tools I use myself. This is to keep the codebase manageable
+and to ensure that the project stays focused on the things I need. If you need support for other tools, feel free to
+open an issue or a PR and I will consider adding it.
+
 ## Why not use Shell scripts?
 
 Yes, you could write scripts for all the things
-`system-control` can do and be happy with that. That was also my initial approach. When I wrote my first script I tried
-to use Bash since it is more close to the system, but:
+`system-control` can do and be happy with that. In fact, that was also my initial approach.
+When I wrote my first script I tried to use Bash since it is more close to the system, but:
 
-* Bash scripting syntax is exhausting
+* Bash scripting syntax is exhausting (imho)
 * Parsing or extracting text from command output can be very tricky/hacky when compared to a "real" programming language
+* Combining and maintaining multiple commands is tricky since the commands are possibly in separate files
 
 Because of those downsides I started to use Python scripts, but python also has its downsides:
 
@@ -33,8 +40,21 @@ To fix the dependency and file management you could use any packaging tool. But 
 not address the performance concerns I had, I decided to give golang a try. Go allows me to build
 a single binary file that includes everything necessary and provides the best possible performance
 (without using bash). The performance aspect is crucial for my usage, because some of these commands
- get executed on a regular basis through [Polybar](https://github.com/polybar/polybar) and other 
- applications.
+get executed on a regular basis through [Polybar](https://github.com/polybar/polybar) and other applications. Of course
+it also
+has its downsides, the main one beeing that it is the least flexible solution since it is a compiled
+binary, but history has shown that this is mostly non-issue, because commands on linux tend to have a
+very stable API or CLI interface (even when its explicitly stated that its not).
+
+# Installation
+
+```shell
+> git clone https://github.com/markusressel/system-control.git
+> cd system-control
+> make 
+```
+
+# Usage
 
 ## System
 

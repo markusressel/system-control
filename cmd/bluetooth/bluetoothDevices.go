@@ -50,6 +50,9 @@ var bluetoothDevicesCmd = &cobra.Command{
 			fmt.Printf("Address: %v\n", device.Address)
 			fmt.Printf("Connected: %v\n", device.Connected)
 			fmt.Printf("Paired: %v\n", device.Paired)
+			if device.BatteryPercentage != nil {
+				fmt.Printf("Battery: %v%%\n", *device.BatteryPercentage)
+			}
 			fmt.Println()
 		}
 

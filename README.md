@@ -48,13 +48,23 @@ very stable API or CLI interface (even when its explicitly stated that its not).
 
 # Installation
 
+Note that you need a working Go environment to build this project.
+
 ```shell
 > git clone https://github.com/markusressel/system-control.git
 > cd system-control
-> make 
+> make deploy
 ```
 
 # Usage
+
+system-control is a command-line-interface (CLI) tool. To use it simply open a terminal and type in one
+of the listed commands. If you want to see all available commands, type `system-control help`.
+
+```shell
+> system-control help
+
+```
 
 ## System
 

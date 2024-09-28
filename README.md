@@ -164,7 +164,13 @@ TODO: not yet implemented
 > system-control hotspot off -n "MyHotspot"
 ```
 
-### Screen
+### Display / Screen
+
+#### List Screens
+
+```shell script
+> system-control display list
+````
 
 #### Brightness
 

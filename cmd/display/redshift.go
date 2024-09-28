@@ -23,6 +23,7 @@ import (
 	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
+	"slices"
 	"strconv"
 )
 
@@ -151,7 +152,7 @@ func saveLastSetGamma(display string, gamma float64) error {
 	return persistence.SaveFloat(key, gamma)
 }
 
-func ApplyRedshift(display string, colorTemperature int64, brightness float64, gamma float64) error {
+func ApplyRedshift(display string, colorTemperature int64, brightness float64, gamma float64) (err error) {
 	if colorTemperature == -1 {
 		colorTemperature = getLastSetColorTemperature(display)
 	}
@@ -162,14 +163,13 @@ func ApplyRedshift(display string, colorTemperature int64, brightness float64, g
 		gamma = getLastSetGamma(display)
 	}
 
-	displayIndex := -1
-	if display == "DisplayPort-1" {
-		displayIndex = 1
-	} else if display == "DisplayPort-2" {
-		displayIndex = 0
+	displays, err := util.GetDisplays()
+	if err != nil {
+		return err
 	}
+	displayIndex := slices.IndexFunc(displays, func(d string) bool { return d == display })
 
-	err := SetRedshiftCBG(displayIndex, colorTemperature, brightness, gamma)
+	err = SetRedshiftCBG(displayIndex, colorTemperature, brightness, gamma)
 	if err != nil {
 		return err
 	}

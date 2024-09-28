@@ -56,6 +56,30 @@ TODO: not yet fully working
 
 ## Hardware
 
+### Bluetooth
+
+```shell
+> system-control bluetooth pair "LG-TONE-FP9"
+> system-control bluetooth pair "00:1D:43:6D:03:1A"
+```
+
+```shell
+> system-control bluetooth device connect "LG-TONE-FP9"
+> system-control bluetooth device connect "00:1D:43:6D:03:1A"
+```
+
+```shell
+> system-control bluetooth device disconnect "LG-TONE-FP9"
+> system-control bluetooth device disconnect "00:1D:43:6D:03:1A"
+
+# disconnect all devices
+> system-control bluetooth device disconnect
+```
+
+```shell
+> system-control bluetooth on
+```
+
 ### Battery
 
 ```shell

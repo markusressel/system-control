@@ -5,11 +5,15 @@ import (
 	"strings"
 )
 
+// BluetoothDevice represents a bluetooth device
 type BluetoothDevice struct {
-	Name    string
+	// Name of the device
+	Name string
+	// Address MAC address of the device
 	Address string
 }
 
+// PairBluetoothDevice pairs a bluetooth device with the system
 func PairBluetoothDevice(device BluetoothDevice) error {
 	_, err := util.ExecCommand(
 		"bluetoothctl",
@@ -19,6 +23,7 @@ func PairBluetoothDevice(device BluetoothDevice) error {
 	return err
 }
 
+// ConnectToBluetoothDevice connects to a bluetooth device
 func ConnectToBluetoothDevice(device BluetoothDevice) error {
 	_, err := util.ExecCommand(
 		"bluetoothctl",
@@ -28,6 +33,26 @@ func ConnectToBluetoothDevice(device BluetoothDevice) error {
 	return err
 }
 
+// DisconnectAllBluetoothDevices disconnects all bluetooth devices
+func DisconnectAllBluetoothDevices() error {
+	_, err := util.ExecCommand(
+		"bluetoothctl",
+		"disconnect",
+	)
+	return err
+}
+
+// DisconnectBluetoothDevice disconnects a specific bluetooth device
+func DisconnectBluetoothDevice(device BluetoothDevice) error {
+	_, err := util.ExecCommand(
+		"bluetoothctl",
+		"disconnect",
+		device.Address,
+	)
+	return err
+}
+
+// GetBluetoothDevices returns a list of all paired bluetooth devices
 func GetBluetoothDevices() ([]BluetoothDevice, error) {
 	result, err := util.ExecCommand(
 		"bluetoothctl",

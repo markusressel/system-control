@@ -23,9 +23,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var bluetoothConnectCmd = &cobra.Command{
-	Use:   "connect",
-	Short: "Connect to a Bluetooth Device",
+var bluetoothPairCmd = &cobra.Command{
+	Use:   "pair",
+	Short: "Pair a Bluetooth Device",
 	Long:  ``,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -37,7 +37,7 @@ var bluetoothConnectCmd = &cobra.Command{
 		}
 		for _, device := range devices {
 			if device.Name == deviceName || device.Address == deviceName {
-				err := bluetooth.ConnectToBluetoothDevice(device)
+				err := bluetooth.PairBluetoothDevice(device)
 				return err
 			}
 		}
@@ -47,5 +47,5 @@ var bluetoothConnectCmd = &cobra.Command{
 }
 
 func init() {
-	Command.AddCommand(bluetoothConnectCmd)
+	Command.AddCommand(bluetoothPairCmd)
 }

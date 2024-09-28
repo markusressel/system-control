@@ -23,22 +23,29 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var bluetoothConnectCmd = &cobra.Command{
-	Use:   "connect",
+var bluetoothDisconnectCmd = &cobra.Command{
+	Use:   "disconnect",
 	Short: "Connect to a Bluetooth Device",
 	Long:  ``,
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		deviceName := args[0]
-
-		devices, err := bluetooth.GetBluetoothDevices()
-		if err != nil {
-			return err
+		deviceName := ""
+		if len(args) > 0 {
+			deviceName = args[0]
 		}
-		for _, device := range devices {
-			if device.Name == deviceName || device.Address == deviceName {
-				err := bluetooth.ConnectToBluetoothDevice(device)
+
+		if deviceName == "" {
+			return bluetooth.DisconnectAllBluetoothDevices()
+		} else {
+			devices, err := bluetooth.GetBluetoothDevices()
+			if err != nil {
 				return err
+			}
+			for _, device := range devices {
+				if device.Name == deviceName || device.Address == deviceName {
+					err := bluetooth.DisconnectBluetoothDevice(device)
+					return err
+				}
 			}
 		}
 
@@ -47,5 +54,5 @@ var bluetoothConnectCmd = &cobra.Command{
 }
 
 func init() {
-	Command.AddCommand(bluetoothConnectCmd)
+	Command.AddCommand(bluetoothDisconnectCmd)
 }

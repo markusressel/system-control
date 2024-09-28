@@ -3,11 +3,12 @@
 A utility to make common system actions a breeze.
 
 ## What?
+
 On linux it can be cumbersome to do simple stuff via the command line, like f. ex.:
 * changing the volume
 * increasing the display brightness
 * manage WiFi connections / Hotspots
-* graceful shutdown/restart
+* connecting to bluetooth devices
 
 In most cases these actions either require knowledge about a specific shell tool to do the job or even a custom-built script.
 
@@ -89,25 +90,76 @@ Flags:
 Use "system-control [command] --help" for more information about a command.
 ```
 
-## System
+## Audio
 
-### Shutdown/Restart
+system-control is optimized for pipewire. If currently you are not using pipewire already, I strongly recommend to
+consider it.
 
-TODO: not yet fully working
+**Requirements:**
 
-```shell script
-> system-control shutdown
+* `pw-dump`
+* `pw-cli`
+* `wpctl`
+
+```shell
+> system-control audio mute
+> system-control audio unmute
+> system-control audio toggle-mute
 ```
 
-```shell script
-> system-control restart
+```shell
+> system-control audio volume
+28
+> system-control audio volume inc
+> system-control audio volume dec
+> system-control audio volume set 100 --channel Master
 ```
 
-```shell script
-> system-control lock
+Save and Restore Audio State, f.ex. before and after reboot:
+
+```shell
+> system-control audio save
+> system-control audio restore
 ```
 
-## Hardware
+### Sink
+
+```shell
+// list sinks
+> system-control audio sink
+Sink #64
+	State: SUSPENDED
+	Name: alsa_output.pci-0000_11_00.4.analog-stereo
+	Description: Starship/Matisse HD Audio Controller Analog Stereo
+	Driver: PipeWire
+	Sample Specification: s32le 2ch 48000Hz
+	Channel Map: front-left,front-right
+[...]
+
+// get active sink
+> system-control audio sink active
+46
+
+// check if the current active sink contains "nvidia" in its name
+> system-control audio sink active "NVIDIA"
+0
+
+// switch active sink to a sink which contains the given text
+> system-control audio sink switch "Built-in"
+> system-control audio sink switch "X-Fi"
+> system-control audio sink switch "NVIDIA"
+```
+
+### Battery
+
+```shell
+> system-control battery threshold -name BAT0
+100
+> system-control battery threshold -name BAT0 75
+
+> system-control battery threshold -name BAT0 save       # run this after changing the threshold
+> system-control battery threshold -name BAT0 restore    # run this f.ex. right after boot
+```
 
 ### Bluetooth
 
@@ -133,42 +185,11 @@ TODO: not yet fully working
 > system-control bluetooth on
 ```
 
-### Battery
-
-```shell
-> system-control battery threshold -name BAT0
-100
-> system-control battery threshold -name BAT0 75
-
-> system-control battery threshold -name BAT0 save       # run this after changing the threshold
-> system-control battery threshold -name BAT0 restore    # run this f.ex. right after boot
-```
-
-### Touchpad
-
-```shell
-> system-control touchpad toggle
-```
-
-### Network
-
-#### Hotspot
-
-TODO: not yet implemented
-
-```shell script
-> system-control hotspot on -n "MyHotspot"
-```
-
-```shell script
-> system-control hotspot off -n "MyHotspot"
-```
-
 ### Display / Screen
 
 #### List Screens
 
-```shell script
+```shell
 > system-control display list
 ````
 
@@ -178,63 +199,61 @@ TODO: not yet implemented
 
 * None
 
-```shell script
+```shell
 > system-control display brightness set 100
 > system-control display brightness inc
 > system-control display brightness dec
 ```
 
-### Audio
+## Keyboard
 
-system-control is optimized for pipewire. If currently you are not using pipewire already, I strongly recommend to
-consider it.
+### Brightness
 
-**Requirements:**
-
-* `pw-dump`
-* `pw-cli`
-* `wpctl`
-
-#### Volume
-
-```shell script
-> system-control audio mute
-> system-control audio unmute
-> system-control audio toggle-mute
+```shell
+> system-control keyboard brightness set 100
+> system-control keyboard brightness inc
+> system-control keyboard brightness dec
 ```
 
-```shell script
-> system-control audio volume
-28
-> system-control audio volume inc
-> system-control audio volume dec
-> system-control audio volume set 100 --channel Master
+## Touchpad
+
+```shell
+> system-control touchpad toggle
 ```
 
-#### Sink
+## Video
 
-```shell script
-// list sinks
-> system-control audio sink
-Sink #43
-	State: SUSPENDED
-	Name: alsa_output.pci-0000_07_00.0.analog-stereo
-	Description: EMU20k2 [Sound Blaster X-Fi Titanium Series] Analog Stereo
-	Driver: PipeWire
-	Sample Specification: float32le 2ch 48000Hz
-	Channel Map: front-left,front-right
-[...]
+```shell
+> system-control video load
+> system-control video unload
+```
 
-// get active sink
-> system-control audio sink active
-46
+### Network
 
-// check if the current active sink contains "nvidia" in its name
-> system-control audio sink active "NVIDIA"
-0
+#### Hotspot
 
-// switch active sink to a sink which contains the given text
-> system-control audio sink switch "Built-in"
-> system-control audio sink switch "X-Fi"
-> system-control audio sink switch "NVIDIA"
+TODO: not yet implemented
+
+```shell
+> system-control hotspot on -n "MyHotspot"
+```
+
+```shell
+> system-control hotspot off -n "MyHotspot"
+```
+
+### Shutdown/Restart
+
+TODO: not yet fully working
+
+```shell
+> system-control shutdown
+```
+
+```shell
+> system-control restart
+```
+
+```shell
+> system-control lock
 ```

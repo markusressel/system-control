@@ -225,8 +225,8 @@ DisplayPort-1
 ## Video (Webcam)
 
 ```shell
-> system-control video load
-> system-control video unload
+> system-control video load    # loads the kernel driver for webcam support
+> system-control video unload  # unloads the kernel driver for webcam support
 ```
 
 ### Network

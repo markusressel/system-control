@@ -198,10 +198,6 @@ DisplayPort-1
 
 #### Brightness
 
-**Requirements:**
-
-* None
-
 ```shell
 > system-control display brightness set 100
 > system-control display brightness inc
@@ -221,6 +217,8 @@ DisplayPort-1
 ## Touchpad
 
 ```shell
+> system-control touchpad on
+> system-control touchpad off
 > system-control touchpad toggle
 ```
 

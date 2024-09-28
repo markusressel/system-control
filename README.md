@@ -164,6 +164,11 @@ Sink #64
 ### Bluetooth
 
 ```shell
+> system-control bluetooth on
+> system-control bluetooth off
+```
+
+```shell
 > system-control bluetooth pair "LG-TONE-FP9"
 > system-control bluetooth pair "00:1D:43:6D:03:1A"
 ```
@@ -179,10 +184,6 @@ Sink #64
 
 # disconnect all devices
 > system-control bluetooth device disconnect
-```
-
-```shell
-> system-control bluetooth on
 ```
 
 ### Display / Screen

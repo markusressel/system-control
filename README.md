@@ -7,7 +7,7 @@ On linux it can be cumbersome to do simple stuff via the command line, like f. e
 * changing the volume
 * increasing the display brightness
 * manage WiFi connections / Hotspots
-* graceful shutting/restart
+* graceful shutdown/restart
 
 In most cases these actions either require knowledge about a specific shell tool to do the job or even a custom-built script.
 

@@ -229,13 +229,25 @@ func SetRedshiftCBG(display int, colorTemperature int64, brightness float64, gam
 	return err
 }
 
-func ResetRedshift() error {
+func ResetRedshift(display string) (err error) {
 	args := []string{
 		"-x", // reset previous "mode"
 		"-P", // reset previous gamma ramps
 		"-r", // apply immediately
 	}
-	_, err := util.ExecCommand("redshift", args...)
+
+	displays, err := util.GetDisplays()
+	if err != nil {
+		return err
+	}
+	displayIndex := slices.IndexFunc(displays, func(d string) bool { return d == display })
+
+	if displayIndex > -1 {
+		// -m randr:crtc=1
+		args = append(args, "-m", fmt.Sprintf("randr:crtc=%d", display))
+	}
+
+	_, err = util.ExecCommand("redshift", args...)
 	return err
 }
 

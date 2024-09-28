@@ -192,6 +192,8 @@ Sink #64
 
 ```shell
 > system-control display list
+DisplayPort-2
+DisplayPort-1
 ````
 
 #### Brightness

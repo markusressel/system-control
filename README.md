@@ -63,7 +63,30 @@ of the listed commands. If you want to see all available commands, type `system-
 
 ```shell
 > system-control help
+A utility to make common system actions a breeze.
 
+Usage:
+  system-control [command]
+
+Available Commands:
+  audio       Control System Audio
+  battery     Control System Battery
+  bluetooth   Control Bluetooth Devices
+  completion  Generate the autocompletion script for the specified shell
+  display     Control Display
+  help        Help about any command
+  keyboard    Control Keyboard
+  restart     Reboot the system gracefully
+  shutdown    Shutdown the system gracefully
+  touchpad    Control touchpad
+  video       Control video inputs (cameras)
+
+Flags:
+      --configuration string   configuration file (default is $HOME/.system-control.yaml)
+  -h, --help                   help for system-control
+  -t, --toggle                 Help message for toggle
+
+Use "system-control [command] --help" for more information about a command.
 ```
 
 ## System

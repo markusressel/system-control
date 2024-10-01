@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
+	"os"
+	"text/tabwriter"
 )
 
 var batteryListCmd = &cobra.Command{
@@ -33,18 +35,25 @@ var batteryListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		for _, battery := range batteries {
+		for i, battery := range batteries {
 			fmt.Println(battery.Name)
 
-			fmt.Println("  Path: ", battery.Path)
-			fmt.Println("  Type: ", battery.Type)
-			fmt.Println("  Manufacturer: ", battery.Manufacturer)
-			fmt.Println("  Model: ", battery.Model)
-			fmt.Println("  Serial: ", battery.SerialNumber)
-			fmt.Println("  Capacity Level: ", battery.CapacityLevel)
-			fmt.Println("  Online: ", battery.Online)
-			fmt.Println("  Status: ", battery.Status)
-			fmt.Println("  Scope: ", battery.Scope)
+			w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
+			fmt.Fprintf(w, "  Path:\t%s\t\n", battery.Path)
+			fmt.Fprintf(w, "  Type:\t%s\t\n", battery.Type)
+			fmt.Fprintf(w, "  Manufacturer:\t%s\t\n", battery.Manufacturer)
+			fmt.Fprintf(w, "  Model:\t%s\t\n", battery.Model)
+			fmt.Fprintf(w, "  Serial:\t%s\t\n", battery.SerialNumber)
+			fmt.Fprintf(w, "  Capacity:\t%s\t\n", battery.CapacityLevel)
+			fmt.Fprintf(w, "  Online:\t%v\t\n", battery.Online)
+			fmt.Fprintf(w, "  Status:\t%s\t\n", battery.Status)
+			fmt.Fprintf(w, "  Scope:\t%s\t\n", battery.Scope)
+			w.Flush()
+
+			if i < len(batteries)-1 {
+				fmt.Println()
+			}
+
 		}
 		return nil
 	},

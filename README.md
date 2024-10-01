@@ -153,6 +153,18 @@ Sink #64
 ### Battery
 
 ```shell
+> system-control battery list
+hidpp_battery_0
+  Path:         /sys/class/power_supply/hidpp_battery_0 
+  Type:         Battery                                 
+  Manufacturer: Logitech                                
+  Model:        MX Keys Wireless Keyboard               
+  Serial:       a8-bc-3a-a5                             
+  Capacity:     Full                                    
+  Online:       true                                    
+  Status:       Discharging                             
+  Scope:        Device   
+
 > system-control battery threshold -name BAT0
 100
 > system-control battery threshold -name BAT0 75

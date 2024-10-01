@@ -7,6 +7,14 @@ import (
 	"strings"
 )
 
+func ReadTextFromFile(path string) (value string, err error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
 func ReadIntFromFile(path string) (int64, error) {
 	fileBuffer, err := os.ReadFile(path)
 	if err != nil {

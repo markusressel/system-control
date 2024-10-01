@@ -19,9 +19,12 @@ build: clean
 run: build
 	./${OUTPUT_DIR}${BINARY_NAME}
 
-deploy: build
+deploy-custom: build
 	mkdir -p ~/.custom/bin/
 	cp ./${OUTPUT_DIR}${BINARY_NAME} ~/.custom/bin/${BINARY_NAME}
+
+deploy: build
+	sudo cp ./${OUTPUT_DIR}${BINARY_NAME} /usr/bin/${BINARY_NAME}
 
 clean:
 	go clean

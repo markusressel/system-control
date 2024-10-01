@@ -20,6 +20,7 @@ package display
 import (
 	"errors"
 	"github.com/markusressel/system-control/internal/configuration"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/nathan-osman/go-sunrise"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
@@ -35,12 +36,12 @@ var redshiftUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update the currently applied redshift based on the current time of day.",
 	Long:  ``,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 
 		configPath := configuration.DetectAndReadConfigFile()
 		//ui.Info("Using configuration file at: %s", configPath)
 		config := configuration.LoadConfig()
-		err := configuration.Validate(configPath)
+		err = configuration.Validate(configPath)
 		if err != nil {
 			//ui.FatalWithoutStacktrace(err.Error())
 		}
@@ -59,15 +60,28 @@ var redshiftUpdateCmd = &cobra.Command{
 			return errors.New("color temperature must be between 1000 and 25000")
 		}
 
-		err = ApplyRedshift(display, colorTemperature, -1, -1)
-		if err != nil {
-			return err
+		var displays []string
+		if len(display) > 0 {
+			displays = []string{display}
+		} else {
+			var err error
+			displays, err = util.GetDisplays()
+			if err != nil {
+				return err
+			}
 		}
 
-		// print current values
-		//fmt.Printf("Color Temperature: %d -> %d\n", lastSetColorTemperature, colorTemperature)
-		//fmt.Printf("Brightness: %.2f -> %.2f\n", lastSetBrightness, brightness)
-		//fmt.Printf("Gamma: %.2f -> %.2f\n", lastSetGamma, gamma)
+		for _, display := range displays {
+			err = ApplyRedshift(display, colorTemperature, -1, -1)
+			if err != nil {
+				return err
+			}
+
+			// print current values
+			//fmt.Printf("Color Temperature: %d -> %d\n", lastSetColorTemperature, colorTemperature)
+			//fmt.Printf("Brightness: %.2f -> %.2f\n", lastSetBrightness, brightness)
+			//fmt.Printf("Gamma: %.2f -> %.2f\n", lastSetGamma, gamma)
+		}
 
 		return nil
 	},

@@ -15,40 +15,23 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package display
+package bluetooth
 
 import (
-	"github.com/markusressel/system-control/internal/util"
+	"github.com/markusressel/system-control/internal/bluetooth"
 	"github.com/spf13/cobra"
 )
 
-var redshiftResetCmd = &cobra.Command{
-	Use:   "reset",
-	Short: "Reset the currently applied redshift",
+var bluetoothOffCmd = &cobra.Command{
+	Use:   "off",
+	Short: "Turn off the Bluetooth Adapter",
 	Long:  ``,
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var displays []string
-		if len(display) > 0 {
-			displays = []string{display}
-		} else {
-			var err error
-			displays, err = util.GetDisplays()
-			if err != nil {
-				return err
-			}
-		}
-
-		for _, display := range displays {
-			err := ResetRedshift(display)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
+		return bluetooth.TurnOffBluetoothAdapter()
 	},
 }
 
 func init() {
-	redshiftCmd.AddCommand(redshiftResetCmd)
+	Command.AddCommand(bluetoothOffCmd)
 }

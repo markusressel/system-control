@@ -18,31 +18,24 @@
 package display
 
 import (
+	"fmt"
 	"github.com/markusressel/system-control/internal/util"
+
 	"github.com/spf13/cobra"
 )
 
-var redshiftResetCmd = &cobra.Command{
-	Use:   "reset",
-	Short: "Reset the currently applied redshift",
+var displayListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "Show current displays",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var displays []string
-		if len(display) > 0 {
-			displays = []string{display}
-		} else {
-			var err error
-			displays, err = util.GetDisplays()
-			if err != nil {
-				return err
-			}
+		displays, err := util.GetDisplays()
+		if err != nil {
+			return err
 		}
 
 		for _, display := range displays {
-			err := ResetRedshift(display)
-			if err != nil {
-				return err
-			}
+			fmt.Println(display)
 		}
 
 		return nil
@@ -50,5 +43,5 @@ var redshiftResetCmd = &cobra.Command{
 }
 
 func init() {
-	redshiftCmd.AddCommand(redshiftResetCmd)
+	Command.AddCommand(displayListCmd)
 }

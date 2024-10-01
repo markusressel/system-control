@@ -7,6 +7,18 @@ import (
 	"strings"
 )
 
+// TurnOnBluetoothAdapter turns on the bluetooth adapter
+func TurnOnBluetoothAdapter() error {
+	_, err := util.ExecCommand("bluetoothctl", "power", "on")
+	return err
+}
+
+// TurnOffBluetoothAdapter turns off the bluetooth adapter
+func TurnOffBluetoothAdapter() error {
+	_, err := util.ExecCommand("bluetoothctl", "power", "off")
+	return err
+}
+
 // simpleDeviceInfo is a simple representation of a known bluetooth device and only used internally.
 // BluetoothDevice is a much more detailed representation.
 type simpleDeviceInfo struct {

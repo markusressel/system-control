@@ -18,7 +18,7 @@ func ReadTextFromFile(path string) (value string, err error) {
 func ReadIntFromFile(path string) (int64, error) {
 	fileBuffer, err := os.ReadFile(path)
 	if err != nil {
-		log.Fatal(err)
+		return -1, err
 	}
 	value := string(fileBuffer)
 	value = strings.TrimSpace(value)

@@ -11,6 +11,7 @@ type BatteryInfo struct {
 
 	Manufacturer  string
 	Model         string
+	Capacity      int64
 	CapacityLevel string
 	Online        bool
 	// f.ex. "Charging" or "Discharging"
@@ -44,52 +45,30 @@ func parseBatteryInfo(file os.DirEntry) (BatteryInfo, error) {
 	battery := BatteryInfo{}
 	batteryName := file.Name()
 	batteryPath := PowerSupplyBasePath + batteryName
-	manufacturer, err := ReadTextFromFile(batteryPath + "/manufacturer")
-	if err != nil {
-		return battery, err
-	}
+	manufacturer, _ := ReadTextFromFile(batteryPath + "/manufacturer")
 	manufacturer = strings.TrimSpace(manufacturer)
 
-	model, err := ReadTextFromFile(batteryPath + "/model_name")
-	if err != nil {
-		return battery, err
-	}
+	model, _ := ReadTextFromFile(batteryPath + "/model_name")
 	model = strings.TrimSpace(model)
 
-	capacityLevel, err := ReadTextFromFile(batteryPath + "/capacity_level")
-	if err != nil {
-		return battery, err
-	}
+	capacity, _ := ReadIntFromFile(batteryPath + "/capacity")
+
+	capacityLevel, _ := ReadTextFromFile(batteryPath + "/capacity_level")
 	capacityLevel = strings.TrimSpace(capacityLevel)
 
-	online, err := ReadTextFromFile(batteryPath + "/online")
-	if err != nil {
-		return battery, err
-	}
+	online, _ := ReadTextFromFile(batteryPath + "/online")
 	online = strings.TrimSpace(online)
 
-	status, err := ReadTextFromFile(batteryPath + "/status")
-	if err != nil {
-		return battery, err
-	}
+	status, _ := ReadTextFromFile(batteryPath + "/status")
 	status = strings.TrimSpace(status)
 
-	serialNumber, err := ReadTextFromFile(batteryPath + "/serial_number")
-	if err != nil {
-		return battery, err
-	}
+	serialNumber, _ := ReadTextFromFile(batteryPath + "/serial_number")
 	serialNumber = strings.TrimSpace(serialNumber)
 
-	scope, err := ReadTextFromFile(batteryPath + "/scope")
-	if err != nil {
-		return battery, err
-	}
+	scope, _ := ReadTextFromFile(batteryPath + "/scope")
 	scope = strings.TrimSpace(scope)
 
-	bType, err := ReadTextFromFile(batteryPath + "/type")
-	if err != nil {
-		return battery, err
-	}
+	bType, _ := ReadTextFromFile(batteryPath + "/type")
 	bType = strings.TrimSpace(bType)
 
 	battery.Name = batteryName
@@ -97,6 +76,7 @@ func parseBatteryInfo(file os.DirEntry) (BatteryInfo, error) {
 
 	battery.Manufacturer = manufacturer
 	battery.Model = model
+	battery.Capacity = capacity
 	battery.CapacityLevel = capacityLevel
 	battery.Online = online == "1"
 	battery.Status = status

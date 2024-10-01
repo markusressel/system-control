@@ -33,22 +33,46 @@ var batteryRemainingCmd = &cobra.Command{
 
 		template := "%hours%:%minutes%"
 
-		battery := Name
+		batteries, err := util.GetBatteryList()
+		if err != nil {
+			return err
+		}
+
+		if len(batteries) <= 0 {
+			return fmt.Errorf("no batteries found")
+		}
+
+		var batteryInfo *util.BatteryInfo
+		for _, battery := range batteries {
+			if util.EqualsIgnoreCase(battery.Name, Name) {
+				batteryInfo = &battery
+			} else if util.EqualsIgnoreCase(battery.SerialNumber, Name) {
+				batteryInfo = &battery
+			} else if util.EqualsIgnoreCase(battery.Model, Name) {
+				batteryInfo = &battery
+			} else if util.EqualsIgnoreCase(battery.Path, Name) {
+				batteryInfo = &battery
+			}
+		}
+
+		if batteryInfo == nil {
+			return fmt.Errorf("no battery found matching '%s'", Name)
+		}
 
 		// get value
-		charging, err := util.IsBatteryCharging(battery)
+		charging, err := util.IsBatteryCharging(*batteryInfo)
 		if err != nil {
 			return err
 		}
-		energyTarget, err := util.GetEnergyTarget(battery)
+		energyTarget, err := util.GetEnergyTarget(*batteryInfo)
 		if err != nil {
 			return err
 		}
-		energyNow, err := util.GetEnergyNow(battery)
+		energyNow, err := util.GetEnergyNow(*batteryInfo)
 		if err != nil {
 			return err
 		}
-		powerNow, err := util.GetPowerNow(battery)
+		powerNow, err := util.GetPowerNow(*batteryInfo)
 		if err != nil {
 			return err
 		}

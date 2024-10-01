@@ -106,14 +106,14 @@ func parseBatteryInfo(file os.DirEntry) (BatteryInfo, error) {
 	return battery, nil
 }
 
-func GetEnergyTarget(battery string) (int64, error) {
+func GetEnergyTarget(battery BatteryInfo) (int64, error) {
 	chargeControlEndThreshold := GetChargeControlEndThreshold(battery)
 	energyFull, err := GetEnergyFull(battery)
 	return int64((float64(energyFull) / 100) * float64(chargeControlEndThreshold)), err
 }
 
-func GetChargeControlEndThreshold(battery string) int64 {
-	path := PowerSupplyBasePath + battery + "/charge_control_end_threshold"
+func GetChargeControlEndThreshold(battery BatteryInfo) int64 {
+	path := battery.Path + "/charge_control_end_threshold"
 	value, err := ReadIntFromFile(path)
 	if err != nil {
 		value = 100
@@ -125,25 +125,25 @@ func CalculateRemainingTime(wh int64, w int64) int64 {
 	return int64((float64(wh) / float64(w)) * 60 * 60)
 }
 
-func IsBatteryCharging(battery string) (bool, error) {
-	path := PowerSupplyBasePath + battery + "/status"
+func IsBatteryCharging(battery BatteryInfo) (bool, error) {
+	path := battery.Path + "/status"
 	status, err := ReadTextFromFile(path)
 	status = strings.TrimSpace(status)
 	charging := status == "Charging"
 	return charging, err
 }
 
-func GetEnergyFull(battery string) (int64, error) {
-	path := PowerSupplyBasePath + battery + "/energy_full"
+func GetEnergyFull(battery BatteryInfo) (int64, error) {
+	path := battery.Path + "/energy_full"
 	return ReadIntFromFile(path)
 }
 
-func GetEnergyNow(battery string) (int64, error) {
-	path := PowerSupplyBasePath + battery + "/energy_now"
+func GetEnergyNow(battery BatteryInfo) (int64, error) {
+	path := battery.Path + "/energy_now"
 	return ReadIntFromFile(path)
 }
 
-func GetPowerNow(battery string) (int64, error) {
-	path := PowerSupplyBasePath + battery + "/power_now"
+func GetPowerNow(battery BatteryInfo) (int64, error) {
+	path := battery.Path + "/power_now"
 	return ReadIntFromFile(path)
 }

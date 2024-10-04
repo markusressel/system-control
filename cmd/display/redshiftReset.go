@@ -18,7 +18,6 @@
 package display
 
 import (
-	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -27,15 +26,9 @@ var redshiftResetCmd = &cobra.Command{
 	Short: "Reset the currently applied redshift",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var displays []string
-		if len(display) > 0 {
-			displays = []string{display}
-		} else {
-			var err error
-			displays, err = util.GetDisplays()
-			if err != nil {
-				return err
-			}
+		displays, err := parseDisplayParam(display)
+		if err != nil {
+			return err
 		}
 
 		for _, display := range displays {

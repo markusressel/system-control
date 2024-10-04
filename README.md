@@ -216,6 +216,26 @@ DisplayPort-1
 > system-control display brightness dec
 ```
 
+#### RedShift
+
+```shell
+> system-control display redshift
+system-control display redshift                                                                                                                                                             0 (0.000s) < 19:10:58
+Display: DisplayPort-2
+  Color Temperature: 4500
+  Brightness: 0.70
+  Gamma: -1.00
+Display: DisplayPort-1
+  Color Temperature: 4500
+  Brightness: 0.70
+  Gamma: -1.00
+```
+
+```shell
+> system-control display redshift off
+> system-control display redshift toggle
+```
+
 ## Keyboard
 
 ### Brightness

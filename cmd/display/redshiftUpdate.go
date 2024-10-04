@@ -20,7 +20,6 @@ package display
 import (
 	"errors"
 	"github.com/markusressel/system-control/internal/configuration"
-	"github.com/markusressel/system-control/internal/util"
 	"github.com/nathan-osman/go-sunrise"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
@@ -30,14 +29,11 @@ import (
 	"time"
 )
 
-var display string
-
 var redshiftUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update the currently applied redshift based on the current time of day.",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-
 		configPath := configuration.DetectAndReadConfigFile()
 		//ui.Info("Using configuration file at: %s", configPath)
 		config := configuration.LoadConfig()
@@ -60,15 +56,9 @@ var redshiftUpdateCmd = &cobra.Command{
 			return errors.New("color temperature must be between 1000 and 25000")
 		}
 
-		var displays []string
-		if len(display) > 0 {
-			displays = []string{display}
-		} else {
-			var err error
-			displays, err = util.GetDisplays()
-			if err != nil {
-				return err
-			}
+		displays, err := parseDisplayParam(display)
+		if err != nil {
+			return err
 		}
 
 		for _, display := range displays {
@@ -135,7 +125,7 @@ func readRedshiftConfig() (RedshiftConfig, error) {
 }
 
 const (
-	// TransitionElevationThreshold is the elevation threshold at which the color temperature should be fully transitioned.
+	// TransitionElevationThreshold is the sun's elevation threshold at which the color temperature should be fully transitioned.
 	TransitionElevationThreshold = 20
 )
 
@@ -162,12 +152,5 @@ func CalculateTargetColorTemperature(
 }
 
 func init() {
-	redshiftUpdateCmd.PersistentFlags().StringVarP(
-		&display,
-		"display", "d",
-		"",
-		"Color Temperature",
-	)
-
 	redshiftCmd.AddCommand(redshiftUpdateCmd)
 }

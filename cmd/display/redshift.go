@@ -34,6 +34,8 @@ const (
 )
 
 var (
+	display string
+
 	colorTemperature int64
 	brightness       float64
 	gamma            float64
@@ -57,15 +59,9 @@ var redshiftCmd = &cobra.Command{
 			return errors.New("gamma must be between 0.1 and 2.0")
 		}
 
-		var displays []string
-		if len(display) > 0 {
-			displays = []string{display}
-		} else {
-			var err error
-			displays, err = util.GetDisplays()
-			if err != nil {
-				return err
-			}
+		displays, err := parseDisplayParam(display)
+		if err != nil {
+			return err
 		}
 
 		for _, display := range displays {
@@ -100,6 +96,33 @@ var redshiftCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func parseDisplayParam(display string) (result []string, err error) {
+	if len(display) > 0 {
+		foundDisplayName, err := findDisplay(display)
+		if err != nil {
+			return nil, err
+		}
+		result = []string{foundDisplayName}
+	} else {
+		return util.GetDisplays()
+	}
+
+	return result, nil
+}
+
+func findDisplay(d string) (string, error) {
+	knownDisplays, err := util.GetDisplays()
+	if err != nil {
+		return "", err
+	}
+	for _, knownDisplay := range knownDisplays {
+		if knownDisplay == d {
+			return d, nil
+		}
+	}
+	return "", fmt.Errorf("display named %s not found", d)
 }
 
 func getLastSetColorTemperature(display string) int64 {
@@ -252,6 +275,13 @@ func ResetRedshift(display string) (err error) {
 }
 
 func init() {
+	redshiftCmd.PersistentFlags().StringVarP(
+		&display,
+		"display", "d",
+		"",
+		"Display",
+	)
+
 	redshiftCmd.PersistentFlags().Int64VarP(
 		&colorTemperature,
 		"temperature", "t",

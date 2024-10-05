@@ -15,46 +15,33 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package display
+package backlight
 
 import (
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
-var incBrightnessCmd = &cobra.Command{
-	Use:   "inc",
-	Short: "Increase display brightness",
+var setBrightnessCmd = &cobra.Command{
+	Use:   "set",
+	Short: "Set the brightness of a given display backlight.",
 	Long:  ``,
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		brightness, err := util.GetBrightness()
-		if err != nil {
-			return err
-		}
-		maxBrightness, err := util.GetMaxBrightness()
+		p, err := strconv.Atoi(args[0])
 		if err != nil {
 			return err
 		}
 
-		percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
-
-		var change int
-		if percentage < 10 {
-			change = 1
-		} else if percentage < 20 {
-			change = 2
-		} else if percentage < 40 {
-			change = 4
-		} else {
-			change = 8
+		mainBacklight, err := util.GetMainBacklight()
+		if err != nil {
+			return err
 		}
-
-		rawChange := int(float32(change) * (float32(maxBrightness) / 100.0))
-
-		return util.AdjustBrightness(rawChange)
+		return mainBacklight.SetBrightness(p)
 	},
 }
 
 func init() {
-	brightnessCmd.AddCommand(incBrightnessCmd)
+	brightnessCmd.AddCommand(setBrightnessCmd)
 }

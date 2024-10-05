@@ -15,46 +15,40 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package display
+package backlight
 
 import (
+	"fmt"
 	"github.com/markusressel/system-control/internal/util"
+
 	"github.com/spf13/cobra"
 )
 
-var decBrightnessCmd = &cobra.Command{
-	Use:   "dec",
-	Short: "Decrease display brightness",
+var brightnessCmd = &cobra.Command{
+	Use:   "brightness",
+	Short: "Show current display brightness",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		brightness, err := util.GetBrightness()
+		mainBacklight, err := util.GetMainBacklight()
 		if err != nil {
 			return err
 		}
-		maxBrightness, err := util.GetMaxBrightness()
+		brightness, err := mainBacklight.GetBrightness()
+		if err != nil {
+			return err
+		}
+		maxBrightness, err := mainBacklight.GetMaxBrightness()
 		if err != nil {
 			return err
 		}
 
 		percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
 
-		var change int
-		if percentage < 10 {
-			change = 1
-		} else if percentage < 20 {
-			change = 2
-		} else if percentage < 40 {
-			change = 4
-		} else {
-			change = 8
-		}
-
-		rawChange := int(float32(change) * (float32(maxBrightness) / 100.0))
-
-		return util.AdjustBrightness(-rawChange)
+		fmt.Println(percentage)
+		return nil
 	},
 }
 
 func init() {
-	brightnessCmd.AddCommand(decBrightnessCmd)
+	Command.AddCommand(brightnessCmd)
 }

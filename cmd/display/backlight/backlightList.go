@@ -15,36 +15,48 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package display
+package backlight
 
 import (
 	"fmt"
+	"github.com/markusressel/system-control/cmd/battery"
 	"github.com/markusressel/system-control/internal/util"
+	"os"
+	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 )
 
-var brightnessCmd = &cobra.Command{
-	Use:   "brightness",
+var backlightListCmd = &cobra.Command{
+	Use:   "list",
 	Short: "Show current display brightness",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		brightness, err := util.GetBrightness()
-		if err != nil {
-			return err
-		}
-		maxBrightness, err := util.GetMaxBrightness()
+		backlights, err := util.GetBacklights()
 		if err != nil {
 			return err
 		}
 
-		percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
+		for i, backlight := range backlights {
+			brightness, _ := backlight.GetBrightness()
+			maxBrightness, _ := backlight.GetMaxBrightness()
 
-		fmt.Println(percentage)
+			fmt.Println(battery.Name)
+
+			w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
+			fmt.Fprintf(w, "  Brightness:\t%d\t\n", brightness)
+			fmt.Fprintf(w, "  MaxBrightness:\t%d\t\n", maxBrightness)
+			w.Flush()
+
+			if i < len(backlights)-1 {
+				fmt.Println()
+			}
+		}
+
 		return nil
 	},
 }
 
 func init() {
-	Command.AddCommand(brightnessCmd)
+	Command.AddCommand(backlightListCmd)
 }

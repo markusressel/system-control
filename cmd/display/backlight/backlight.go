@@ -15,28 +15,14 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package display
+package backlight
 
 import (
-	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
-var setBrightnessCmd = &cobra.Command{
-	Use:   "set",
-	Short: "Set the brightness of a given display.",
+var Command = &cobra.Command{
+	Use:   "backlight",
+	Short: "Control the Backlight of a Display",
 	Long:  ``,
-	Args:  cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		p, err := strconv.Atoi(args[0])
-		if err != nil {
-			return err
-		}
-		return util.SetBrightness(p)
-	},
-}
-
-func init() {
-	brightnessCmd.AddCommand(setBrightnessCmd)
 }

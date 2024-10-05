@@ -26,9 +26,10 @@ var incKeyboardBrightnessCmd = &cobra.Command{
 	Use:   "inc",
 	Short: "Increase keyboard backlight brightness",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		brightness := util.GetKeyboardBrightness()
-		util.SetKeyboardBrightness(brightness + 1)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		brightness, _ := util.GetKeyboardBrightness()
+		_, err := util.SetKeyboardBrightness(brightness + 1)
+		return err
 	},
 }
 

@@ -26,10 +26,13 @@ func ReadIntFromFile(path string) (int64, error) {
 }
 
 func WriteIntToFile(value int, path string) error {
-	touch(path)
+	err := touch(path)
+	if err != nil {
+		return err
+	}
 	fileStat, err := os.Stat(path)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	return os.WriteFile(path, []byte(strconv.Itoa(value)), fileStat.Mode())
@@ -46,7 +49,10 @@ func ReadFloatFromFile(path string) (float64, error) {
 }
 
 func WriteFloatToFile(value float64, path string) error {
-	touch(path)
+	err := touch(path)
+	if err != nil {
+		return err
+	}
 	fileStat, err := os.Stat(path)
 	if err != nil {
 		log.Fatal(err)
@@ -55,15 +61,16 @@ func WriteFloatToFile(value float64, path string) error {
 	return os.WriteFile(path, []byte(strconv.FormatFloat(value, 'f', -1, 64)), fileStat.Mode())
 }
 
-func touch(path string) {
+func touch(path string) error {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		file, err := os.Create(path)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		defer file.Close()
 	} else if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }

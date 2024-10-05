@@ -18,7 +18,6 @@
 package util
 
 import (
-	"log"
 	"math"
 	"os"
 	"regexp"
@@ -31,20 +30,20 @@ const (
 	Brightness           = "brightness"
 )
 
-func FindOpenWindows() []string {
+func FindOpenWindows() ([]string, error) {
 	result, err := ExecCommand("wmctrl", "-l")
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	hostname, err := os.Hostname()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	r := regexp.MustCompile("(0x[0-9a-f]+) +(\\d+) +(" + hostname + "|N/A) +(.*)")
 	matches := r.FindAllString(result, -1)
-	return matches
+	return matches, nil
 }
 
 func RoundToTwoDecimals(number float64) float64 {

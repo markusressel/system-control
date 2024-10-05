@@ -20,7 +20,6 @@ package display
 import (
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
-	"log"
 	"strconv"
 )
 
@@ -29,12 +28,12 @@ var setBrightnessCmd = &cobra.Command{
 	Short: "Set the brightness of a given display.",
 	Long:  ``,
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		p, err := strconv.Atoi(args[0])
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
-		util.SetBrightness(p)
+		return util.SetBrightness(p)
 	},
 }
 

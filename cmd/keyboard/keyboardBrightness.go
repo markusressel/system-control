@@ -30,15 +30,20 @@ var keyboardBrightnessCmd = &cobra.Command{
 	Short: "Show current keyboard brightness",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		brightness := util.GetKeyboardBrightness()
-
 		if len(args) > 0 {
 			p, err := strconv.Atoi(args[0])
 			if err != nil {
 				return err
 			}
-			util.SetKeyboardBrightness(p)
+			_, err = util.SetKeyboardBrightness(p)
+			if err != nil {
+				return err
+			}
 		} else {
+			brightness, err := util.GetKeyboardBrightness()
+			if err != nil {
+				return err
+			}
 			fmt.Println(brightness)
 		}
 

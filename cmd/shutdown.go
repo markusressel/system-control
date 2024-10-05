@@ -20,7 +20,6 @@ package cmd
 import (
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
-	"log"
 	"strings"
 	"time"
 )
@@ -29,20 +28,26 @@ var shutdownCmd = &cobra.Command{
 	Use:   "shutdown",
 	Short: "Shutdown the system gracefully",
 	Long:  `Shuts down the system in a graceful way, first closing all opened applications.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		openWindows := util.FindOpenWindows()
+	RunE: func(cmd *cobra.Command, args []string) error {
+		openWindows, err := util.FindOpenWindows()
+		if err != nil {
+			return err
+		}
 
 		for _, element := range openWindows {
 			windowId := strings.Split(element, " ")[0]
 			_, err := util.ExecCommand("wmctrl", "-i", "-c", windowId)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 		}
 
 		// wait for all windows to disappear
 		for {
-			openWindows = util.FindOpenWindows()
+			openWindows, err = util.FindOpenWindows()
+			if err != nil {
+				return err
+			}
 			if len(openWindows) <= 0 {
 				break
 			} else {
@@ -50,10 +55,8 @@ var shutdownCmd = &cobra.Command{
 			}
 		}
 
-		_, err := util.ExecCommand("poweroff")
-		if err != nil {
-			log.Fatal(err)
-		}
+		_, err = util.ExecCommand("poweroff")
+		return err
 	},
 }
 

@@ -2,7 +2,6 @@ package util
 
 import (
 	"errors"
-	"log"
 	"math"
 	"os"
 	"regexp"
@@ -10,50 +9,54 @@ import (
 	"strings"
 )
 
-func findKeyboardBacklight() string {
+func findKeyboardBacklight() (string, error) {
 	files, err := os.ReadDir(LedsPath)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
-	var kbdBacklight string
 	r := regexp.MustCompile(".*(kbd|keyboard).*")
 	for _, f := range files {
 		if r.MatchString(f.Name()) {
-			return f.Name()
+			return f.Name(), nil
 		}
 	}
 
-	log.Fatal("No keyboard backlight found")
-	return kbdBacklight
+	return "", errors.New("no keyboard backlight found")
 }
 
-func GetKeyboardBrightness() int {
-	backlightName := findKeyboardBacklight()
+func GetKeyboardBrightness() (int, error) {
+	backlightName, err := findKeyboardBacklight()
+	if err != nil {
+		return -1, err
+	}
 	brightnessPath := LedsPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
 	brightness, err := ReadIntFromFile(brightnessPath)
 	if err != nil {
-		log.Fatal(err)
+		return -1, err
 	}
-	return int(brightness)
+	return int(brightness), nil
 }
 
-func SetKeyboardBrightness(brightness int) int {
-	backlightName := findKeyboardBacklight()
+func SetKeyboardBrightness(brightness int) (int, error) {
+	backlightName, err := findKeyboardBacklight()
+	if err != nil {
+		return -1, err
+	}
 	brightnessPath := LedsPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
 	maxBrightnessPath := LedsPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + MaxBrightness
 
 	maxBrightness, err := ReadIntFromFile(maxBrightnessPath)
 	if err != nil {
-		log.Fatal(err)
+		return -1, err
 	}
 
 	targetValue := math.Max(0, math.Min(float64(maxBrightness), float64(brightness)))
 	err = WriteIntToFile(int(targetValue), brightnessPath)
 	if err != nil {
-		log.Fatal(err)
+		return -1, err
 	}
-	return int(targetValue)
+	return int(targetValue), nil
 }
 
 func GetInputDevices() []string {

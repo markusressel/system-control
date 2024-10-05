@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"log"
 	"os"
 	"strings"
@@ -29,46 +30,55 @@ func GetDisplays() (displays []string, err error) {
 	return displays, nil
 }
 
-func GetMaxBrightness() int {
-	backlightName := findBacklight()
+func GetMaxBrightness() (int, error) {
+	backlightName, err := findBacklight()
+	if err != nil {
+		return -1, err
+	}
 	maxBrightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + MaxBrightness
 	maxBrightness, err := ReadIntFromFile(maxBrightnessPath)
 	if err != nil {
-		log.Fatal(err)
+		return -1, err
 	}
-	return int(maxBrightness)
+	return int(maxBrightness), nil
 }
 
-func GetBrightness() int {
-	backlightName := findBacklight()
+func GetBrightness() (int, error) {
+	backlightName, err := findBacklight()
+	if err != nil {
+		return -1, err
+	}
 	brightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
 	brightness, err := ReadIntFromFile(brightnessPath)
 	if err != nil {
-		log.Fatal(err)
+		return -1, err
 	}
-	return int(brightness)
+	return int(brightness), nil
 }
 
 // SetBrightness sets a specific brightness of main the display
-func SetBrightness(percentage int) {
-	backlightName := findBacklight()
+func SetBrightness(percentage int) error {
+	backlightName, err := findBacklight()
+	if err != nil {
+		return err
+	}
 	maxBrightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + MaxBrightness
 	brightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
 
 	maxBrightness, err := ReadIntFromFile(maxBrightnessPath)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	targetValue := int((float32(percentage) / 100.0) * float32(maxBrightness))
-	err = WriteIntToFile(targetValue, brightnessPath)
-	if err != nil {
-		log.Fatal(err)
-	}
+	return WriteIntToFile(targetValue, brightnessPath)
 }
 
-func setBrightnessRaw(backlight string, brightness int) {
-	maxBrightness := GetMaxBrightness()
+func setBrightnessRaw(backlight string, brightness int) error {
+	maxBrightness, err := GetMaxBrightness()
+	if err != nil {
+		return err
+	}
 	targetBrightness := brightness
 	if targetBrightness < 0 {
 		targetBrightness = 0
@@ -79,18 +89,24 @@ func setBrightnessRaw(backlight string, brightness int) {
 
 	brightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlight + string(os.PathSeparator) + Brightness
 
-	err := WriteIntToFile(targetBrightness, brightnessPath)
-	if err != nil {
-		log.Fatal(err)
-	}
+	return WriteIntToFile(targetBrightness, brightnessPath)
 }
 
 // AdjustBrightness adjusts the brightness of the main display
-func AdjustBrightness(change int) {
-	backlight := findBacklight()
+func AdjustBrightness(change int) error {
+	backlight, err := findBacklight()
+	if err != nil {
+		return err
+	}
 
-	maxBrightness := GetMaxBrightness()
-	currentBrightness := GetBrightness()
+	maxBrightness, err := GetMaxBrightness()
+	if err != nil {
+		return err
+	}
+	currentBrightness, err := GetBrightness()
+	if err != nil {
+		return err
+	}
 
 	targetBrightness := currentBrightness + change
 	if targetBrightness < 0 {
@@ -100,18 +116,18 @@ func AdjustBrightness(change int) {
 		targetBrightness = maxBrightness
 	}
 
-	setBrightnessRaw(backlight, targetBrightness)
+	return setBrightnessRaw(backlight, targetBrightness)
 }
 
-func findBacklight() string {
+func findBacklight() (string, error) {
 	files, err := os.ReadDir(DisplayBacklightPath)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	var backlightName string
 	if len(files) == 0 {
-		log.Fatal("No backlight found")
+		return "", errors.New("no backlight found")
 	} else if len(files) == 1 {
 		backlightName = files[0].Name()
 	} else {
@@ -120,5 +136,5 @@ func findBacklight() string {
 		log.Printf("Found multiple backlight sources, using: " + backlightName)
 	}
 
-	return backlightName
+	return backlightName, nil
 }

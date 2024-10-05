@@ -20,6 +20,7 @@ package bluetooth
 import (
 	"fmt"
 	"github.com/markusressel/system-control/internal/bluetooth"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -38,7 +39,7 @@ var bluetoothDevicesCmd = &cobra.Command{
 			return err
 		}
 
-		for _, device := range devices {
+		for i, device := range devices {
 			if filterConnected && !device.Connected {
 				continue
 			}
@@ -46,14 +47,20 @@ var bluetoothDevicesCmd = &cobra.Command{
 				continue
 			}
 
-			fmt.Printf("Name: %v\n", device.Name)
-			fmt.Printf("Address: %v\n", device.Address)
-			fmt.Printf("Connected: %v\n", device.Connected)
-			fmt.Printf("Paired: %v\n", device.Paired)
-			if device.BatteryPercentage != nil {
-				fmt.Printf("Battery: %v%%\n", *device.BatteryPercentage)
+			properties := map[string]string{
+				"Address":   device.Address,
+				"Connected": strconv.FormatBool(device.Connected),
+				"Paired":    strconv.FormatBool(device.Paired),
 			}
-			fmt.Println()
+			if device.BatteryPercentage != nil {
+				properties["Battery"] = fmt.Sprintf("%v%%", *device.BatteryPercentage)
+			}
+
+			util.PrintFormattedTable(device.Name, properties)
+
+			if i < len(devices)-1 {
+				fmt.Println()
+			}
 		}
 
 		return nil

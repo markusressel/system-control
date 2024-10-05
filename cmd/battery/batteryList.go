@@ -21,8 +21,7 @@ import (
 	"fmt"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
-	"os"
-	"text/tabwriter"
+	"strconv"
 )
 
 var batteryListCmd = &cobra.Command{
@@ -36,20 +35,20 @@ var batteryListCmd = &cobra.Command{
 			return err
 		}
 		for i, battery := range batteries {
-			fmt.Println(battery.Name)
+			properties := map[string]string{
+				"Path":           battery.Path,
+				"Type":           battery.Type,
+				"Manufacturer":   battery.Manufacturer,
+				"Model":          battery.Model,
+				"Serial":         battery.SerialNumber,
+				"Capacity":       strconv.Itoa(int(battery.Capacity)),
+				"Capacity Level": battery.CapacityLevel,
+				"Online":         strconv.FormatBool(battery.Online),
+				"Status":         battery.Status,
+				"Scope":          battery.Scope,
+			}
 
-			w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
-			fmt.Fprintf(w, "  Path:\t%s\t\n", battery.Path)
-			fmt.Fprintf(w, "  Type:\t%s\t\n", battery.Type)
-			fmt.Fprintf(w, "  Manufacturer:\t%s\t\n", battery.Manufacturer)
-			fmt.Fprintf(w, "  Model:\t%s\t\n", battery.Model)
-			fmt.Fprintf(w, "  Serial:\t%s\t\n", battery.SerialNumber)
-			fmt.Fprintf(w, "  Capacity:\t%d\t\n", battery.Capacity)
-			fmt.Fprintf(w, "  Capacity Level:\t%s\t\n", battery.CapacityLevel)
-			fmt.Fprintf(w, "  Online:\t%v\t\n", battery.Online)
-			fmt.Fprintf(w, "  Status:\t%s\t\n", battery.Status)
-			fmt.Fprintf(w, "  Scope:\t%s\t\n", battery.Scope)
-			w.Flush()
+			util.PrintFormattedTable(battery.Name, properties)
 
 			if i < len(batteries)-1 {
 				fmt.Println()

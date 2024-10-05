@@ -19,11 +19,7 @@ package backlight
 
 import (
 	"fmt"
-	"github.com/markusressel/system-control/cmd/battery"
 	"github.com/markusressel/system-control/internal/util"
-	"os"
-	"text/tabwriter"
-
 	"github.com/spf13/cobra"
 )
 
@@ -41,12 +37,12 @@ var backlightListCmd = &cobra.Command{
 			brightness, _ := backlight.GetBrightness()
 			maxBrightness, _ := backlight.GetMaxBrightness()
 
-			fmt.Println(battery.Name)
+			properties := map[string]string{
+				"Brightness":    fmt.Sprintf("%d", brightness),
+				"MaxBrightness": fmt.Sprintf("%d", maxBrightness),
+			}
 
-			w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
-			fmt.Fprintf(w, "  Brightness:\t%d\t\n", brightness)
-			fmt.Fprintf(w, "  MaxBrightness:\t%d\t\n", maxBrightness)
-			w.Flush()
+			util.PrintFormattedTable(backlight.Name, properties)
 
 			if i < len(backlights)-1 {
 				fmt.Println()

@@ -18,9 +18,11 @@
 package util
 
 import (
+	"fmt"
 	"math"
 	"os"
 	"regexp"
+	"text/tabwriter"
 )
 
 const (
@@ -48,4 +50,13 @@ func FindOpenWindows() ([]string, error) {
 
 func RoundToTwoDecimals(number float64) float64 {
 	return math.Round(number*100) / 100
+}
+
+func PrintFormattedTable(title string, properties map[string]string) {
+	fmt.Println(title)
+	w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
+	for key, value := range properties {
+		fmt.Fprintf(w, "  %s:\t%s\t\n", key, value)
+	}
+	w.Flush()
 }

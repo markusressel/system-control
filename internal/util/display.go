@@ -35,7 +35,7 @@ func GetMaxBrightness() (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	maxBrightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + MaxBrightness
+	maxBrightnessPath := computeBacklightPropertyPath(backlightName, MaxBrightness)
 	maxBrightness, err := ReadIntFromFile(maxBrightnessPath)
 	if err != nil {
 		return -1, err
@@ -48,7 +48,7 @@ func GetBrightness() (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	brightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
+	brightnessPath := computeBacklightPropertyPath(backlightName, Brightness)
 	brightness, err := ReadIntFromFile(brightnessPath)
 	if err != nil {
 		return -1, err
@@ -56,14 +56,15 @@ func GetBrightness() (int, error) {
 	return int(brightness), nil
 }
 
-// SetBrightness sets a specific brightness of main the display
+// SetBrightness sets the brightness of the main display to the given percentage
+// Note: This function only works if the display has a max_brightness value
 func SetBrightness(percentage int) error {
 	backlightName, err := findBacklight()
 	if err != nil {
 		return err
 	}
-	maxBrightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + MaxBrightness
-	brightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlightName + string(os.PathSeparator) + Brightness
+	maxBrightnessPath := computeBacklightPropertyPath(backlightName, MaxBrightness)
+	brightnessPath := computeBacklightPropertyPath(backlightName, Brightness)
 
 	maxBrightness, err := ReadIntFromFile(maxBrightnessPath)
 	if err != nil {
@@ -74,6 +75,7 @@ func SetBrightness(percentage int) error {
 	return WriteIntToFile(targetValue, brightnessPath)
 }
 
+// setBrightnessRaw sets the brightness of the main display to the given value
 func setBrightnessRaw(backlight string, brightness int) error {
 	maxBrightness, err := GetMaxBrightness()
 	if err != nil {
@@ -87,9 +89,13 @@ func setBrightnessRaw(backlight string, brightness int) error {
 		targetBrightness = maxBrightness
 	}
 
-	brightnessPath := DisplayBacklightPath + string(os.PathSeparator) + backlight + string(os.PathSeparator) + Brightness
+	brightnessPath := computeBacklightPropertyPath(backlight, Brightness)
 
 	return WriteIntToFile(targetBrightness, brightnessPath)
+}
+
+func computeBacklightPropertyPath(backlight string, property string) string {
+	return DisplayBacklightPath + string(os.PathSeparator) + backlight + string(os.PathSeparator) + property
 }
 
 // AdjustBrightness adjusts the brightness of the main display

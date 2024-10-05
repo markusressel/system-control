@@ -208,12 +208,14 @@ DisplayPort-2
 DisplayPort-1
 ````
 
-#### Brightness
+#### Backlight
 
 ```shell
-> system-control display brightness set 100
-> system-control display brightness inc
-> system-control display brightness dec
+> system-control display backlight list
+
+> system-control display backlight brightness set 100
+> system-control display backlight brightness inc
+> system-control display backlight brightness dec
 ```
 
 #### RedShift

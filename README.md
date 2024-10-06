@@ -226,7 +226,6 @@ DisplayPort-1
 
 ```shell
 > system-control display redshift
-system-control display redshift                                                                                                                                                             0 (0.000s) < 19:10:58
 Display: DisplayPort-2
   Color Temperature: 4500
   Brightness: 0.70

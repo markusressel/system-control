@@ -22,9 +22,12 @@ run: build
 deploy-custom: build
 	mkdir -p ~/.custom/bin/
 	cp ./${OUTPUT_DIR}${BINARY_NAME} ~/.custom/bin/${BINARY_NAME}
+	system-control completion fish > ~/.config/fish/completions/system-control.fish
+
 
 deploy: build
 	sudo cp ./${OUTPUT_DIR}${BINARY_NAME} /usr/bin/${BINARY_NAME}
+	system-control completion fish > ~/.config/fish/completions/system-control.fish
 
 clean:
 	go clean

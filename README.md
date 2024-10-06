@@ -57,6 +57,12 @@ Note that you need a working Go environment to build this project.
 > make deploy
 ```
 
+If you like, generate shell completions for your shell:
+
+```shell
+system-control completion fish > ~/.config/fish/completions/system-control.fish
+```
+
 # Usage
 
 system-control is a command-line-interface (CLI) tool. To use it simply open a terminal and type in one

@@ -25,7 +25,7 @@ import (
 
 var setTouchpadCmd = &cobra.Command{
 	Use:   "set",
-	Short: "Set the emabled state of the Touchpad",
+	Short: "Set the enabled state of the Touchpad",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		enabled, err := strconv.ParseBool(args[0])

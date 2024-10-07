@@ -108,9 +108,9 @@ consider it.
 * `wpctl`
 
 ```shell
-> system-control audio mute
-> system-control audio unmute
-> system-control audio toggle-mute
+> system-control audio volume mute
+> system-control audio volume unmute
+> system-control audio volume toggle-mute
 ```
 
 ```shell
@@ -124,8 +124,8 @@ consider it.
 Save and Restore Audio State, f.ex. before and after reboot:
 
 ```shell
-> system-control audio save
-> system-control audio restore
+> system-control audio volume save
+> system-control audio volume restore
 ```
 
 ### Sink
@@ -154,6 +154,9 @@ Sink #64
 > system-control audio sink switch "Built-in"
 > system-control audio sink switch "X-Fi"
 > system-control audio sink switch "NVIDIA"
+
+> system-control audio sink next
+> system-control audio sink previous
 ```
 
 ### Battery
@@ -170,6 +173,8 @@ hidpp_battery_0
   Online:       true
   Status:       Discharging
   Scope:        Device
+
+> system-comtrol battery remaining
 
 > system-control battery threshold -name BAT0
 100
@@ -196,16 +201,16 @@ hidpp_battery_0
 ```
 
 ```shell
-> system-control bluetooth device connect "LG-TONE-FP9"
-> system-control bluetooth device connect "00:1D:43:6D:03:1A"
+> system-control bluetooth connect "LG-TONE-FP9"
+> system-control bluetooth connect "00:1D:43:6D:03:1A"
 ```
 
 ```shell
-> system-control bluetooth device disconnect "LG-TONE-FP9"
-> system-control bluetooth device disconnect "00:1D:43:6D:03:1A"
+> system-control bluetooth disconnect "LG-TONE-FP9"
+> system-control bluetooth disconnect "00:1D:43:6D:03:1A"
 
 # disconnect all devices
-> system-control bluetooth device disconnect
+> system-control bluetooth disconnect
 ```
 
 ### Display / Screen
@@ -243,8 +248,8 @@ Display: DisplayPort-1
 ```
 
 ```shell
-> system-control display redshift off
-> system-control display redshift toggle
+> system-control display redshift reset
+> system-control display redshift update
 ```
 
 ## Keyboard
@@ -262,6 +267,7 @@ Display: DisplayPort-1
 ```shell
 > system-control touchpad on
 > system-control touchpad off
+> system-control touchpad set true
 > system-control touchpad toggle
 ```
 

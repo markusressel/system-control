@@ -26,7 +26,7 @@ import (
 
 var batteryRemainingCmd = &cobra.Command{
 	Use:   "remaining",
-	Short: "Get the remaining battery life",
+	Short: "Get the remaining battery life in hours and minutes",
 	Long:  ``,
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {

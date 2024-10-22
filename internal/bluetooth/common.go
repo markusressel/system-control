@@ -127,6 +127,15 @@ func GetPairedBluetoothDevices() ([]BluetoothDevice, error) {
 	return retrieveDevicesForResult(result)
 }
 
+func RemoveBluetoothDevice(device BluetoothDevice) error {
+	_, err := util.ExecCommand(
+		"bluetoothctl",
+		"remove",
+		device.Address,
+	)
+	return err
+}
+
 func getFullInfoDevices(simpleDeviceInfos []simpleDeviceInfo) (devices []BluetoothDevice, err error) {
 	for _, deviceId := range simpleDeviceInfos {
 		info, err := GetBluetoothDeviceInfo(deviceId)

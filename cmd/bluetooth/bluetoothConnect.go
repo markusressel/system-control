@@ -19,8 +19,11 @@ package bluetooth
 
 import (
 	"fmt"
+	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/markusressel/system-control/internal/bluetooth"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
+	"sort"
 )
 
 var bluetoothConnectCmd = &cobra.Command{
@@ -35,15 +38,50 @@ var bluetoothConnectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		for _, device := range devices {
-			if device.Name == deviceName || device.Address == deviceName {
-				err := bluetooth.ConnectToBluetoothDevice(device)
+
+		matchingDevices := findBluetoothDeviceFuzzy(deviceName, devices)
+
+		if len(matchingDevices) == 1 {
+			err := bluetooth.ConnectToBluetoothDevice(matchingDevices[0])
+			if err != nil {
 				return err
 			}
+			return nil
+		} else if len(matchingDevices) > 1 {
+			return fmt.Errorf("multiple matching devices found: %v", matchingDevices)
 		}
 
 		return fmt.Errorf("device not found: %v", deviceName)
 	},
+}
+
+func findBluetoothDeviceFuzzy(name string, devices []bluetooth.BluetoothDevice) []bluetooth.BluetoothDevice {
+	// check exact address matches first
+	for _, device := range devices {
+		if util.EqualsIgnoreCase(device.Address, name) {
+			return []bluetooth.BluetoothDevice{device}
+		}
+	}
+
+	// then check fuzzy name matches
+	deviceNames := make([]string, len(devices))
+	for i, device := range devices {
+		deviceNames[i] = device.Name
+	}
+
+	fuzzyMatches := fuzzy.RankFindNormalizedFold(name, deviceNames)
+	sort.Sort(fuzzyMatches)
+
+	result := make([]bluetooth.BluetoothDevice, 0)
+	for _, match := range fuzzyMatches {
+		for _, device := range devices {
+			if device.Name == match.Target {
+				result = append(result, device)
+			}
+		}
+	}
+
+	return result
 }
 
 func init() {

@@ -21,3 +21,8 @@ func CountLeadingSpace(line string) int {
 	}
 	return i
 }
+
+func IsNotEmpty(s string) bool {
+	s = strings.TrimSpace(s)
+	return len(s) > 0
+}

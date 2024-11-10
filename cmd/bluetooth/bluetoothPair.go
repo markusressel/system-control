@@ -31,6 +31,18 @@ var bluetoothPairCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		deviceName := args[0]
 
+		defer func() {
+			err := bluetooth.SetBluetoothScan(false)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		}()
+
+		err := bluetooth.SetBluetoothScan(true)
+		if err != nil {
+			return err
+		}
+
 		devices, err := bluetooth.GetBluetoothDevices()
 		if err != nil {
 			return err

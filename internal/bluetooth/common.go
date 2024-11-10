@@ -1,10 +1,13 @@
 package bluetooth
 
 import (
+	"context"
+	"errors"
 	"github.com/google/uuid"
 	"github.com/markusressel/system-control/internal/util"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // TurnOnBluetoothAdapter turns on the bluetooth adapter
@@ -28,8 +31,7 @@ type simpleDeviceInfo struct {
 	Address string
 }
 
-// simpleDeviceInfo represents a bluetooth device
-
+// BluetoothDevice represents a bluetooth device
 type BluetoothDevice struct {
 	Name              string // LG-TONE-FP9
 	Address           string // B8:F8:BE:13:A4:72
@@ -249,11 +251,14 @@ func SetBluetoothScan(enable bool) error {
 		arg = "on"
 	}
 
-	_, err := util.ExecCommand(
+	err := util.ExecCommandOneshot(
+		5*time.Second,
 		"bluetoothctl",
 		"scan",
 		arg,
 	)
-
+	if errors.Is(err, context.DeadlineExceeded) {
+		return nil
+	}
 	return err
 }

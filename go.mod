@@ -3,6 +3,7 @@ module github.com/markusressel/system-control
 go 1.23
 
 require (
+	github.com/elliotchance/orderedmap/v2 v2.4.0
 	github.com/google/uuid v1.6.0
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/mitchellh/go-homedir v1.1.0

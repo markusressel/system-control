@@ -26,3 +26,18 @@ func IsNotEmpty(s string) bool {
 	s = strings.TrimSpace(s)
 	return len(s) > 0
 }
+
+func SubstringRunes(s string, start int, end int) string {
+	startStrIdx := 0
+	i := 0
+	for j := range s {
+		if i == start {
+			startStrIdx = j
+		}
+		if i == end {
+			return s[startStrIdx:j]
+		}
+		i++
+	}
+	return s[startStrIdx:]
+}

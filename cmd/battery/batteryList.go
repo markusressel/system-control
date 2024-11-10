@@ -19,6 +19,7 @@ package battery
 
 import (
 	"fmt"
+	"github.com/elliotchance/orderedmap/v2"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 	"strconv"
@@ -35,20 +36,19 @@ var batteryListCmd = &cobra.Command{
 			return err
 		}
 		for i, battery := range batteries {
-			properties := map[string]string{
-				"Path":           battery.Path,
-				"Type":           battery.Type,
-				"Manufacturer":   battery.Manufacturer,
-				"Model":          battery.Model,
-				"Serial":         battery.SerialNumber,
-				"Capacity":       strconv.Itoa(int(battery.Capacity)),
-				"Capacity Level": battery.CapacityLevel,
-				"Online":         strconv.FormatBool(battery.Online),
-				"Status":         battery.Status,
-				"Scope":          battery.Scope,
-			}
+			properties := orderedmap.NewOrderedMap[string, string]()
+			properties.Set("Path", battery.Path)
+			properties.Set("Type", battery.Type)
+			properties.Set("Manufacturer", battery.Manufacturer)
+			properties.Set("Model", battery.Model)
+			properties.Set("Serial", battery.SerialNumber)
+			properties.Set("Capacity", strconv.Itoa(int(battery.Capacity)))
+			properties.Set("Capacity Level", battery.CapacityLevel)
+			properties.Set("Online", strconv.FormatBool(battery.Online))
+			properties.Set("Status", battery.Status)
+			properties.Set("Scope", battery.Scope)
 
-			util.PrintFormattedTable(battery.Name, properties)
+			util.PrintFormattedTableOrdered(battery.Name, properties)
 
 			if i < len(batteries)-1 {
 				fmt.Println()

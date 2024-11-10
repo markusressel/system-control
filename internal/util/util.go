@@ -19,6 +19,7 @@ package util
 
 import (
 	"fmt"
+	"github.com/elliotchance/orderedmap/v2"
 	"math"
 	"os"
 	"regexp"
@@ -53,10 +54,18 @@ func RoundToTwoDecimals(number float64) float64 {
 }
 
 func PrintFormattedTable(title string, properties map[string]string) {
+	orderedProperties := orderedmap.NewOrderedMap[string, string]()
+	for key, value := range properties {
+		orderedProperties.Set(key, value)
+	}
+	PrintFormattedTableOrdered(title, orderedProperties)
+}
+
+func PrintFormattedTableOrdered(title string, properties *orderedmap.OrderedMap[string, string]) {
 	fmt.Println(title)
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
-	for key, value := range properties {
-		fmt.Fprintf(w, "  %s:\t%s\t\n", key, value)
+	for key, value := range properties.Iterator() {
+		_, _ = fmt.Fprintf(w, "  %s:\t%s\t\n", key, value)
 	}
-	w.Flush()
+	_ = w.Flush()
 }

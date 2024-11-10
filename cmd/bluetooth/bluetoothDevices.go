@@ -19,6 +19,7 @@ package bluetooth
 
 import (
 	"fmt"
+	"github.com/elliotchance/orderedmap/v2"
 	"github.com/markusressel/system-control/internal/bluetooth"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
@@ -47,16 +48,16 @@ var bluetoothDevicesCmd = &cobra.Command{
 				continue
 			}
 
-			properties := map[string]string{
-				"Address":   device.Address,
-				"Connected": strconv.FormatBool(device.Connected),
-				"Paired":    strconv.FormatBool(device.Paired),
-			}
+			properties := orderedmap.NewOrderedMap[string, string]()
+			properties.Set("Address", device.Address)
+			properties.Set("Connected", strconv.FormatBool(device.Connected))
+			properties.Set("Paired", strconv.FormatBool(device.Paired))
+
 			if device.BatteryPercentage != nil {
-				properties["Battery"] = fmt.Sprintf("%v%%", *device.BatteryPercentage)
+				properties.Set("Battery", fmt.Sprintf("%v%%", *device.BatteryPercentage))
 			}
 
-			util.PrintFormattedTable(device.Name, properties)
+			util.PrintFormattedTableOrdered(device.Name, properties)
 
 			if i < len(devices)-1 {
 				fmt.Println()

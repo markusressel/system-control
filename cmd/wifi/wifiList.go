@@ -15,36 +15,44 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package backlight
+package wifi
 
 import (
 	"fmt"
-	"github.com/elliotchance/orderedmap/v2"
+	orderedmap "github.com/elliotchance/orderedmap/v2"
 	"github.com/markusressel/system-control/internal/util"
+	"github.com/markusressel/system-control/internal/wifi"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
-var backlightListCmd = &cobra.Command{
+var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "Show current display brightness",
+	Short: "List all known WiFi networks",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		backlights, err := util.GetBacklights()
+		networks, err := wifi.GetNetworks()
 		if err != nil {
 			return err
 		}
 
-		for i, backlight := range backlights {
-			brightness, _ := backlight.GetBrightness()
-			maxBrightness, _ := backlight.GetMaxBrightness()
-
+		for i, network := range networks {
 			properties := orderedmap.NewOrderedMap[string, string]()
-			properties.Set("Brightness", fmt.Sprintf("%d", brightness))
-			properties.Set("MaxBrightness", fmt.Sprintf("%d", maxBrightness))
+			properties.Set("Connected", strconv.FormatBool(network.Connected))
+			properties.Set("SSID", network.SSID)
+			properties.Set("BSSID", network.BSSID)
+			properties.Set("Mode", network.Mode)
+			properties.Set("Channel", fmt.Sprintf("%v", network.Channel))
+			properties.Set("Bandwidth", fmt.Sprintf("%v", network.Bandwidth))
+			properties.Set("Frequency", fmt.Sprintf("%v", network.Frequency))
+			properties.Set("Rate", fmt.Sprintf("%v", network.Rate))
+			properties.Set("Signal", fmt.Sprintf("%v", network.Signal))
+			properties.Set("Bars", fmt.Sprintf("%v", network.Bars))
+			properties.Set("Security", network.Security)
 
-			util.PrintFormattedTableOrdered(backlight.Name, properties)
+			util.PrintFormattedTableOrdered(network.SSID, properties)
 
-			if i < len(backlights)-1 {
+			if i < len(networks)-1 {
 				fmt.Println()
 			}
 		}
@@ -54,5 +62,5 @@ var backlightListCmd = &cobra.Command{
 }
 
 func init() {
-	Command.AddCommand(backlightListCmd)
+	Command.AddCommand(listCmd)
 }

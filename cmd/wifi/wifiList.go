@@ -18,12 +18,15 @@
 package wifi
 
 import (
+	"cmp"
 	"fmt"
 	orderedmap "github.com/elliotchance/orderedmap/v2"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/markusressel/system-control/internal/wifi"
 	"github.com/spf13/cobra"
+	"slices"
 	"strconv"
+	"strings"
 )
 
 var listCmd = &cobra.Command{
@@ -35,6 +38,18 @@ var listCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
+		// sort entries
+		slices.SortFunc(networks, func(a, b wifi.WiFiNetwork) int {
+			return cmp.Or(
+				// connected networks first
+				-1*cmp.Compare(strconv.FormatBool(a.Connected), strconv.FormatBool(b.Connected)),
+				// then sort by signal strength
+				-1*cmp.Compare(a.Signal, b.Signal),
+				// then sort by SSID
+				cmp.Compare(strings.ToLower(a.SSID), strings.ToLower(b.SSID)),
+			)
+		})
 
 		for i, network := range networks {
 			properties := orderedmap.NewOrderedMap[string, string]()

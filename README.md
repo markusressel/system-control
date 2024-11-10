@@ -285,6 +285,33 @@ Display: DisplayPort-1
 
 ### Network
 
+#### WiFi
+
+```shell
+> system-control wifi on
+> system-control wifi off
+```
+
+```shell
+> system-control wifi list
+FRITZ!Box 6591 Cable NM
+  Connected: false                   
+  SSID:      FRITZ!Box 6591 Cable NM 
+  BSSID:     1A:2B:3C:4D:5E:6F       
+  Mode:      Infra                   
+  Channel:   6                       
+  Bandwidth: 20 MHz                  
+  Frequency: 2437 MHz                
+  Rate:      260 Mbit/s              
+  Signal:    54                      
+  Bars:      ▂▄__                    
+  Security:  WPA3
+```
+
+```shell
+> system-control wifi connect "MyNetwork"
+```
+
 #### Hotspot
 
 TODO: not yet implemented

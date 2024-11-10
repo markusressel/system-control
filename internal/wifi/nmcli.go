@@ -72,3 +72,23 @@ func OpenManageGui() error {
 	)
 	return err
 }
+
+func TurnOnWifiAdapter() error {
+	_, err := util.ExecCommand(
+		"nmcli",
+		"radio",
+		"wifi",
+		"on",
+	)
+	return err
+}
+
+func TurnOffWifiAdapter() error {
+	_, err := util.ExecCommand(
+		"nmcli",
+		"radio",
+		"wifi",
+		"off",
+	)
+	return err
+}

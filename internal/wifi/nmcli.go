@@ -16,6 +16,7 @@ func Connect(name string) error {
 	return err
 }
 
+// WiFiNetwork represents a WiFi network
 type WiFiNetwork struct {
 	Connected bool
 	BSSID     string
@@ -30,6 +31,7 @@ type WiFiNetwork struct {
 	Security  string
 }
 
+// GetNetworks returns a list of all known WiFi networks
 func GetNetworks() ([]WiFiNetwork, error) {
 	output, err := util.ExecCommand(
 		"nmcli",
@@ -66,6 +68,7 @@ func GetNetworks() ([]WiFiNetwork, error) {
 	return wifiNetworks, err
 }
 
+// OpenManageGui opens the network manager GUI
 func OpenManageGui() error {
 	_, err := util.ExecCommand(
 		"nm-connection-editor",
@@ -73,6 +76,7 @@ func OpenManageGui() error {
 	return err
 }
 
+// TurnOnWifiAdapter turns on the WiFi adapter
 func TurnOnWifiAdapter() error {
 	_, err := util.ExecCommand(
 		"nmcli",
@@ -83,6 +87,7 @@ func TurnOnWifiAdapter() error {
 	return err
 }
 
+// TurnOffWifiAdapter turns off the WiFi adapter
 func TurnOffWifiAdapter() error {
 	_, err := util.ExecCommand(
 		"nmcli",

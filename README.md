@@ -251,7 +251,7 @@ Display: DisplayPort-1
 
 ### Keyboard
 
-### Brightness
+#### Brightness
 
 **Requirements:**
 None

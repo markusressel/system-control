@@ -247,7 +247,9 @@ Display: DisplayPort-1
 > system-control display redshift update
 ```
 
-## Keyboard
+## Input
+
+### Keyboard
 
 ### Brightness
 
@@ -260,7 +262,7 @@ None
 > system-control keyboard brightness dec
 ```
 
-## Touchpad
+### Touchpad
 
 **Requirements:**
 * `synclient`

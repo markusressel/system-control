@@ -5,21 +5,22 @@ A utility to make common system actions a breeze.
 ## What?
 
 On linux it can be cumbersome to do simple stuff via the command line, like f. ex.:
-* changing the volume
-* increasing the display brightness
-* manage WiFi connections / Hotspots
-* connecting to bluetooth devices
 
-In most cases these actions either require knowledge about a specific shell tool to do the job or even a custom-built script.
+* changing system volume
+* changing display brightness
+* managing WiFi connections / Hotspots
+* managing Bluetooth devices
 
-This project aims to simplify that by providing a command line tool that can do all the things mentioned above with a
-simple and easy to understand syntax, as well as an extensive help system and documentation.
+In most cases these actions either require specific knowledge about a shell tool or even a custom-built script.
+
+This project aims to simplify these actions on the CLI via *+system-control** - a CLI tool that can do all the
+things mentioned above through a unified syntax, as well as an extensive help system and documentation.
 
 ## DISCLAIMER: Highly opinionated
 
-This project is highly opinionated and only supports the tools I use myself. This is to keep the codebase manageable
-and to ensure that the project stays focused on the things I need. If you need support for other tools, feel free to
-open an issue or a PR and I will consider adding it. If not, feel free to fork the project and add the tools you need
+This project is highly opinionated and specialized for the tools I use myself, keeping the codebase manageable
+and to ensure project focus. If you need support for other tools, feel free to open an issue or a PR and I will
+consider adding it. Alternatively feel free to fork the project and add the tools you need
 to your own version of the project.
 
 # Installation

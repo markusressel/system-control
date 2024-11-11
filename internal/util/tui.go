@@ -33,6 +33,7 @@ const (
 	Brightness           = "brightness"
 )
 
+// FindOpenWindows returns a list of currently open windows
 func FindOpenWindows() ([]string, error) {
 	result, err := ExecCommand("wmctrl", "-l")
 	if err != nil {
@@ -49,10 +50,12 @@ func FindOpenWindows() ([]string, error) {
 	return matches, nil
 }
 
+// RoundToTwoDecimals rounds a float to (at most) two decimal places
 func RoundToTwoDecimals(number float64) float64 {
 	return math.Round(number*100) / 100
 }
 
+// PrintFormattedTable prints a formatted table to the console
 func PrintFormattedTable(title string, properties map[string]string) {
 	orderedProperties := orderedmap.NewOrderedMap[string, string]()
 	for key, value := range properties {
@@ -61,6 +64,7 @@ func PrintFormattedTable(title string, properties map[string]string) {
 	PrintFormattedTableOrdered(title, orderedProperties)
 }
 
+// PrintFormattedTableOrdered prints a formatted table to the console
 func PrintFormattedTableOrdered(title string, properties *orderedmap.OrderedMap[string, string]) {
 	fmt.Println(title)
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)

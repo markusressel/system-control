@@ -56,13 +56,13 @@ Available Commands:
   battery     Control System Battery
   bluetooth   Control Bluetooth Devices
   completion  Generate the autocompletion script for the specified shell
-  display     Control Display
+  display     Control Displays
   help        Help about any command
-  keyboard    Control Keyboard
+  keyboard    Control Keyboards
   restart     Reboot the system gracefully
   shutdown    Shutdown the system gracefully
-  touchpad    Control touchpad
-  video       Control video inputs (cameras)
+  touchpad    Control Touchpads
+  video       Control Video Inputs (cameras)
   wifi        Control WiFi devices and networks
 
 Flags:

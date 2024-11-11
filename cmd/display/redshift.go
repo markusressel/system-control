@@ -98,13 +98,15 @@ var redshiftCmd = &cobra.Command{
 	},
 }
 
-func parseDisplayParam(display string) (result []string, err error) {
+func parseDisplayParam(display string) (result []util.DisplayInfo, err error) {
 	if len(display) > 0 {
 		foundDisplayName, err := findDisplay(display)
 		if err != nil {
 			return nil, err
 		}
-		result = []string{foundDisplayName}
+		if foundDisplayName != nil {
+			result = []util.DisplayInfo{*foundDisplayName}
+		}
 	} else {
 		return util.GetDisplays()
 	}
@@ -112,21 +114,22 @@ func parseDisplayParam(display string) (result []string, err error) {
 	return result, nil
 }
 
-func findDisplay(d string) (string, error) {
+// findDisplay finds a display by name
+func findDisplay(d string) (*util.DisplayInfo, error) {
 	knownDisplays, err := util.GetDisplays()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	for _, knownDisplay := range knownDisplays {
-		if knownDisplay == d {
-			return d, nil
+		if knownDisplay.Name == d {
+			return &knownDisplay, nil
 		}
 	}
-	return "", fmt.Errorf("display named %s not found", d)
+	return nil, fmt.Errorf("display named %s not found", d)
 }
 
-func getLastSetColorTemperature(display string) int64 {
-	key := KeyRedshiftColorTemp + "." + display
+func getLastSetColorTemperature(display util.DisplayInfo) int64 {
+	key := KeyRedshiftColorTemp + "." + display.Name
 	lastSetColorTemperature, err := persistence.ReadInt(key)
 	if err != nil {
 		lastSetColorTemperature = -1
@@ -134,8 +137,8 @@ func getLastSetColorTemperature(display string) int64 {
 	return lastSetColorTemperature
 }
 
-func getLastSetBrightness(display string) float64 {
-	key := KeyRedshiftBrightness + "." + display
+func getLastSetBrightness(display util.DisplayInfo) float64 {
+	key := KeyRedshiftBrightness + "." + display.Name
 	lastSetBrightness, err := persistence.ReadFloat(key)
 	if err != nil {
 		lastSetBrightness = -1
@@ -151,8 +154,8 @@ func getLastSetBrightness(display string) float64 {
 	return lastSetBrightness
 }
 
-func getLastSetGamma(display string) float64 {
-	key := KeyRedshiftGamma + "." + display
+func getLastSetGamma(display util.DisplayInfo) float64 {
+	key := KeyRedshiftGamma + "." + display.Name
 	lastSetGamma, err := persistence.ReadFloat(key)
 	if err != nil {
 		lastSetGamma = -1
@@ -160,22 +163,22 @@ func getLastSetGamma(display string) float64 {
 	return lastSetGamma
 }
 
-func saveLastSetColorTemperature(display string, colorTemperature int64) error {
-	key := KeyRedshiftColorTemp + "." + display
+func saveLastSetColorTemperature(display util.DisplayInfo, colorTemperature int64) error {
+	key := KeyRedshiftColorTemp + "." + display.Name
 	return persistence.SaveInt(key, int(colorTemperature))
 }
 
-func saveLastSetBrightness(display string, brightness float64) error {
-	key := KeyRedshiftBrightness + "." + display
+func saveLastSetBrightness(display util.DisplayInfo, brightness float64) error {
+	key := KeyRedshiftBrightness + "." + display.Name
 	return persistence.SaveFloat(key, brightness)
 }
 
-func saveLastSetGamma(display string, gamma float64) error {
-	key := KeyRedshiftGamma + "." + display
+func saveLastSetGamma(display util.DisplayInfo, gamma float64) error {
+	key := KeyRedshiftGamma + "." + display.Name
 	return persistence.SaveFloat(key, gamma)
 }
 
-func ApplyRedshift(display string, colorTemperature int64, brightness float64, gamma float64) (err error) {
+func ApplyRedshift(display util.DisplayInfo, colorTemperature int64, brightness float64, gamma float64) (err error) {
 	if colorTemperature == -1 {
 		colorTemperature = getLastSetColorTemperature(display)
 	}
@@ -190,7 +193,7 @@ func ApplyRedshift(display string, colorTemperature int64, brightness float64, g
 	if err != nil {
 		return err
 	}
-	displayIndex := slices.IndexFunc(displays, func(d string) bool { return d == display })
+	displayIndex := slices.IndexFunc(displays, func(d util.DisplayInfo) bool { return d.Name == display.Name })
 
 	err = SetRedshiftCBG(displayIndex, colorTemperature, brightness, gamma)
 	if err != nil {
@@ -252,7 +255,7 @@ func SetRedshiftCBG(displayIndex int, colorTemperature int64, brightness float64
 	return err
 }
 
-func ResetRedshift(display string) (err error) {
+func ResetRedshift(display util.DisplayInfo) (err error) {
 	args := []string{
 		"-x", // reset previous "mode"
 		"-P", // reset previous gamma ramps
@@ -263,7 +266,7 @@ func ResetRedshift(display string) (err error) {
 	if err != nil {
 		return err
 	}
-	displayIndex := slices.IndexFunc(displays, func(d string) bool { return d == display })
+	displayIndex := slices.IndexFunc(displays, func(d util.DisplayInfo) bool { return d.Name == display.Name })
 
 	if displayIndex > -1 {
 		// -m randr:crtc=1

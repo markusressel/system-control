@@ -35,7 +35,7 @@ var displayListCmd = &cobra.Command{
 		}
 
 		for _, display := range displays {
-			fmt.Println(display)
+			fmt.Println(display.Name)
 		}
 
 		return nil

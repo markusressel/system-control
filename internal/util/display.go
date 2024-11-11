@@ -9,7 +9,11 @@ const (
 	xrandrExecutable = "xrandr"
 )
 
-func GetDisplays() (displays []string, err error) {
+type DisplayInfo struct {
+	Name string
+}
+
+func GetDisplays() (displays []DisplayInfo, err error) {
 	result, err := ExecCommand(
 		xrandrExecutable,
 		"--listmonitors",
@@ -26,7 +30,9 @@ func GetDisplays() (displays []string, err error) {
 		} else {
 			segments := strings.Split(line, " ")
 			displayName := segments[len(segments)-1]
-			displays = append(displays, displayName)
+			displays = append(displays, DisplayInfo{
+				Name: displayName,
+			})
 		}
 	}
 	return displays, nil

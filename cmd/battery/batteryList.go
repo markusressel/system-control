@@ -67,11 +67,26 @@ var batteryListCmd = &cobra.Command{
 			bCapacityText := ""
 			if e == nil {
 				bCapacityText = strconv.Itoa(int(bCapacity))
+				bCapacityText = fmt.Sprintf("%v %%", bCapacityText)
 			}
 			properties.Set("Capacity", bCapacityText)
 
 			bCapacityLevel, _ := battery.GetCapacityLevel()
 			properties.Set("Capacity Level", bCapacityLevel)
+
+			bCycleCount, e := battery.GetCycleCount()
+			bCycleCountText := ""
+			if e == nil {
+				bCycleCountText = strconv.Itoa(int(bCycleCount))
+			}
+			properties.Set("Cycle Count", bCycleCountText)
+
+			degradation, e := battery.GetDegradation()
+			degradationText := ""
+			if e == nil {
+				degradationText = fmt.Sprintf("%v %%", util.RoundToTwoDecimals(degradation))
+			}
+			properties.Set("Degradation", degradationText)
 
 			bOnline, e := battery.IsOnline()
 			bOnlineText := ""

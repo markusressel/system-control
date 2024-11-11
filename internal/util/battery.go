@@ -102,21 +102,31 @@ func (battery BatteryInfo) IsCharging() (bool, error) {
 	return charging, err
 }
 
+// GetEnergyFull returns the energy level of the battery in Wh when fully charged.
 func (battery BatteryInfo) GetEnergyFull() (int64, error) {
 	path := battery.Path + "/energy_full"
 	return ReadIntFromFile(path)
 }
 
+// GetEnergyFullDesign returns the design energy level of the battery in Wh.
+func (battery BatteryInfo) GetEnergyFullDesign() (int64, error) {
+	path := battery.Path + "/energy_full_design"
+	return ReadIntFromFile(path)
+}
+
+// GetEnergyNow returns the current energy level of the battery in Wh.
 func (battery BatteryInfo) GetEnergyNow() (int64, error) {
 	path := battery.Path + "/energy_now"
 	return ReadIntFromFile(path)
 }
 
+// GetPowerNow returns the current power usage of the battery in Watts.
 func (battery BatteryInfo) GetPowerNow() (int64, error) {
 	path := battery.Path + "/power_now"
 	return ReadIntFromFile(path)
 }
 
+// GetVoltageNow returns the current voltage of the battery in Volts.
 func (battery BatteryInfo) GetVoltageNow() (int64, error) {
 	path := battery.Path + "/voltage_now"
 	rawValue, err := ReadIntFromFile(path)
@@ -126,6 +136,7 @@ func (battery BatteryInfo) GetVoltageNow() (int64, error) {
 	return rawValue / 1000000, nil
 }
 
+// GetVoltageMinDesign returns the minimum voltage of the battery in Volts.
 func (battery BatteryInfo) GetVoltageMinDesign() (int64, error) {
 	path := battery.Path + "/voltage_min_design"
 	rawValue, err := ReadIntFromFile(path)
@@ -135,6 +146,7 @@ func (battery BatteryInfo) GetVoltageMinDesign() (int64, error) {
 	return rawValue / 1000000, nil
 }
 
+// GetTechnology returns the technology of the battery. For example, "Li-ion", "Li-poly", etc.
 func (battery BatteryInfo) GetTechnology() (string, error) {
 	path := battery.Path + "/technology"
 	rawValue, err := ReadTextFromFile(path)
@@ -144,16 +156,19 @@ func (battery BatteryInfo) GetTechnology() (string, error) {
 	return strings.TrimSpace(rawValue), nil
 }
 
+// GetCycleCount returns the current cycle count of the battery.
 func (battery BatteryInfo) GetCycleCount() (int64, error) {
 	path := battery.Path + "/cycle_count"
 	return ReadIntFromFile(path)
 }
 
+// GetCapacity returns the current battery capacity in percent.
 func (battery BatteryInfo) GetCapacity() (int64, error) {
 	path := battery.Path + "/capacity"
 	return ReadIntFromFile(path)
 }
 
+// GetCapacityLevel returns the current capacity level of the battery.
 func (battery BatteryInfo) GetCapacityLevel() (string, error) {
 	path := battery.Path + "/capacity_level"
 	capacityLevel, err := ReadTextFromFile(path)
@@ -164,6 +179,7 @@ func (battery BatteryInfo) GetCapacityLevel() (string, error) {
 	return capacityLevel, nil
 }
 
+// GetStatus returns the current status of the battery. For example, "Charging", "Discharging", "Not Charging", etc.
 func (battery BatteryInfo) GetStatus() (string, error) {
 	path := battery.Path + "/status"
 	status, err := ReadTextFromFile(path)
@@ -226,4 +242,14 @@ func (battery BatteryInfo) GetModel() (string, error) {
 		return rawValue, err
 	}
 	return strings.TrimSpace(rawValue), nil
+}
+
+// GetDegradation returns the current battery degradation in percent.
+func (battery BatteryInfo) GetDegradation() (float64, error) {
+	energyFull, err := battery.GetEnergyFull()
+	energyFullDesign, err := battery.GetEnergyFullDesign()
+	if err != nil {
+		return 0, err
+	}
+	return (1 - (float64(energyFull) / float64(energyFullDesign))) * 100, nil
 }

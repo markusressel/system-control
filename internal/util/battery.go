@@ -63,10 +63,10 @@ func parseBatteryInfo(file os.DirEntry) (BatteryInfo, error) {
 }
 
 // GetEnergyTarget returns the target energy level in Wh that the battery should be charged to.
-func (battery BatteryInfo) GetEnergyTarget() (int64, error) {
+func (battery BatteryInfo) GetEnergyTarget() (float64, error) {
 	chargeControlEndThreshold := battery.GetChargeControlEndThreshold()
 	energyFull, err := battery.GetEnergyFull()
-	return int64((float64(energyFull) / 100) * float64(chargeControlEndThreshold)), err
+	return (float64(energyFull) / 100) * float64(chargeControlEndThreshold), err
 }
 
 // GetChargeControlEndThreshold returns the charge end threshold in percent.
@@ -81,8 +81,8 @@ func (battery BatteryInfo) GetChargeControlEndThreshold() int64 {
 
 // CalculateRemainingTime calculates the remaining time in seconds until the battery is fully discharged or has reached
 // the currently set charge control end threshold.
-func CalculateRemainingTime(wh int64, w int64) int64 {
-	return int64((float64(wh) / float64(w)) * 60 * 60)
+func CalculateRemainingTime(wh float64, w float64) int64 {
+	return int64((wh / w) * 60 * 60)
 }
 
 func (battery BatteryInfo) GetType() (string, error) {
@@ -103,47 +103,69 @@ func (battery BatteryInfo) IsCharging() (bool, error) {
 }
 
 // GetEnergyFull returns the energy level of the battery in Wh when fully charged.
-func (battery BatteryInfo) GetEnergyFull() (int64, error) {
+func (battery BatteryInfo) GetEnergyFull() (float64, error) {
 	path := battery.Path + "/energy_full"
-	return ReadIntFromFile(path)
+	rawValue, err := ReadIntFromFile(path)
+	scaledValue := float64(rawValue) / 1000000
+	if err != nil {
+		return scaledValue, err
+	}
+	return scaledValue, nil
 }
 
 // GetEnergyFullDesign returns the design energy level of the battery in Wh.
-func (battery BatteryInfo) GetEnergyFullDesign() (int64, error) {
+func (battery BatteryInfo) GetEnergyFullDesign() (float64, error) {
 	path := battery.Path + "/energy_full_design"
-	return ReadIntFromFile(path)
+	rawValue, err := ReadIntFromFile(path)
+	scaledValue := float64(rawValue) / 1000000
+	if err != nil {
+		return scaledValue, err
+	}
+	return scaledValue, nil
 }
 
 // GetEnergyNow returns the current energy level of the battery in Wh.
-func (battery BatteryInfo) GetEnergyNow() (int64, error) {
+func (battery BatteryInfo) GetEnergyNow() (float64, error) {
 	path := battery.Path + "/energy_now"
-	return ReadIntFromFile(path)
+	rawValue, err := ReadIntFromFile(path)
+	scaledValue := float64(rawValue) / 1000000
+	if err != nil {
+		return scaledValue, err
+	}
+	return scaledValue, nil
 }
 
 // GetPowerNow returns the current power usage of the battery in Watts.
-func (battery BatteryInfo) GetPowerNow() (int64, error) {
+func (battery BatteryInfo) GetPowerNow() (float64, error) {
 	path := battery.Path + "/power_now"
-	return ReadIntFromFile(path)
+	rawValue, err := ReadIntFromFile(path)
+	scaledValue := float64(rawValue) / 1000000
+	if err != nil {
+		return scaledValue, err
+	}
+	return scaledValue, nil
 }
 
 // GetVoltageNow returns the current voltage of the battery in Volts.
-func (battery BatteryInfo) GetVoltageNow() (int64, error) {
+func (battery BatteryInfo) GetVoltageNow() (float64, error) {
 	path := battery.Path + "/voltage_now"
 	rawValue, err := ReadIntFromFile(path)
+	scaledValue := float64(rawValue) / 1000000
 	if err != nil {
-		return 0, err
+		return scaledValue, err
 	}
-	return rawValue / 1000000, nil
+	return scaledValue, nil
 }
 
 // GetVoltageMinDesign returns the minimum voltage of the battery in Volts.
-func (battery BatteryInfo) GetVoltageMinDesign() (int64, error) {
+func (battery BatteryInfo) GetVoltageMinDesign() (float64, error) {
 	path := battery.Path + "/voltage_min_design"
 	rawValue, err := ReadIntFromFile(path)
+	scaledValue := float64(rawValue) / 1000000
 	if err != nil {
-		return 0, err
+		return scaledValue, err
 	}
-	return rawValue / 1000000, nil
+	return scaledValue, nil
 }
 
 // GetTechnology returns the technology of the battery. For example, "Li-ion", "Li-poly", etc.

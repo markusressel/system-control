@@ -81,12 +81,26 @@ var batteryListCmd = &cobra.Command{
 			}
 			properties.Set("Cycle Count", bCycleCountText)
 
+			bEnergyFull, e := battery.GetEnergyFull()
+			bEnergyFullText := ""
+			if e == nil {
+				bEnergyFullText = fmt.Sprintf("%v Wh", util.RoundToTwoDecimals(bEnergyFull))
+			}
+			properties.Set("Energy Full", bEnergyFullText)
+
 			degradation, e := battery.GetDegradation()
 			degradationText := ""
 			if e == nil {
 				degradationText = fmt.Sprintf("%v %%", util.RoundToTwoDecimals(degradation))
 			}
 			properties.Set("Degradation", degradationText)
+
+			bPowerNow, e := battery.GetPowerNow()
+			bPowerNowText := ""
+			if e == nil {
+				bPowerNowText = fmt.Sprintf("%v W", util.RoundToTwoDecimals(bPowerNow))
+			}
+			properties.Set("Power Now", bPowerNowText)
 
 			bOnline, e := battery.IsOnline()
 			bOnlineText := ""

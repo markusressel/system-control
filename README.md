@@ -303,6 +303,7 @@ FRITZ!Box 6591 Cable NM
 
 ```shell
 > system-control wifi connect "MyNetwork"
+> system-control wifi disconnect
 ```
 
 #### Hotspot

@@ -5,17 +5,6 @@ import (
 	"strings"
 )
 
-// Connect to a known WiFi network
-func Connect(name string) error {
-	_, err := util.ExecCommand(
-		"nmcli",
-		"connection",
-		"up",
-		name,
-	)
-	return err
-}
-
 // WiFiNetwork represents a WiFi network
 type WiFiNetwork struct {
 	Connected bool
@@ -29,6 +18,37 @@ type WiFiNetwork struct {
 	Signal    string
 	Bars      string
 	Security  string
+}
+
+// Connect to a known WiFi network
+func Connect(name string) error {
+	_, err := util.ExecCommand(
+		"nmcli",
+		"connection",
+		"up",
+		name,
+	)
+	return err
+}
+
+// Disconnect from the currently connected WiFi network, if any
+func Disconnect() error {
+	connectedNetwork, err := GetConnectedNetwork()
+	if err != nil {
+		return err
+	}
+
+	if connectedNetwork == nil {
+		return nil
+	}
+
+	_, err = util.ExecCommand(
+		"nmcli",
+		"connection",
+		"down",
+		connectedNetwork.SSID,
+	)
+	return err
 }
 
 // GetNetworks returns a list of all known WiFi networks
@@ -66,6 +86,22 @@ func GetNetworks() ([]WiFiNetwork, error) {
 		})
 
 	return wifiNetworks, err
+}
+
+// GetConnectedNetwork returns the currently connected WiFi network, if any
+func GetConnectedNetwork() (*WiFiNetwork, error) {
+	networks, err := GetNetworks()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, network := range networks {
+		if network.Connected {
+			return &network, nil
+		}
+	}
+
+	return nil, nil
 }
 
 // OpenManageGui opens the network manager GUI

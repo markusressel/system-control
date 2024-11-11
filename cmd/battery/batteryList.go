@@ -81,6 +81,13 @@ var batteryListCmd = &cobra.Command{
 			}
 			properties.Set("Cycle Count", bCycleCountText)
 
+			bEnergyFullDesign, e := battery.GetEnergyFullDesign()
+			bEnergyFullDesignText := ""
+			if e == nil {
+				bEnergyFullDesignText = fmt.Sprintf("%v Wh", util.RoundToTwoDecimals(bEnergyFullDesign))
+			}
+			properties.Set("Energy Full Design", bEnergyFullDesignText)
+
 			bEnergyFull, e := battery.GetEnergyFull()
 			bEnergyFullText := ""
 			if e == nil {
@@ -94,13 +101,6 @@ var batteryListCmd = &cobra.Command{
 				bEnergyNowText = fmt.Sprintf("%v Wh", util.RoundToTwoDecimals(bEnergyNow))
 			}
 			properties.Set("Energy Now", bEnergyNowText)
-
-			bEnergyFullDesign, e := battery.GetEnergyFullDesign()
-			bEnergyFullDesignText := ""
-			if e == nil {
-				bEnergyFullDesignText = fmt.Sprintf("%v Wh", util.RoundToTwoDecimals(bEnergyFullDesign))
-			}
-			properties.Set("Energy Full Design", bEnergyFullDesignText)
 
 			degradation, e := battery.GetDegradation()
 			degradationText := ""

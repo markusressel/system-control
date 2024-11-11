@@ -2,10 +2,12 @@ package util
 
 import "strings"
 
+// EqualsIgnoreCase returns true if the two strings are equal, ignoring case.
 func EqualsIgnoreCase(s string, substr string) bool {
 	return strings.Compare(strings.ToLower(s), strings.ToLower(substr)) == 0
 }
 
+// ContainsIgnoreCase returns true if the string contains the substring, ignoring case.
 func ContainsIgnoreCase(s string, substr string) bool {
 	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
@@ -22,6 +24,7 @@ func CountLeadingSpace(line string) int {
 	return i
 }
 
+// IsNotEmpty returns true if the string is not empty after trimming whitespace.
 func IsNotEmpty(s string) bool {
 	s = strings.TrimSpace(s)
 	return len(s) > 0

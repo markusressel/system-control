@@ -13,7 +13,7 @@ On linux it can be cumbersome to do simple stuff via the command line, like f. e
 In most cases these actions either require knowledge about a specific shell tool to do the job or even a custom-built script.
 
 This project aims to simplify that by providing a command line tool that can do all the things mentioned above with a
-simple and easy to understand syntax.
+simple and easy to understand syntax, as well as an extensive help system and documentation.
 
 ## Highly opinionated
 
@@ -87,11 +87,11 @@ Available Commands:
   shutdown    Shutdown the system gracefully
   touchpad    Control touchpad
   video       Control video inputs (cameras)
+  wifi        Control WiFi devices and networks
 
 Flags:
       --configuration string   configuration file (default is $HOME/.system-control.yaml)
   -h, --help                   help for system-control
-  -t, --toggle                 Help message for toggle
 
 Use "system-control [command] --help" for more information about a command.
 ```

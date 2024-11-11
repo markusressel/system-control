@@ -9,16 +9,10 @@ type BatteryInfo struct {
 	Name string
 	Path string
 
-	Manufacturer  string
-	Model         string
-	Capacity      int64
-	CapacityLevel string
-	Online        bool
-	// f.ex. "Charging" or "Discharging"
-	Status       string
+	Manufacturer string
+	Model        string
 	SerialNumber string
 	Scope        string
-	Type         string
 }
 
 const (
@@ -46,46 +40,23 @@ func GetBatteryList() (batteryList []BatteryInfo, err error) {
 // The directory entry should be a directory in the /sys/class/power_supply/ directory.
 func parseBatteryInfo(file os.DirEntry) (BatteryInfo, error) {
 	battery := BatteryInfo{}
+
 	batteryName := file.Name()
 	batteryPath := PowerSupplyBasePath + batteryName
-	manufacturer, _ := ReadTextFromFile(batteryPath + "/manufacturer")
-	manufacturer = strings.TrimSpace(manufacturer)
-
-	model, _ := ReadTextFromFile(batteryPath + "/model_name")
-	model = strings.TrimSpace(model)
-
-	capacity, _ := ReadIntFromFile(batteryPath + "/capacity")
-
-	capacityLevel, _ := ReadTextFromFile(batteryPath + "/capacity_level")
-	capacityLevel = strings.TrimSpace(capacityLevel)
-
-	online, _ := ReadTextFromFile(batteryPath + "/online")
-	online = strings.TrimSpace(online)
-
-	status, _ := ReadTextFromFile(batteryPath + "/status")
-	status = strings.TrimSpace(status)
-
-	serialNumber, _ := ReadTextFromFile(batteryPath + "/serial_number")
-	serialNumber = strings.TrimSpace(serialNumber)
-
-	scope, _ := ReadTextFromFile(batteryPath + "/scope")
-	scope = strings.TrimSpace(scope)
-
-	bType, _ := ReadTextFromFile(batteryPath + "/type")
-	bType = strings.TrimSpace(bType)
 
 	battery.Name = batteryName
 	battery.Path = batteryPath
 
+	manufacturer, _ := battery.GetManufacturer()
+	model, _ := battery.GetModel()
+	serialNumber, _ := battery.GetSerialNumber()
+	scope, _ := battery.GetScope()
+
 	battery.Manufacturer = manufacturer
 	battery.Model = model
-	battery.Capacity = capacity
-	battery.CapacityLevel = capacityLevel
-	battery.Online = online == "1"
-	battery.Status = status
 	battery.SerialNumber = serialNumber
 	battery.Scope = scope
-	battery.Type = bType
+
 	return battery, nil
 }
 
@@ -112,11 +83,20 @@ func CalculateRemainingTime(wh int64, w int64) int64 {
 	return int64((float64(wh) / float64(w)) * 60 * 60)
 }
 
+func (battery BatteryInfo) GetType() (string, error) {
+	path := battery.Path + "/type"
+	rawValue, err := ReadTextFromFile(path)
+	if err != nil {
+		return rawValue, err
+	}
+	return strings.TrimSpace(rawValue), nil
+}
+
 func (battery BatteryInfo) IsCharging() (bool, error) {
 	path := battery.Path + "/status"
 	status, err := ReadTextFromFile(path)
 	status = strings.TrimSpace(status)
-	charging := status == "Charging"
+	charging := EqualsIgnoreCase(status, "Charging")
 	return charging, err
 }
 
@@ -133,4 +113,115 @@ func (battery BatteryInfo) GetEnergyNow() (int64, error) {
 func (battery BatteryInfo) GetPowerNow() (int64, error) {
 	path := battery.Path + "/power_now"
 	return ReadIntFromFile(path)
+}
+
+func (battery BatteryInfo) GetVoltageNow() (int64, error) {
+	path := battery.Path + "/voltage_now"
+	rawValue, err := ReadIntFromFile(path)
+	if err != nil {
+		return 0, err
+	}
+	return rawValue / 1000000, nil
+}
+
+func (battery BatteryInfo) GetVoltageMinDesign() (int64, error) {
+	path := battery.Path + "/voltage_min_design"
+	rawValue, err := ReadIntFromFile(path)
+	if err != nil {
+		return 0, err
+	}
+	return rawValue / 1000000, nil
+}
+
+func (battery BatteryInfo) GetTechnology() (string, error) {
+	path := battery.Path + "/technology"
+	rawValue, err := ReadTextFromFile(path)
+	if err != nil {
+		return rawValue, err
+	}
+	return strings.TrimSpace(rawValue), nil
+}
+
+func (battery BatteryInfo) GetCycleCount() (int64, error) {
+	path := battery.Path + "/cycle_count"
+	return ReadIntFromFile(path)
+}
+
+func (battery BatteryInfo) GetCapacity() (int64, error) {
+	path := battery.Path + "/capacity"
+	return ReadIntFromFile(path)
+}
+
+func (battery BatteryInfo) GetCapacityLevel() (string, error) {
+	path := battery.Path + "/capacity_level"
+	capacityLevel, err := ReadTextFromFile(path)
+	if err != nil {
+		return capacityLevel, err
+	}
+	capacityLevel = strings.TrimSpace(capacityLevel)
+	return capacityLevel, nil
+}
+
+func (battery BatteryInfo) GetStatus() (string, error) {
+	path := battery.Path + "/status"
+	status, err := ReadTextFromFile(path)
+	if err != nil {
+		return status, err
+	}
+	status = strings.TrimSpace(status)
+	return status, nil
+}
+
+func (battery BatteryInfo) IsOnline() (bool, error) {
+	path := battery.Path + "/online"
+	rawValue, err := ReadTextFromFile(path)
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(rawValue) == "1", nil
+}
+
+func (battery BatteryInfo) IsPresent() (bool, error) {
+	path := battery.Path + "/present"
+	rawValue, err := ReadTextFromFile(path)
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(rawValue) == "1", nil
+}
+
+func (battery BatteryInfo) GetScope() (string, error) {
+	path := battery.Path + "/scope"
+	rawValue, err := ReadTextFromFile(path)
+	if err != nil {
+		return rawValue, err
+	}
+	return strings.TrimSpace(rawValue), nil
+}
+
+func (battery BatteryInfo) GetSerialNumber() (string, error) {
+	path := battery.Path + "/serial_number"
+	rawValue, err := ReadTextFromFile(path)
+	if err != nil {
+		return rawValue, err
+	}
+	return strings.TrimSpace(rawValue), nil
+}
+
+func (battery BatteryInfo) GetManufacturer() (string, error) {
+	path := battery.Path + "/manufacturer"
+	rawValue, err := ReadTextFromFile(path)
+	if err != nil {
+		return rawValue, err
+	}
+	return strings.TrimSpace(rawValue), nil
+}
+
+func (battery BatteryInfo) GetModel() (string, error) {
+	path := battery.Path + "/model_name"
+	rawValue, err := ReadTextFromFile(path)
+	if err != nil {
+		return rawValue, err
+	}
+	return strings.TrimSpace(rawValue), nil
 }

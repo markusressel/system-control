@@ -48,16 +48,43 @@ var batteryListCmd = &cobra.Command{
 
 		for i, battery := range batteries {
 			properties := orderedmap.NewOrderedMap[string, string]()
+
+			bPresent, e := battery.IsPresent()
+			bPresentText := ""
+			if e == nil {
+				bPresentText = strconv.FormatBool(bPresent)
+			}
+			properties.Set("Present", bPresentText)
+
 			properties.Set("Path", battery.Path)
-			properties.Set("Type", battery.Type)
+			bType, _ := battery.GetType()
+			properties.Set("Type", bType)
 			properties.Set("Manufacturer", battery.Manufacturer)
 			properties.Set("Model", battery.Model)
 			properties.Set("Serial", battery.SerialNumber)
-			properties.Set("Capacity", strconv.Itoa(int(battery.Capacity)))
-			properties.Set("Capacity Level", battery.CapacityLevel)
-			properties.Set("Online", strconv.FormatBool(battery.Online))
-			properties.Set("Status", battery.Status)
+
+			bCapacity, e := battery.GetCapacity()
+			bCapacityText := ""
+			if e == nil {
+				bCapacityText = strconv.Itoa(int(bCapacity))
+			}
+			properties.Set("Capacity", bCapacityText)
+
+			bCapacityLevel, _ := battery.GetCapacityLevel()
+			properties.Set("Capacity Level", bCapacityLevel)
+
+			bOnline, e := battery.IsOnline()
+			bOnlineText := ""
+			if e == nil {
+				bOnlineText = strconv.FormatBool(bOnline)
+			}
+			properties.Set("Online", bOnlineText)
+
+			bStatus, _ := battery.GetStatus()
+			properties.Set("Status", bStatus)
 			properties.Set("Scope", battery.Scope)
+			bTechnology, _ := battery.GetTechnology()
+			properties.Set("Technology", bTechnology)
 
 			util.PrintFormattedTableOrdered(battery.Name, properties)
 

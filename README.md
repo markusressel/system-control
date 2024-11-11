@@ -245,6 +245,11 @@ Display: DisplayPort-1
 
 ## Touchpad
 
+**Requirements:**
+
+* `synclient`
+* `xinput`
+
 ```shell
 > system-control touchpad on
 > system-control touchpad off

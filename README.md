@@ -135,7 +135,10 @@ Sink #64
 > system-control audio sink previous
 ```
 
-### Battery
+## Battery
+
+**Requirements:**
+None
 
 ```shell
 > system-control battery list
@@ -160,7 +163,11 @@ hidpp_battery_0
 > system-control battery threshold -name BAT0 restore    # run this f.ex. right after boot
 ```
 
-### Bluetooth
+## Bluetooth
+
+**Requirements:**
+
+* `bluetoothctl`
 
 ```shell
 > system-control bluetooth on
@@ -194,7 +201,7 @@ hidpp_battery_0
 > system-control bluetooth disconnect
 ```
 
-### Display / Screen
+## Display / Screen
 
 #### List Screens
 
@@ -206,6 +213,9 @@ DisplayPort-1
 
 #### Backlight
 
+**Requirements:**
+None
+
 ```shell
 > system-control display backlight list
 
@@ -215,6 +225,10 @@ DisplayPort-1
 ```
 
 #### RedShift
+
+**Requirements:**
+
+* `redshift`
 
 ```shell
 > system-control display redshift
@@ -237,6 +251,9 @@ Display: DisplayPort-1
 
 ### Brightness
 
+**Requirements:**
+None
+
 ```shell
 > system-control keyboard brightness set 100
 > system-control keyboard brightness inc
@@ -246,7 +263,6 @@ Display: DisplayPort-1
 ## Touchpad
 
 **Requirements:**
-
 * `synclient`
 * `xinput`
 
@@ -257,17 +273,9 @@ Display: DisplayPort-1
 > system-control touchpad toggle
 ```
 
-## Video (Webcam)
-
-```shell
-> system-control video load    # loads the kernel driver for webcam support
-> system-control video unload  # unloads the kernel driver for webcam support
-```
-
-### Network
+## Network
 
 **Requirements:**
-
 * `nmcli`
 
 #### WiFi
@@ -309,7 +317,7 @@ TODO: not yet implemented
 > system-control hotspot off -n "MyHotspot"
 ```
 
-### Shutdown/Restart
+## Shutdown/Restart
 
 TODO: not yet fully working
 
@@ -323,6 +331,13 @@ TODO: not yet fully working
 
 ```shell
 > system-control lock
+```
+
+## Video (Webcam)
+
+```shell
+> system-control video load    # loads the kernel driver for webcam support
+> system-control video unload  # unloads the kernel driver for webcam support
 ```
 
 # FAQ

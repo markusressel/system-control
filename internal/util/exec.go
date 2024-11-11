@@ -68,10 +68,7 @@ func ParseTable[T any](input string, cellSeparator string, producer func(row []s
 		return nil, fmt.Errorf("invalid table format")
 	}
 
-	headerCellRegex, err := regexp.Compile(cellSeparator)
-	if err != nil {
-		return nil, err
-	}
+	headerCellRegex := regexp.MustCompile(cellSeparator)
 	header := headerCellRegex.FindAllString(lines[0], -1)
 	if len(header) < 2 {
 		return nil, fmt.Errorf("invalid table format")

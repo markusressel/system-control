@@ -261,6 +261,10 @@ Display: DisplayPort-1
 
 ### Network
 
+**Requirements:**
+
+* `nmcli`
+
 #### WiFi
 
 ```shell

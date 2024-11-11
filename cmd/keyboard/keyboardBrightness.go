@@ -27,7 +27,7 @@ import (
 
 var keyboardBrightnessCmd = &cobra.Command{
 	Use:   "brightness",
-	Short: "Show current keyboard brightness",
+	Short: "Get/Set the current keyboard backlight brightness",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) > 0 {

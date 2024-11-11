@@ -23,6 +23,6 @@ import (
 
 var Command = &cobra.Command{
 	Use:   "touchpad",
-	Short: "Control touchpad",
+	Short: "Control Touchpads",
 	Long:  ``,
 }

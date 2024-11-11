@@ -24,7 +24,7 @@ import (
 
 var decKeyboardBrightnessCmd = &cobra.Command{
 	Use:   "dec",
-	Short: "Decrease keyboard backlight brightness",
+	Short: "Decrease the keyboard backlight brightness",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		brightness, _ := util.GetKeyboardBrightness()

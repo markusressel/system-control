@@ -24,7 +24,7 @@ import (
 
 var Command = &cobra.Command{
 	Use:   "display",
-	Short: "Control Display",
+	Short: "Control Displays",
 	Long:  ``,
 }
 

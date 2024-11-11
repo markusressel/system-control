@@ -23,6 +23,6 @@ import (
 
 var Command = &cobra.Command{
 	Use:   "video",
-	Short: "Control video inputs (cameras)",
+	Short: "Control Video Inputs (cameras)",
 	Long:  ``,
 }

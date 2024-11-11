@@ -23,6 +23,6 @@ import (
 
 var Command = &cobra.Command{
 	Use:   "keyboard",
-	Short: "Control Keyboard",
+	Short: "Control Keyboards",
 	Long:  ``,
 }

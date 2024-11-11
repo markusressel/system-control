@@ -88,6 +88,20 @@ var batteryListCmd = &cobra.Command{
 			}
 			properties.Set("Energy Full", bEnergyFullText)
 
+			bEnergyNow, e := battery.GetEnergyNow()
+			bEnergyNowText := ""
+			if e == nil {
+				bEnergyNowText = fmt.Sprintf("%v Wh", util.RoundToTwoDecimals(bEnergyNow))
+			}
+			properties.Set("Energy Now", bEnergyNowText)
+
+			bEnergyFullDesign, e := battery.GetEnergyFullDesign()
+			bEnergyFullDesignText := ""
+			if e == nil {
+				bEnergyFullDesignText = fmt.Sprintf("%v Wh", util.RoundToTwoDecimals(bEnergyFullDesign))
+			}
+			properties.Set("Energy Full Design", bEnergyFullDesignText)
+
 			degradation, e := battery.GetDegradation()
 			degradationText := ""
 			if e == nil {

@@ -9,10 +9,12 @@ const (
 	xrandrExecutable = "xrandr"
 )
 
+// DisplayInfo represents a display
 type DisplayInfo struct {
 	Name string
 }
 
+// GetDisplays returns a list of all connected displays
 func GetDisplays() (displays []DisplayInfo, err error) {
 	result, err := ExecCommand(
 		xrandrExecutable,
@@ -38,6 +40,7 @@ func GetDisplays() (displays []DisplayInfo, err error) {
 	return displays, nil
 }
 
+// DisplayConfig represents a display configuration
 type DisplayConfig struct {
 	// Name is the name of the display as shown by GetDisplays
 	Name string

@@ -26,7 +26,6 @@ import (
 	"github.com/spf13/cobra"
 	"slices"
 	"strconv"
-	"strings"
 )
 
 var listCmd = &cobra.Command{
@@ -47,7 +46,7 @@ var listCmd = &cobra.Command{
 				// then sort by signal strength
 				-1*cmp.Compare(a.Signal, b.Signal),
 				// then sort by SSID
-				cmp.Compare(strings.ToLower(a.SSID), strings.ToLower(b.SSID)),
+				util.CompareIgnoreCase(a.SSID, b.SSID),
 			)
 		})
 

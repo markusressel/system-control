@@ -1,10 +1,13 @@
 package util
 
-import "strings"
+import (
+	"cmp"
+	"strings"
+)
 
 // EqualsIgnoreCase returns true if the two strings are equal, ignoring case.
-func EqualsIgnoreCase(s string, substr string) bool {
-	return strings.Compare(strings.ToLower(s), strings.ToLower(substr)) == 0
+func EqualsIgnoreCase(s string, b string) bool {
+	return strings.ToLower(s) == strings.ToLower(b)
 }
 
 // ContainsIgnoreCase returns true if the string contains the substring, ignoring case.
@@ -45,4 +48,9 @@ func SubstringRunes(s string, start int, end int) string {
 		i++
 	}
 	return s[startStrIdx:]
+}
+
+// CompareIgnoreCase compares two strings ignoring case
+func CompareIgnoreCase(a string, b string) int {
+	return cmp.Compare(strings.ToLower(a), strings.ToLower(b))
 }

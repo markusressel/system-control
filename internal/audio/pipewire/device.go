@@ -1,8 +1,8 @@
 package pipewire
 
 import (
+	"github.com/markusressel/system-control/internal/util"
 	"math"
-	"strings"
 )
 
 type InterfaceDevice struct {
@@ -27,7 +27,7 @@ type DeviceInfoParams struct {
 func (i DeviceInfoParams) GetOutputRoutes() []DeviceRoute {
 	var outputRoutes []DeviceRoute
 	for _, route := range i.Route {
-		if strings.ToLower(route.Direction) == "output" {
+		if util.EqualsIgnoreCase(route.Direction, "output") {
 			outputRoutes = append(outputRoutes, route)
 		}
 	}

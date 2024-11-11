@@ -59,20 +59,22 @@ var batteryRemainingCmd = &cobra.Command{
 			return fmt.Errorf("no battery found matching '%s'", Name)
 		}
 
+		batteryInfoNonNull := *batteryInfo
+
 		// get value
-		charging, err := util.IsBatteryCharging(*batteryInfo)
+		charging, err := batteryInfoNonNull.IsCharging()
 		if err != nil {
 			return err
 		}
-		energyTarget, err := util.GetEnergyTarget(*batteryInfo)
+		energyTarget, err := batteryInfoNonNull.GetEnergyTarget()
 		if err != nil {
 			return err
 		}
-		energyNow, err := util.GetEnergyNow(*batteryInfo)
+		energyNow, err := batteryInfoNonNull.GetEnergyNow()
 		if err != nil {
 			return err
 		}
-		powerNow, err := util.GetPowerNow(*batteryInfo)
+		powerNow, err := batteryInfoNonNull.GetPowerNow()
 		if err != nil {
 			return err
 		}

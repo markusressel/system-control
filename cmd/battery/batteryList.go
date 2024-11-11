@@ -18,10 +18,12 @@
 package battery
 
 import (
+	"cmp"
 	"fmt"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
+	"slices"
 	"strconv"
 )
 
@@ -35,6 +37,15 @@ var batteryListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
+		// sort entries
+		slices.SortFunc(batteries, func(a, b util.BatteryInfo) int {
+			return cmp.Or(
+				// sort by battery name
+				util.CompareIgnoreCase(a.Name, b.Name),
+			)
+		})
+
 		for i, battery := range batteries {
 			properties := orderedmap.NewOrderedMap[string, string]()
 			properties.Set("Path", battery.Path)

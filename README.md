@@ -18,9 +18,9 @@ things mentioned above through a unified syntax, as well as an extensive help sy
 
 ## DISCLAIMER: Highly opinionated
 
-This project is highly opinionated and specialized for the tools I use myself, keeping the codebase manageable
-and to ensure project focus. If you need support for other tools, feel free to open an issue or a PR and I will
-consider adding it. Alternatively feel free to fork the project and add the tools you need
+This project is highly opinionated and specialized for the tools I use myself (such as nmcli, pipewire, etc.), keeping
+the codebase manageable and to ensure project focus. If you need support for other tools, feel free to open an
+issue or a PR and I will consider adding it. Alternatively feel free to fork the project and add the tools you need
 to your own version of the project.
 
 # Installation

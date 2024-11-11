@@ -27,6 +27,8 @@ func IsNotEmpty(s string) bool {
 	return len(s) > 0
 }
 
+// SubstringRunes returns a substring of a string based on rune indices.
+// Works like "string"[start:end], but uses rune indices instead of byte indices, which is useful for UTF-8 strings.
 func SubstringRunes(s string, start int, end int) string {
 	startStrIdx := 0
 	i := 0

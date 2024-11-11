@@ -15,37 +15,12 @@ In most cases these actions either require knowledge about a specific shell tool
 This project aims to simplify that by providing a command line tool that can do all the things mentioned above with a
 simple and easy to understand syntax, as well as an extensive help system and documentation.
 
-## Highly opinionated
+## DISCLAIMER: Highly opinionated
 
 This project is highly opinionated and only supports the tools I use myself. This is to keep the codebase manageable
 and to ensure that the project stays focused on the things I need. If you need support for other tools, feel free to
 open an issue or a PR and I will consider adding it. If not, feel free to fork the project and add the tools you need
 to your own version of the project.
-
-## Why not use Shell scripts?
-
-Yes, you could write scripts for all the things
-`system-control` can do and be happy with that. In fact, that was also my initial approach.
-When I wrote my first script I tried to use Bash since it is more close to the system, but:
-
-* Bash scripting syntax is exhausting (imho)
-* Parsing or extracting text from command output can be very tricky/hacky when compared to a "real" programming language
-* Combining and maintaining multiple commands is tricky since the commands are possibly in separate files
-
-Because of those downsides I started to use Python scripts, but python also has its downsides:
-
-* Python is relatively slow (especially when compared to pure bash) since it has to start a python environment every time
-* Dependency management can be tricky when not using something like [Poetry](https://github.com/python-poetry/poetry)
-* If you don't want to write a massive one-file script there are still lots of files to manage
-
-To fix the dependency and file management you could use any packaging tool. But since this would
-not address the performance concerns I had, I decided to give golang a try. Go allows me to build
-a single binary file that includes everything necessary and provides the best possible performance
-(without using bash). The performance aspect is crucial for my usage, because some of these commands
-get executed on a regular basis through [Polybar](https://github.com/polybar/polybar) and other applications. Of course
-it also has its downsides, the main one beeing that it is the least flexible solution since it is a compiled
-binary, but history has shown that this is mostly non-issue, because commands on linux tend to have a
-very stable API or CLI interface (even when its explicitly stated that its not).
 
 # Installation
 
@@ -338,4 +313,52 @@ TODO: not yet fully working
 
 ```shell
 > system-control lock
+```
+
+# FAQ
+
+## Why use Golang instead of simple Shell scripts?
+
+Yes, you could write scripts for all the things
+`system-control` can do and be happy with that. In fact, that was also my initial approach.
+When I wrote my first script I tried to use Bash since it is more close to the system, but:
+
+* Bash scripting syntax is exhausting (imho)
+* Parsing or extracting text from command output can be very tricky/hacky when compared to a "real" programming language
+* Combining and maintaining multiple commands is tricky since the commands are possibly in separate files
+
+Because of those downsides I started to use Python scripts, but python also has its downsides:
+
+* Python is relatively slow (especially when compared to pure bash) since it has to start a python environment every
+  time
+* Dependency management can be tricky when not using something like [Poetry](https://github.com/python-poetry/poetry)
+* If you don't want to write a massive one-file script there are still lots of files to manage
+
+To fix the dependency and file management you could use any packaging tool. But since this would
+not address the performance concerns I had, I decided to give golang a try. Go allows me to build
+a single binary file that includes everything necessary and provides the best possible performance
+(without using bash). The performance aspect is crucial for my usage, because some of these commands
+get executed on a regular basis through [Polybar](https://github.com/polybar/polybar) and other applications. Of course
+it also has its downsides, the main one beeing that it is the least flexible solution since it is a compiled
+binary, but history has shown that this is mostly non-issue, because commands on linux tend to have a
+very stable API or CLI interface (even when its explicitly stated that its not).
+
+# License
+
+```
+system-control
+Copyright (C) 2024  Markus Ressel
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ```

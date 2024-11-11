@@ -343,6 +343,10 @@ it also has its downsides, the main one beeing that it is the least flexible sol
 binary, but history has shown that this is mostly non-issue, because commands on linux tend to have a
 very stable API or CLI interface (even when its explicitly stated that its not).
 
+# Dependencies
+
+See [go.mod](go.mod)
+
 # License
 
 ```

@@ -19,6 +19,13 @@ const (
 	PowerSupplyBasePath = "/sys/class/power_supply/"
 )
 
+func newBatteryInfo(name string) BatteryInfo {
+	return BatteryInfo{
+		Name: name,
+		Path: PowerSupplyBasePath + name,
+	}
+}
+
 // GetBatteryList returns a list of all batteries found in the system.
 func GetBatteryList() (batteryList []BatteryInfo, err error) {
 	path := PowerSupplyBasePath
@@ -39,13 +46,8 @@ func GetBatteryList() (batteryList []BatteryInfo, err error) {
 // parseBatteryInfo parses the battery information from the given directory entry.
 // The directory entry should be a directory in the /sys/class/power_supply/ directory.
 func parseBatteryInfo(file os.DirEntry) (BatteryInfo, error) {
-	battery := BatteryInfo{}
-
 	batteryName := file.Name()
-	batteryPath := PowerSupplyBasePath + batteryName
-
-	battery.Name = batteryName
-	battery.Path = batteryPath
+	battery := newBatteryInfo(batteryName)
 
 	manufacturer, _ := battery.GetManufacturer()
 	model, _ := battery.GetModel()

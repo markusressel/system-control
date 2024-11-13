@@ -304,6 +304,8 @@ FRITZ!Box 6591 Cable NM
 ```shell
 > system-control wifi connect "MyNetwork"
 > system-control wifi disconnect
+# Open WiFi settings
+> system-control wifi manage
 ```
 
 #### Hotspot

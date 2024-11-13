@@ -57,7 +57,6 @@ func GetNetworks() ([]WiFiNetwork, error) {
 		"nmcli",
 		"-f",
 		"in-use,ssid,bssid,mode,chan,bandwidth,freq,rate,signal,bars,security",
-		// WPA-FLAGS  RSN-FLAGS                     DEVICE  ACTIVE  IN->
 		"device",
 		"wifi",
 		"list",

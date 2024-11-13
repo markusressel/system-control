@@ -2,6 +2,7 @@ package wifi
 
 import (
 	"github.com/markusressel/system-control/internal/util"
+	"strconv"
 	"strings"
 )
 
@@ -11,11 +12,11 @@ type WiFiNetwork struct {
 	BSSID     string
 	SSID      string
 	Mode      string
-	Channel   string
+	Channel   int
 	Bandwidth string
 	Frequency string
 	Rate      string
-	Signal    string
+	Signal    int
 	Bars      string
 	Security  string
 }
@@ -69,16 +70,18 @@ func GetNetworks() ([]WiFiNetwork, error) {
 		output,
 		util.DefaultColumnHeaderRegexPattern,
 		func(row []string) WiFiNetwork {
+			channelInt, _ := strconv.Atoi(strings.TrimSpace(row[4]))
+			signalInt, _ := strconv.Atoi(strings.TrimSpace(row[8]))
 			return WiFiNetwork{
 				Connected: strings.Contains(row[0], "*"),
 				SSID:      strings.TrimSpace(row[1]),
 				BSSID:     strings.TrimSpace(row[2]),
 				Mode:      strings.TrimSpace(row[3]),
-				Channel:   strings.TrimSpace(row[4]),
+				Channel:   channelInt,
 				Bandwidth: strings.TrimSpace(row[5]),
 				Frequency: strings.TrimSpace(row[6]),
 				Rate:      strings.TrimSpace(row[7]),
-				Signal:    strings.TrimSpace(row[8]),
+				Signal:    signalInt,
 				Bars:      strings.TrimSpace(row[9]),
 				Security:  strings.TrimSpace(row[10]),
 			}

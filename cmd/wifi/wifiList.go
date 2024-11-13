@@ -28,6 +28,19 @@ import (
 	"strconv"
 )
 
+var (
+	flagFilterConnected bool
+	filterBSSID         string
+	filterSSID          string
+	filterMode          string
+	filterChannel       int
+	filterBandwidth     string
+	filterFrequency     string
+	filterRate          string
+	filterSignal        int
+	filterSecurity      string
+)
+
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all known WiFi networks",
@@ -37,6 +50,41 @@ var listCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
+		// filter entries
+		networks = util.FilterFunc(networks, func(network wifi.WiFiNetwork) bool {
+			if flagFilterConnected && !network.Connected {
+				return false
+			}
+			if filterBSSID != "" && !util.ContainsIgnoreCase(network.BSSID, filterBSSID) {
+				return false
+			}
+			if filterSSID != "" && !util.ContainsIgnoreCase(network.SSID, filterSSID) {
+				return false
+			}
+			if filterMode != "" && !util.ContainsIgnoreCase(network.Mode, filterMode) {
+				return false
+			}
+			if filterChannel != 0 && network.Channel != filterChannel {
+				return false
+			}
+			if filterBandwidth != "" && !util.ContainsIgnoreCase(network.Bandwidth, filterBandwidth) {
+				return false
+			}
+			if filterFrequency != "" && !util.ContainsIgnoreCase(network.Frequency, filterFrequency) {
+				return false
+			}
+			if filterRate != "" && !util.ContainsIgnoreCase(network.Rate, filterRate) {
+				return false
+			}
+			if filterSignal != 0 && network.Signal != filterSignal {
+				return false
+			}
+			if filterSecurity != "" && !util.ContainsIgnoreCase(network.Security, filterSecurity) {
+				return false
+			}
+			return true
+		})
 
 		// sort entries
 		slices.SortFunc(networks, func(a, b wifi.WiFiNetwork) int {
@@ -77,4 +125,15 @@ var listCmd = &cobra.Command{
 
 func init() {
 	Command.AddCommand(listCmd)
+
+	listCmd.Flags().BoolVarP(&flagFilterConnected, "connected", "c", false, "Filter by connected state")
+	listCmd.Flags().StringVarP(&filterBSSID, "bssid", "b", "", "Filter by BSSID")
+	listCmd.Flags().StringVarP(&filterSSID, "ssid", "s", "", "Filter by SSID")
+	listCmd.Flags().StringVarP(&filterMode, "mode", "m", "", "Filter by mode")
+	listCmd.Flags().IntVarP(&filterChannel, "channel", "C", 0, "Filter by channel")
+	listCmd.Flags().StringVarP(&filterBandwidth, "bandwidth", "B", "", "Filter by bandwidth")
+	listCmd.Flags().StringVarP(&filterFrequency, "frequency", "F", "", "Filter by frequency")
+	listCmd.Flags().StringVarP(&filterRate, "rate", "r", "", "Filter by rate")
+	listCmd.Flags().IntVarP(&filterSignal, "signal", "S", 0, "Filter by signal")
+	listCmd.Flags().StringVarP(&filterSecurity, "security", "q", "", "Filter by security")
 }

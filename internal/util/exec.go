@@ -10,6 +10,18 @@ import (
 	"time"
 )
 
+// ExecCommandAndFork executes a shell command with the given arguments
+// and disowns the process, resulting in the process continuing to run
+// even after the parent process (this golang application) has exited.
+func ExecCommandAndFork(command string, args ...string) error {
+	cmd := exec.Command(command, args...)
+	err := cmd.Start()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // ExecCommand executes a shell command with the given arguments
 // and returns its stdout as a []byte.
 // If an error occurs the content of stderr is printed

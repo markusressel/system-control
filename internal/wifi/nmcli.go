@@ -106,7 +106,7 @@ func GetConnectedNetwork() (*WiFiNetwork, error) {
 
 // OpenManageGui opens the network manager GUI
 func OpenManageGui() error {
-	_, err := util.ExecCommand(
+	err := util.ExecCommandAndFork(
 		"nm-connection-editor",
 	)
 	return err

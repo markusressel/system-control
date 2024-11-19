@@ -163,8 +163,7 @@ func GetConnectedHotspotDevices(ssid string) ([]HotspotLease, error) {
 	if err != nil {
 		return result, err
 	}
-	parsed := ParseStationDump(output)
-	println(parsed)
+	stationInfoList := ParseStationDump(output)
 
 	leaseFilePath := fmt.Sprintf("/var/lib/NetworkManager/dnsmasq-%s.leases", wifiInterface)
 	text, err := util.ReadTextFromFile(leaseFilePath)
@@ -173,13 +172,24 @@ func GetConnectedHotspotDevices(ssid string) ([]HotspotLease, error) {
 	}
 	hotspotLeases, err := util.ParseDelimitedTable(text, " ", func(row []string) HotspotLease {
 		return HotspotLease{
+			MAC:  row[1],
 			IP:   row[2],
 			Name: row[3],
-			MAC:  row[4],
 		}
 	})
 	if err != nil {
 		return result, err
+	}
+
+	for _, hotspotLease := range hotspotLeases {
+		matchingStationInfo := util.FilterFunc(stationInfoList, func(e StationInfo) bool {
+			return e.MAC == hotspotLease.MAC
+		})
+		if len(matchingStationInfo) > 0 {
+			result = append(result, hotspotLease)
+		} else {
+			// Did not find matching StationInfo for mac %s, assuming its not connected.
+		}
 	}
 
 	//// list all wireless network interfaces (for MAC80211 driver; see wiki article for alternative commands)
@@ -202,9 +212,6 @@ func GetConnectedHotspotDevices(ssid string) ([]HotspotLease, error) {
 	//ip := "UNKN"
 	//host := ""
 	//
-	for _, lease := range hotspotLeases {
-		result = append(result, lease)
-	}
 
 	return result, nil
 }
@@ -260,7 +267,7 @@ func ParseStationDump(output string) []StationInfo {
 		if !strings.HasPrefix(line, "\t") {
 			parsed := parseStationDumpEntryHeader(line)
 			lastStation = &parsed
-			result = append(result, parseStationDumpEntryHeader(line))
+			result = append(result, parsed)
 		} else {
 			result[len(result)-1] = parseStationDumpEntryProperty(*lastStation, line)
 		}
@@ -298,14 +305,14 @@ func parseStationDumpEntryHeader(line string) StationInfo {
 	}
 }
 
-// IsHotspotUp
-func IsHotspotUp(name string) (bool, error) {
+// IsHotspotUp checks if the given hotspot is currently running
+func IsHotspotUp(ssid string) (bool, error) {
 	networkInfo, err := GetNetworks()
 	if err != nil {
 		return false, err
 	}
 	networkInfo = util.FilterFunc(networkInfo, func(e WiFiNetwork) bool {
-		return e.SSID == name
+		return e.SSID == ssid
 	})
 	if len(networkInfo) <= 0 {
 		return false, nil

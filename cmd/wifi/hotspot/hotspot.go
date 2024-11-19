@@ -26,3 +26,12 @@ var Command = &cobra.Command{
 	Short: "Control WiFi hotspots",
 	Long:  ``,
 }
+
+func init() {
+	Command.PersistentFlags().StringVarP(
+		&wifiInterface,
+		"interface", "i",
+		"",
+		"WiFi interface to use for the hotspot",
+	)
+}

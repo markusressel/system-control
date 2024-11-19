@@ -126,6 +126,9 @@ func TurnOnHotspot(
 	password string,
 ) error {
 
+	// TODO: check if hotspot config already exists (by hotspot name)
+	//  if so, we dont need the full command, altough settings might change...
+
 	_, err := util.ExecCommand(
 		"nmcli",
 		"d",
@@ -141,8 +144,6 @@ func TurnOnHotspot(
 	if err != nil {
 		return err
 	}
-
-	// try this: nmcli d wifi hotspot ifname %s ssid %s password %s", wifiInterface, hotspotSSID, hotspotPassword)
 
 	return Connect(name)
 }
@@ -165,10 +166,8 @@ type HotspotLease struct {
 }
 
 // GetConn
-func GetConnectedHotspotDevices(ssid string) ([]HotspotLease, error) {
+func GetConnectedHotspotDevices(wifiInterface string, ssid string) ([]HotspotLease, error) {
 	result := make([]HotspotLease, 0)
-
-	wifiInterface := "wlo1"
 
 	wifiHotspotIsUp, _ := IsHotspotUp(ssid)
 	if !wifiHotspotIsUp {
@@ -281,7 +280,6 @@ type StationInfo struct {
 //	current time:	1731975697273 ms
 func ParseStationDump(output string) []StationInfo {
 	lines := strings.Split(output, "\n")
-	//currentIndent := 0
 
 	var lastStation *StationInfo = nil
 	result := []StationInfo{}
@@ -341,4 +339,72 @@ func IsHotspotUp(ssid string) (bool, error) {
 	} else {
 		return networkInfo[0].Connected, nil
 	}
+}
+
+// Block all network traffic for the given host.
+// NOTE: requires root privileges
+func BlockHost(ip string) error {
+	// iptables -I INPUT --source $ip --jump DROP
+	_, err := util.ExecCommand(
+		"iptables",
+		"-I",
+		"INPUT",
+		"--source",
+		ip,
+		"--jump",
+		"DROP",
+	)
+	if err != nil {
+		return err
+	}
+
+	// iptables -I FORWARD --source $ip --jump DROP
+	_, err = util.ExecCommand(
+		"iptables",
+		"-I",
+		"FORWARD",
+		"--source",
+		ip,
+		"--jump",
+		"DROP",
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Unblock network traffic for the given host.
+// NOTE: requires root privileges
+func UnblockHost(ip string) error {
+	// iptables -D INPUT --source $ip --jump DROP
+	_, err := util.ExecCommand(
+		"iptables",
+		"-D",
+		"INPUT",
+		"--source",
+		ip,
+		"--jump",
+		"DROP",
+	)
+	if err != nil {
+		return err
+	}
+
+	// iptables -D FORWARD --source $ip --jump DROP
+	_, err = util.ExecCommand(
+		"iptables",
+		"-D",
+		"FORWARD",
+		"--source",
+		ip,
+		"--jump",
+		"DROP",
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

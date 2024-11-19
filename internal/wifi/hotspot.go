@@ -120,7 +120,27 @@ end
 */
 
 func TurnOnHotspot(name string) error {
-	// try this: nmcli d wifi hotspot ifname <wifi_iface> ssid <ssid> password <password>
+	wifiInterface := "wlo1"
+	hotspotSSID := "M16"
+	hotspotPassword := ""
+
+	_, err := util.ExecCommand(
+		"nmcli",
+		"d",
+		"wifi",
+		"hotspot",
+		"ifname",
+		wifiInterface,
+		"ssid",
+		hotspotSSID,
+		"password",
+		hotspotPassword,
+	)
+	if err != nil {
+		return err
+	}
+
+	// try this: nmcli d wifi hotspot ifname %s ssid %s password %s", wifiInterface, hotspotSSID, hotspotPassword)
 
 	return Connect(name)
 }

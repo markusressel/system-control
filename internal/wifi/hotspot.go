@@ -143,8 +143,8 @@ type HotspotLease struct {
 }
 
 // GetConn
-func GetConnectedHotspotDevices(ssid string) ([]string, error) {
-	result := make([]string, 0)
+func GetConnectedHotspotDevices(ssid string) ([]HotspotLease, error) {
+	result := make([]HotspotLease, 0)
 
 	wifiInterface := "wlo1"
 
@@ -203,16 +203,7 @@ func GetConnectedHotspotDevices(ssid string) ([]string, error) {
 	//host := ""
 	//
 	for _, lease := range hotspotLeases {
-		//if lease == interfaceA {
-		//	// echo yes
-		//	// ... show the mac address:
-		//	ip = "echo $lease | cut -f 2 -s -d\" \""
-		//	host = "echo $lease | cut -f 3 -s -d\" \""
-		//	// printf "  %-20s %-30s %-20s\n" $ip $host $mac
-		//
-		//	println(ip, host)
-
-		result = append(result, lease.MAC)
+		result = append(result, lease)
 	}
 
 	return result, nil
@@ -266,7 +257,9 @@ func ParseStationDump(output string) []StationInfo {
 	var lastStation *StationInfo = nil
 	result := []StationInfo{}
 	for _, line := range lines {
-		if !strings.HasPrefix(line, " ") {
+		if !strings.HasPrefix(line, "\t") {
+			parsed := parseStationDumpEntryHeader(line)
+			lastStation = &parsed
 			result = append(result, parseStationDumpEntryHeader(line))
 		} else {
 			result[len(result)-1] = parseStationDumpEntryProperty(*lastStation, line)
@@ -278,7 +271,9 @@ func ParseStationDump(output string) []StationInfo {
 
 func parseStationDumpEntryProperty(info StationInfo, line string) StationInfo {
 	parts := strings.Split(line, ":")
-	info.Properties[parts[0]] = parts[1]
+	key := strings.TrimSpace(parts[0])
+	value := strings.TrimSpace(parts[1])
+	info.Properties[key] = value
 	return info
 }
 
@@ -290,15 +285,16 @@ func parseStationDumpEntryHeader(line string) StationInfo {
 	mac := macRegex.FindString(line)
 	mac = strings.TrimSpace(mac)
 
-	interfaceNameRegexPattern := "\\(on (*+)\\)"
+	interfaceNameRegexPattern := "\\(on (.+)\\)"
 	interfaceNameRegex := regexp.MustCompile(interfaceNameRegexPattern)
 
 	interfaceName := interfaceNameRegex.FindString(line)
 	interfaceName = strings.TrimSpace(interfaceName)
 
 	return StationInfo{
-		MAC:       mac,
-		Interface: interfaceName,
+		MAC:        mac,
+		Interface:  interfaceName,
+		Properties: map[string]string{},
 	}
 }
 

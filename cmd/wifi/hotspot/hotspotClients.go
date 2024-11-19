@@ -18,6 +18,9 @@
 package wifi
 
 import (
+	"fmt"
+	"github.com/elliotchance/orderedmap/v2"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/markusressel/system-control/internal/wifi"
 	"github.com/spf13/cobra"
 )
@@ -30,13 +33,22 @@ var clientsCmd = &cobra.Command{
 		// TODO: get this from somewhere
 		hotspotSSID := "M16"
 
+		isHotspotUp, err := wifi.IsHotspotUp(hotspotSSID)
+		if err != nil {
+			return err
+		}
+		if !isHotspotUp {
+			fmt.Println("Hotspot is not running")
+			return nil
+		}
+
 		hotspotDevices, err := wifi.GetConnectedHotspotDevices(hotspotSSID)
 		if err != nil {
 			return err
 		}
 
-		for i, device := range hotspotDevices {
-			println(i, device)
+		for _, device := range hotspotDevices {
+			printHotspotDevice(device)
 		}
 
 		return err
@@ -45,4 +57,12 @@ var clientsCmd = &cobra.Command{
 
 func init() {
 	Command.AddCommand(clientsCmd)
+}
+
+func printHotspotDevice(device wifi.HotspotLease) {
+	properties := orderedmap.NewOrderedMap[string, string]()
+	properties.Set("IP", device.IP)
+	properties.Set("MAC", device.MAC)
+
+	util.PrintFormattedTableOrdered(device.Name, properties)
 }

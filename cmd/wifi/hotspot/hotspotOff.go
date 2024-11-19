@@ -38,8 +38,8 @@ var offCmd = &cobra.Command{
 		}
 
 		if len(hotspotDevices) > 0 {
-			for i, device := range hotspotDevices {
-				println(i, device)
+			for _, device := range hotspotDevices {
+				printHotspotDevice(device)
 			}
 			println("There are still devices connected to the hotspot. Please disconnect them first or use --force parameter.")
 			os.Exit(1)

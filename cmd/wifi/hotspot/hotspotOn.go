@@ -29,7 +29,12 @@ var onCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// TODO: get this from somewhere
 		hotspotName := "M16 Hotspot"
-		err := wifi.TurnOnHotspot(hotspotName)
+		err := wifi.TurnOnHotspot(
+			hotspotName,
+			"wlo1",
+			"M16",
+			"M12345678",
+		)
 		return err
 	},
 }

@@ -119,10 +119,12 @@ end
 
 */
 
-func TurnOnHotspot(name string) error {
-	wifiInterface := "wlo1"
-	hotspotSSID := "M16"
-	hotspotPassword := ""
+func TurnOnHotspot(
+	name string,
+	wifiInterface string,
+	ssid string,
+	password string,
+) error {
 
 	_, err := util.ExecCommand(
 		"nmcli",
@@ -132,9 +134,9 @@ func TurnOnHotspot(name string) error {
 		"ifname",
 		wifiInterface,
 		"ssid",
-		hotspotSSID,
+		ssid,
 		"password",
-		hotspotPassword,
+		password,
 	)
 	if err != nil {
 		return err

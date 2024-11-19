@@ -18,16 +18,38 @@
 package wifi
 
 import (
-	hotspot "github.com/markusressel/system-control/cmd/wifi/hotspot"
+	"github.com/markusressel/system-control/internal/wifi"
 	"github.com/spf13/cobra"
+	"os"
 )
 
-var Command = &cobra.Command{
-	Use:   "wifi",
-	Short: "Control WiFi devices and networks",
+var offCmd = &cobra.Command{
+	Use:   "off",
+	Short: "Turn off the WiFi Hotspot",
 	Long:  ``,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// TODO: get this from somewhere
+		hotspotName := "M16 Hotspot"
+		hotspotSSID := "M16"
+
+		hotspotDevices, err := wifi.GetConnectedHotspotDevices(hotspotSSID)
+		if err != nil {
+			return err
+		}
+
+		if len(hotspotDevices) > 0 {
+			for i, device := range hotspotDevices {
+				println(i, device)
+			}
+			println("There are still devices connected to the hotspot. Please disconnect them first or use --force parameter.")
+			os.Exit(1)
+		}
+
+		err = wifi.TurnOffHotspot(hotspotName)
+		return err
+	},
 }
 
 func init() {
-	Command.AddCommand(hotspot.Command)
+	Command.AddCommand(offCmd)
 }

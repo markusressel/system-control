@@ -18,16 +18,11 @@
 package wifi
 
 import (
-	hotspot "github.com/markusressel/system-control/cmd/wifi/hotspot"
 	"github.com/spf13/cobra"
 )
 
 var Command = &cobra.Command{
-	Use:   "wifi",
-	Short: "Control WiFi devices and networks",
+	Use:   "hotspot",
+	Short: "Control WiFi hotspots",
 	Long:  ``,
-}
-
-func init() {
-	Command.AddCommand(hotspot.Command)
 }

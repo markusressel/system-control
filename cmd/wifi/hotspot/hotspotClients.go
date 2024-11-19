@@ -18,16 +18,31 @@
 package wifi
 
 import (
-	hotspot "github.com/markusressel/system-control/cmd/wifi/hotspot"
+	"github.com/markusressel/system-control/internal/wifi"
 	"github.com/spf13/cobra"
 )
 
-var Command = &cobra.Command{
-	Use:   "wifi",
-	Short: "Control WiFi devices and networks",
+var clientsCmd = &cobra.Command{
+	Use:   "clients",
+	Short: "List currently connected Hotspot Client Devices",
 	Long:  ``,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// TODO: get this from somewhere
+		hotspotSSID := "M16"
+
+		hotspotDevices, err := wifi.GetConnectedHotspotDevices(hotspotSSID)
+		if err != nil {
+			return err
+		}
+
+		for i, device := range hotspotDevices {
+			println(i, device)
+		}
+
+		return err
+	},
 }
 
 func init() {
-	Command.AddCommand(hotspot.Command)
+	Command.AddCommand(clientsCmd)
 }

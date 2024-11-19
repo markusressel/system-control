@@ -75,6 +75,27 @@ func PrintFormattedTableOrdered(title string, properties *orderedmap.OrderedMap[
 	_ = w.Flush()
 }
 
+const DefaultColumnDelimiter = " "
+
+func ParseDelimitedTable[T any](
+	input string,
+	delimiter string,
+	producer func(row []string) T,
+) ([]T, error) {
+	result := make([]T, 0)
+
+	lines := strings.Split(input, "\n")
+	lines = FilterFunc(lines, func(e string) bool {
+		return len(e) > 0
+	})
+	for i := 0; i < len(lines); i++ {
+		row := strings.Split(lines[i], delimiter)
+		result = append(result, producer(row))
+	}
+
+	return result, nil
+}
+
 const DefaultColumnHeaderRegexPattern = "\\S+\\s*"
 
 // ParseTable attempts to parse the given input string as a table, converting each row into
@@ -86,7 +107,11 @@ const DefaultColumnHeaderRegexPattern = "\\S+\\s*"
 // must include any whitespace that follows the column title.
 //
 // The producer function is expected to map the values of a row into a struct of type T.
-func ParseTable[T any](input string, cellSeparator string, producer func(row []string) T) ([]T, error) {
+func ParseTable[T any](
+	input string,
+	cellSeparator string,
+	producer func(row []string) T,
+) ([]T, error) {
 	result := make([]T, 0)
 
 	lines := strings.Split(input, "\n")

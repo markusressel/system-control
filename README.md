@@ -313,11 +313,15 @@ FRITZ!Box 6591 Cable NM
 TODO: not yet implemented
 
 ```shell
-> system-control hotspot on -n "MyHotspot"
+> system-control wifi hotspot on -n "MyHotspot"
 ```
 
 ```shell
-> system-control hotspot off -n "MyHotspot"
+> system-control wifi hotspot off -n "MyHotspot"
+```
+
+```shell
+> system-control wifi hotspot clients
 ```
 
 ## Shutdown/Restart

@@ -18,8 +18,6 @@
 package bluetooth
 
 import (
-	"fmt"
-	"github.com/elliotchance/orderedmap/v2"
 	"github.com/markusressel/system-control/internal/bluetooth"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
@@ -40,29 +38,17 @@ var bluetoothDevicesCmd = &cobra.Command{
 			return err
 		}
 
-		for i, device := range devices {
+		filteredDevices := util.FilterFunc(devices, func(device bluetooth.BluetoothDevice) bool {
 			if filterConnected && !device.Connected {
-				continue
+				return false
 			}
 			if filterPaired && !device.Paired {
-				continue
+				return false
 			}
+			return true
+		})
 
-			properties := orderedmap.NewOrderedMap[string, string]()
-			properties.Set("Address", device.Address)
-			properties.Set("Connected", strconv.FormatBool(device.Connected))
-			properties.Set("Paired", strconv.FormatBool(device.Paired))
-
-			if device.BatteryPercentage != nil {
-				properties.Set("Battery", fmt.Sprintf("%v%%", *device.BatteryPercentage))
-			}
-
-			util.PrintFormattedTableOrdered(device.Name, properties)
-
-			if i < len(devices)-1 {
-				fmt.Println()
-			}
-		}
+		printBluetoothDevices(filteredDevices)
 
 		return nil
 	},

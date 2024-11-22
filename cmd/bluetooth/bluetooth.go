@@ -18,7 +18,12 @@
 package bluetooth
 
 import (
+	"fmt"
+	"github.com/elliotchance/orderedmap/v2"
+	"github.com/markusressel/system-control/internal/bluetooth"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
 var Name string
@@ -37,4 +42,26 @@ func init() {
 		"",
 		"Device Name",
 	)
+}
+
+func printBluetoothDevices(devices []bluetooth.BluetoothDevice) {
+	for i, device := range devices {
+		printBluetoothDevice(device)
+		if i < len(devices)-1 {
+			fmt.Println()
+		}
+	}
+}
+
+func printBluetoothDevice(device bluetooth.BluetoothDevice) {
+	properties := orderedmap.NewOrderedMap[string, string]()
+	properties.Set("Address", device.Address)
+	properties.Set("Connected", strconv.FormatBool(device.Connected))
+	properties.Set("Paired", strconv.FormatBool(device.Paired))
+
+	if device.BatteryPercentage != nil {
+		properties.Set("Battery", fmt.Sprintf("%v%%", *device.BatteryPercentage))
+	}
+
+	util.PrintFormattedTableOrdered(device.Name, properties)
 }

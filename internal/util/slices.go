@@ -9,3 +9,11 @@ func FilterFunc[S ~[]E, E any](x S, filter func(e E) bool) []E {
 	}
 	return result
 }
+
+func MapFunc[S ~[]E, E, R any](x S, mapper func(e E) R) []R {
+	result := make([]R, len(x))
+	for i, v := range x {
+		result[i] = mapper(v)
+	}
+	return result
+}

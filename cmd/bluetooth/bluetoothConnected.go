@@ -23,9 +23,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var bluetoothConnectCmd = &cobra.Command{
-	Use:   "connect",
-	Short: "Connect to a Bluetooth Device",
+var bluetoothConnectedCmd = &cobra.Command{
+	Use:   "connected",
+	Short: "Check if currently connected to the given Bluetooth Device",
 	Long:  ``,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -39,20 +39,20 @@ var bluetoothConnectCmd = &cobra.Command{
 		matchingDevices := findBluetoothDeviceFuzzy(deviceName, devices)
 
 		if len(matchingDevices) == 1 {
-			err := bluetooth.ConnectToBluetoothDevice(matchingDevices[0])
-			if err != nil {
-				return err
+			if matchingDevices[0].Connected == true {
+				fmt.Println("yes")
+				return nil
 			}
-			return nil
 		} else if len(matchingDevices) > 1 {
 			deviceNames := createDeviceNameList(matchingDevices)
 			return fmt.Errorf("multiple matching devices found: %v", deviceNames)
 		}
 
-		return fmt.Errorf("device not found: %v", deviceName)
+		fmt.Println("no")
+		return nil
 	},
 }
 
 func init() {
-	Command.AddCommand(bluetoothConnectCmd)
+	Command.AddCommand(bluetoothConnectedCmd)
 }

@@ -20,9 +20,11 @@ package bluetooth
 import (
 	"fmt"
 	"github.com/elliotchance/orderedmap/v2"
+	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/markusressel/system-control/internal/bluetooth"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
+	"sort"
 	"strconv"
 )
 
@@ -64,4 +66,39 @@ func printBluetoothDevice(device bluetooth.BluetoothDevice) {
 	}
 
 	util.PrintFormattedTableOrdered(device.Name, properties)
+}
+
+func findBluetoothDeviceFuzzy(name string, devices []bluetooth.BluetoothDevice) []bluetooth.BluetoothDevice {
+	// check exact address matches first
+	for _, device := range devices {
+		if util.EqualsIgnoreCase(device.Address, name) {
+			return []bluetooth.BluetoothDevice{device}
+		}
+	}
+
+	// then check fuzzy name matches
+	deviceNames := make([]string, len(devices))
+	for i, device := range devices {
+		deviceNames[i] = device.Name
+	}
+
+	fuzzyMatches := fuzzy.RankFindNormalizedFold(name, deviceNames)
+	sort.Sort(fuzzyMatches)
+
+	result := make([]bluetooth.BluetoothDevice, 0)
+	for _, match := range fuzzyMatches {
+		for _, device := range devices {
+			if device.Name == match.Target {
+				result = append(result, device)
+			}
+		}
+	}
+
+	return result
+}
+
+func createDeviceNameList(devices []bluetooth.BluetoothDevice) []string {
+	return util.MapFunc(devices, func(device bluetooth.BluetoothDevice) string {
+		return fmt.Sprintf("%s (%s)", device.Name, device.Address)
+	})
 }

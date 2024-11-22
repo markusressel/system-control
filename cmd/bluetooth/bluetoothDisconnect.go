@@ -25,7 +25,7 @@ import (
 
 var bluetoothDisconnectCmd = &cobra.Command{
 	Use:   "disconnect",
-	Short: "Connect to a Bluetooth Device",
+	Short: "Disconnect a currently connected Bluetooth Device",
 	Long:  ``,
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {

@@ -95,6 +95,8 @@ consider it.
 > system-control audio volume inc
 > system-control audio volume dec
 > system-control audio volume set 100 --channel Master
+> system-control audio volume muted
+no
 ```
 
 Save and Restore Audio State, f.ex. before and after reboot:

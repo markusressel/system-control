@@ -52,6 +52,7 @@ var Command = &cobra.Command{
 	},
 }
 
+// CpuInfo
 // processor       : 0
 // vendor_id       : GenuineIntel
 // cpu family      : 6

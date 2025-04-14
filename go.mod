@@ -8,7 +8,7 @@ require (
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/nathan-osman/go-sunrise v1.1.0
-	github.com/pelletier/go-toml/v2 v2.2.3
+	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0

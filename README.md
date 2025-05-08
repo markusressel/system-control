@@ -109,6 +109,9 @@ Save and Restore Audio State, f.ex. before and after reboot:
 ### Device
 
 ```shell
+> system-control audio device --device "Starship" profile
+Digital Stereo (IEC958) Output
+
 > system-control audio device --device "Starship" profile "Digital Stereo (IEC958) Output"
 ```
 

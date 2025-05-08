@@ -111,3 +111,15 @@ func (d InterfaceDevice) GetProfileIdByName(profileName string) (*DeviceProfile,
 
 	return nil, errors.New("Profile not found: " + profileName)
 }
+
+func (d InterfaceDevice) GetActiveProfile() (*DeviceProfile, error) {
+	var profileName string
+	if len(d.Info.Params.Profile) > 0 {
+		profileName = d.Info.Params.Profile[0].Name
+	}
+	profile, err := d.GetProfileIdByName(profileName)
+	if err != nil {
+		return nil, err
+	}
+	return profile, nil
+}

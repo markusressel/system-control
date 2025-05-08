@@ -15,24 +15,36 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package audio
+package device
 
 import (
-	"github.com/markusressel/system-control/cmd/audio/device"
-	"github.com/markusressel/system-control/cmd/audio/sink"
-	"github.com/markusressel/system-control/cmd/audio/volume"
 	"github.com/spf13/cobra"
 )
 
-var Command = &cobra.Command{
-	Use:              "audio",
-	Short:            "Control System Audio",
-	Long:             ``,
-	TraverseChildren: true,
+var (
+	deviceName string
+)
+
+var DeviceCmd = &cobra.Command{
+	Use:   "device",
+	Short: "Show a list of all available devices",
+	Long:  ``,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// TODO: implement this
+		//result, err := util.ExecCommand("pactl", "list", "sinks")
+		//if err != nil {
+		//	return err
+		//}
+		//print(result)
+		return nil
+	},
 }
 
 func init() {
-	Command.AddCommand(device.DeviceCmd)
-	Command.AddCommand(sink.SinkCmd)
-	Command.AddCommand(volume.VolumeCmd)
+	DeviceCmd.PersistentFlags().StringVarP(
+		&deviceName,
+		"device", "d",
+		"",
+		"device",
+	)
 }

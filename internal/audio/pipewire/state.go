@@ -443,8 +443,40 @@ func (state *GraphState) ContainsActiveSink(text string) int {
 	}
 }
 
+// SetDeviceProfile sets the given profile to the given device using pipewire
+// profile is the name of the profile to set
+// deviceId is the id of the device to set the profile for
+func (state *GraphState) SetDeviceProfile(deviceId int, profile string) error {
+	device, err := state.GetDeviceById(deviceId)
+	if err != nil {
+		return err
+	}
+	profileId, err := device.GetProfileIdByName(profile)
+	if err != nil {
+		return err
+	}
+	err = device.SetProfileByName(profileId.Name)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // GetVolume returns the volume of the active sink
 // The volume is returned as a float value in [0..1]
 func (state *GraphState) GetVolume() (float64, error) {
 	return state.GetVolumeByName("")
+}
+
+// FindDeviceByName returns the first device that matches the given name.
+func (state *GraphState) FindDeviceByName(id string) (InterfaceDevice, error) {
+	for _, device := range state.Devices {
+		infoProps := device.Info.Props
+		deviceName := infoProps["device.name"].(string)
+		deviceDescription := infoProps["device.description"].(string)
+		if util.ContainsIgnoreCase(deviceName, id) || util.ContainsIgnoreCase(deviceDescription, id) {
+			return device, nil
+		}
+	}
+	return InterfaceDevice{}, errors.New("device not found")
 }

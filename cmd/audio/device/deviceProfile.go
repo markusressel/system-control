@@ -15,24 +15,36 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package audio
+package device
 
 import (
-	"github.com/markusressel/system-control/cmd/audio/device"
-	"github.com/markusressel/system-control/cmd/audio/sink"
-	"github.com/markusressel/system-control/cmd/audio/volume"
+	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/spf13/cobra"
 )
 
-var Command = &cobra.Command{
-	Use:              "audio",
-	Short:            "Control System Audio",
-	Long:             ``,
-	TraverseChildren: true,
+var profileCmd = &cobra.Command{
+	Use:   "profile",
+	Short: "Get/Set the current profile of a device",
+	Long:  ``,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		state := pipewire.PwDump()
+
+		profileName := args[0]
+
+		device, err := state.FindDeviceByName(deviceName)
+		if err != nil {
+			return err
+		}
+
+		profile, err := device.GetProfileIdByName(profileName)
+		if err != nil {
+			return err
+		}
+
+		return device.SetProfileByName(profile.Name)
+	},
 }
 
 func init() {
-	Command.AddCommand(device.DeviceCmd)
-	Command.AddCommand(sink.SinkCmd)
-	Command.AddCommand(volume.VolumeCmd)
+	DeviceCmd.AddCommand(profileCmd)
 }

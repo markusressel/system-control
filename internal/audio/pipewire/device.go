@@ -1,8 +1,11 @@
 package pipewire
 
 import (
+	"errors"
+	"fmt"
 	"github.com/markusressel/system-control/internal/util"
 	"math"
+	"strconv"
 )
 
 type InterfaceDevice struct {
@@ -71,4 +74,40 @@ func (d InterfaceDevice) SetVolume(volume float64) error {
 	}
 
 	return nil
+}
+
+func (d InterfaceDevice) SetProfileByName(profileName string) error {
+	profile, err := d.GetProfileIdByName(profileName)
+	if err != nil {
+		return err
+	}
+
+	_, err = util.ExecCommand(
+		"pw-cli",
+		"s",
+		strconv.Itoa(d.Id),
+		"Profile",
+		fmt.Sprintf("{ index: %d, save: true }",
+			profile.Index,
+		),
+	)
+	return err
+}
+
+func (d InterfaceDevice) GetProfileIdByName(profileName string) (*DeviceProfile, error) {
+	// search for exact match first
+	for _, profile := range d.Info.Params.EnumProfile {
+		if profile.Name == profileName || profile.Description == profileName {
+			return &profile, nil
+		}
+	}
+
+	// if no exact match, search for partial match
+	for _, profile := range d.Info.Params.EnumProfile {
+		if util.ContainsIgnoreCase(profile.Name, profileName) || util.ContainsIgnoreCase(profile.Description, profileName) {
+			return &profile, nil
+		}
+	}
+
+	return nil, errors.New("Profile not found: " + profileName)
 }

@@ -13,7 +13,7 @@ On linux it can be cumbersome to do simple stuff via the command line, like f. e
 
 In most cases these actions either require specific knowledge about a shell tool or even a custom-built script.
 
-This project aims to simplify these actions on the CLI via *system-control* - a CLI tool that can do all the
+This project aims to simplify these actions on the CLI via **system-control** - a CLI tool that can do all the
 things mentioned above through a unified syntax, as well as an extensive help system and documentation.
 
 ## DISCLAIMER: Highly opinionated

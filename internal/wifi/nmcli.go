@@ -33,14 +33,75 @@ type WiFiNetwork struct {
 	Security  string
 }
 
+// Connection represents a network connection
+type Connection struct {
+	Name           string // NAME
+	UUID           string // UUID
+	Type           string // TYPE
+	Timestamp      string // TIMESTAMP
+	TimestampReal  string // TIMESTAMP-REAL
+	Autoconnect    string // AUTOCONNECT
+	AutoconnectPri string // AUTOCONNECT-PRIORITY
+	Readonly       string // READONLY
+	DBUSPath       string // DBUS-PATH
+	Active         string // ACTIVE
+	Device         string // DEVICE
+	State          string // STATE
+	ActivePath     string // ACTIVE-PATH
+	Slave          string // SLAVE
+	Filename       string // FILENAME
+}
+
 // Connect to a known WiFi network
 func Connect(name string) error {
-	_, err := util.ExecCommand(
-		"nmcli",
-		"connection",
-		"up",
-		name,
-	)
+	//networks, err := GetNetworks()
+	//if err != nil {
+	//	return err
+	//}
+
+	//knownNetwork := false
+	//for _, network := range networks {
+	//	if network.SSID == name {
+	//		knownNetwork = true
+	//		if network.Connected {
+	//			return errors.New("already connected")
+	//		}
+	//		break
+	//	}
+	//}
+
+	connections, err := GetConnections()
+	if err != nil {
+		return err
+	}
+	knownConnection := false
+	for _, connection := range connections {
+		if connection.Name == name {
+			knownConnection = true
+			break
+		}
+	}
+
+	switch {
+	case knownConnection:
+		_, err = util.ExecCommand(
+			"nmcli",
+			"connection",
+			"up",
+			name,
+			"--ask",
+		)
+	default:
+		_, err = util.ExecCommand(
+			"nmcli",
+			"device",
+			"wifi",
+			"connect",
+			name,
+			"--ask",
+		)
+	}
+
 	return err
 }
 
@@ -62,6 +123,44 @@ func Disconnect() error {
 		connectedNetwork.SSID,
 	)
 	return err
+}
+
+func GetConnections() ([]Connection, error) {
+	output, err := util.ExecCommand(
+		"nmcli",
+		"-f",
+		"NAME,UUID,TYPE,TIMESTAMP,TIMESTAMP-REAL,AUTOCONNECT,AUTOCONNECT-PRIORITY,READONLY,DBUS-PATH,ACTIVE,DEVICE,STATE,ACTIVE-PATH,SLAVE,FILENAME",
+		"connection",
+		"show",
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	connections, err := util.ParseTable(
+		output,
+		util.DefaultColumnHeaderRegexPattern,
+		func(row []string) Connection {
+			return Connection{
+				Name:           strings.TrimSpace(row[0]),
+				UUID:           strings.TrimSpace(row[1]),
+				Type:           strings.TrimSpace(row[2]),
+				Timestamp:      strings.TrimSpace(row[3]),
+				TimestampReal:  strings.TrimSpace(row[4]),
+				Autoconnect:    strings.TrimSpace(row[5]),
+				AutoconnectPri: strings.TrimSpace(row[6]),
+				Readonly:       strings.TrimSpace(row[7]),
+				DBUSPath:       strings.TrimSpace(row[8]),
+				Active:         strings.TrimSpace(row[9]),
+				Device:         strings.TrimSpace(row[10]),
+				State:          strings.TrimSpace(row[11]),
+				ActivePath:     strings.TrimSpace(row[12]),
+				Slave:          strings.TrimSpace(row[13]),
+				Filename:       strings.TrimSpace(row[14]),
+			}
+		})
+
+	return connections, err
 }
 
 func GetNetworkDevices() ([]NetworkDevice, error) {

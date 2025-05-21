@@ -38,7 +38,7 @@ func ExecCommand(command string, args ...string) (string, error) {
 	if err != nil {
 		fmt.Println(err.Error())
 		fmt.Println(stderr.String())
-		return "", err
+		return "", errors.New("Command '" + fmt.Sprintf("%s", cmd) + "' failed with message: " + err.Error() + " " + stderr.String())
 	}
 
 	result := stdout.String()

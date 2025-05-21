@@ -27,9 +27,10 @@ import (
 	"github.com/markusressel/system-control/cmd/global"
 	"github.com/markusressel/system-control/cmd/keyboard"
 	"github.com/markusressel/system-control/cmd/mouse"
+	"github.com/markusressel/system-control/cmd/network"
+	"github.com/markusressel/system-control/cmd/network/wifi"
 	"github.com/markusressel/system-control/cmd/touchpad"
 	"github.com/markusressel/system-control/cmd/video"
-	"github.com/markusressel/system-control/cmd/wifi"
 	"github.com/markusressel/system-control/internal/configuration"
 	"github.com/spf13/cobra"
 	"os"
@@ -73,6 +74,7 @@ func init() {
 	RootCmd.AddCommand(mouse.Command)
 	RootCmd.AddCommand(touchpad.Command)
 	RootCmd.AddCommand(video.Command)
+	RootCmd.AddCommand(network.Command)
 	RootCmd.AddCommand(wifi.Command)
 
 	cobra.OnInitialize(initConfig)

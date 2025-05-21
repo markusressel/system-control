@@ -15,19 +15,18 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package wifi
+package device
 
 import (
-	hotspot "github.com/markusressel/system-control/cmd/wifi/hotspot"
 	"github.com/spf13/cobra"
 )
 
 var Command = &cobra.Command{
-	Use:   "wifi",
-	Short: "Control WiFi devices and networks",
+	Use:   "device",
+	Short: "Network device specific commands",
 	Long:  ``,
 }
 
 func init() {
-	Command.AddCommand(hotspot.Command)
+	Command.AddCommand(listCmd)
 }

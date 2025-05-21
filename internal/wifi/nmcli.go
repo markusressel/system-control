@@ -6,6 +6,18 @@ import (
 	"strings"
 )
 
+type NetworkDevice struct {
+	Name            string // DEVICE
+	Type            string // TYPE
+	State           string // STATE
+	IP4Connectivity string // IP4-CONNECTIVITY
+	IP6Connectivity string // IP6-CONNECTIVITY
+	DBUSPath        string // DBUS-PATH
+	Connection      string // CONNECTION
+	CONUUID         string // CON-UUID
+	CONPath         string // CON-PATH
+}
+
 // WiFiNetwork represents a WiFi network
 type WiFiNetwork struct {
 	Connected bool
@@ -50,6 +62,37 @@ func Disconnect() error {
 		connectedNetwork.SSID,
 	)
 	return err
+}
+
+func GetNetworkDevices() ([]NetworkDevice, error) {
+	output, err := util.ExecCommand(
+		"nmcli",
+		"-f",
+		"DEVICE,TYPE,STATE,IP4-CONNECTIVITY,IP6-CONNECTIVITY,DBUS-PATH,CONNECTION,CON-UUID,CON-PATH",
+		"device",
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	devices, err := util.ParseTable(
+		output,
+		util.DefaultColumnHeaderRegexPattern,
+		func(row []string) NetworkDevice {
+			return NetworkDevice{
+				Name:            strings.TrimSpace(row[0]),
+				Type:            strings.TrimSpace(row[1]),
+				State:           strings.TrimSpace(row[2]),
+				IP4Connectivity: strings.TrimSpace(row[3]),
+				IP6Connectivity: strings.TrimSpace(row[4]),
+				DBUSPath:        strings.TrimSpace(row[5]),
+				Connection:      strings.TrimSpace(row[6]),
+				CONUUID:         strings.TrimSpace(row[7]),
+				CONPath:         strings.TrimSpace(row[8]),
+			}
+		})
+
+	return devices, err
 }
 
 // GetNetworks returns a list of all known WiFi networks

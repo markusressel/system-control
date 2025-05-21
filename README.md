@@ -289,15 +289,36 @@ None
 **Requirements:**
 * `nmcli`
 
+```shell
+# Open Network Management UI
+> system-control network manage
+```
+
+### device
+
+```shell
+> system-control network device list
+enp8s0
+  Name:              enp8s0                                             
+  Type:              ethernet                                           
+  State:             connected (externally)                             
+  IPv4-Connectivity: full                                               
+  IPv6-Connectivity: limited                                            
+  DBus-Path:         /org/freedesktop/NetworkManager/Devices/3          
+  Connection:        enp8s0                                             
+  Con-UUID:          b8284ffa-bd6b-481f-af3b-a15adc08526d               
+  Con-Path:          /org/freedesktop/NetworkManager/ActiveConnection/2 
+```
+
 #### WiFi
 
 ```shell
-> system-control wifi on
-> system-control wifi off
+> system-control network wifi on
+> system-control network wifi off
 ```
 
 ```shell
-> system-control wifi list
+> system-control network wifi list
 FRITZ!Box 6591 Cable NM
   Connected: false                   
   SSID:      FRITZ!Box 6591 Cable NM 
@@ -313,10 +334,8 @@ FRITZ!Box 6591 Cable NM
 ```
 
 ```shell
-> system-control wifi connect "MyNetwork"
-> system-control wifi disconnect
-# Open WiFi settings
-> system-control wifi manage
+> system-control network wifi connect "MyNetwork"
+> system-control network wifi disconnect
 ```
 
 #### Hotspot

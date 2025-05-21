@@ -209,8 +209,8 @@ func parseBluetoothDeviceInfo(input string) (result BluetoothDevice, err error) 
 			result.Connected = strings.Contains(line, "yes")
 		} else if strings.Contains(line, "LegacyPairing: ") {
 			result.LegacyPairing = strings.Contains(line, "yes")
-		} else if strings.Contains(line, "UUID: ") {
-			indexOfTitle := strings.Index(line, "UUID: ")
+		} else if strings.Contains(line, "CONUUID: ") {
+			indexOfTitle := strings.Index(line, "CONUUID: ")
 			value := strings.TrimSpace(line[indexOfTitle+5:])
 			indexOfLastBracket := strings.LastIndex(value, "(")
 			key := strings.TrimSpace(value[:indexOfLastBracket])

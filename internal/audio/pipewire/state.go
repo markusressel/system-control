@@ -468,15 +468,28 @@ func (state *GraphState) GetVolume() (float64, error) {
 	return state.GetVolumeByName("")
 }
 
-// FindDeviceByName returns the first device that matches the given name.
-func (state *GraphState) FindDeviceByName(id string) (InterfaceDevice, error) {
+// FindDevicesByName returns the first device that matches the given name.
+func (state *GraphState) FindDevicesByName(searchTerm string) ([]InterfaceDevice, error) {
+	var matches []InterfaceDevice
 	for _, device := range state.Devices {
 		infoProps := device.Info.Props
 		deviceName := infoProps["device.name"].(string)
 		deviceDescription := infoProps["device.description"].(string)
-		if util.ContainsIgnoreCase(deviceName, id) || util.ContainsIgnoreCase(deviceDescription, id) {
-			return device, nil
+		if util.ContainsIgnoreCase(deviceName, searchTerm) || util.ContainsIgnoreCase(deviceDescription, searchTerm) {
+			matches = append(matches, device)
 		}
 	}
-	return InterfaceDevice{}, errors.New("device not found")
+	return matches, errors.New("device not found")
+}
+
+// FindDeviceByName returns the first device that matches the given name.
+func (state *GraphState) FindDeviceByName(name string) (InterfaceDevice, error) {
+	matches, err := state.FindDevicesByName(name)
+	if err != nil {
+		return InterfaceDevice{}, err
+	}
+	if len(matches) > 1 {
+		return InterfaceDevice{}, fmt.Errorf("multiple devices found for name '%s'", name)
+	}
+	return matches[0], nil
 }

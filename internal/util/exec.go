@@ -33,12 +33,18 @@ func ExecCommand(command string, args ...string) (string, error) {
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	err := cmd.Run()
-
+	//err := cmd.Run()
+	err := cmd.Start()
 	if err != nil {
 		fmt.Println(err.Error())
 		fmt.Println(stderr.String())
-		return "", errors.New("Command '" + fmt.Sprintf("%s", cmd) + "' failed with message: " + err.Error() + " " + stderr.String())
+		return "", errors.New("Command '" + fmt.Sprintf("%s", cmd) + "' failed with message: " + err.Error() + " " + stdout.String() + " " + stderr.String())
+	}
+	err = cmd.Wait()
+	if err != nil {
+		fmt.Println(err.Error())
+		fmt.Println(stderr.String())
+		return "", errors.New("Command '" + fmt.Sprintf("%s", cmd) + "' failed with message: " + err.Error() + " " + stdout.String() + " " + stderr.String())
 	}
 
 	result := stdout.String()

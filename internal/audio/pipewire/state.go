@@ -479,7 +479,7 @@ func (state *GraphState) FindDevicesByName(searchTerm string) ([]InterfaceDevice
 			matches = append(matches, device)
 		}
 	}
-	return matches, errors.New("device not found")
+	return matches, nil
 }
 
 // FindDeviceByName returns the first device that matches the given name.
@@ -490,6 +490,9 @@ func (state *GraphState) FindDeviceByName(name string) (InterfaceDevice, error) 
 	}
 	if len(matches) > 1 {
 		return InterfaceDevice{}, fmt.Errorf("multiple devices found for name '%s'", name)
+	}
+	if len(matches) <= 0 {
+		return InterfaceDevice{}, fmt.Errorf("no device found for name '%s'", name)
 	}
 	return matches[0], nil
 }

@@ -50,7 +50,9 @@ You can specify the audio sink using its index, but also using other strings tha
 		if len(audioSinkNodes) > 1 {
 			nodeNames := make([]string, len(nodes))
 			for i, node := range nodes {
-				nodeNames[i], _ = node.GetName()
+				name, _ := node.GetName()
+				description, _ := node.GetDescription()
+				nodeNames[i] = fmt.Sprintf("%s (%s)", name, description)
 			}
 
 			return errors.New(fmt.Sprintf("ambiguous sink name, found: %v", nodeNames))

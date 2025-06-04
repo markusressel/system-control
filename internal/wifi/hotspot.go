@@ -62,7 +62,7 @@ function block-hotspot-client -d "Block/Unblock specific hotspot client" -a acti
   echo "Client $name not found"
 end
 
-# Limit bandwith of connected hotspot clients
+# Limit bandwidth of connected hotspot clients
 # https://www.linux.com/tutorials/bandwidth-monitoring-iptables/
 function limit-hotspot-client -d "Block/Unblock specific hotspot client" -a name down up
   set -x leasefile "/var/lib/NetworkManager/dnsmasq-wlp8s0.leases"
@@ -97,7 +97,7 @@ function limit-hotspot-client -d "Block/Unblock specific hotspot client" -a name
           sudo iptables -N "HOTSPOT-CLIENT-$ip_u"
         end
 
-        # setup rules to limit bandwith
+        # setup rules to limit bandwidth
         # download
         if test $down -ge 0
           sudo iptables -I FORWARD -d $ip -j $table_name
@@ -127,7 +127,7 @@ func TurnOnHotspot(
 ) error {
 
 	// TODO: check if hotspot config already exists (by hotspot name)
-	//  if so, we dont need the full command, altough settings might change...
+	//  if so, we dont need the full command, although settings might change...
 
 	_, err := util.ExecCommand(
 		"nmcli",

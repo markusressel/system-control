@@ -401,7 +401,7 @@ not address the performance concerns I had, I decided to give golang a try. Go a
 a single binary file that includes everything necessary and provides the best possible performance
 (without using bash). The performance aspect is crucial for my usage, because some of these commands
 get executed on a regular basis through [Polybar](https://github.com/polybar/polybar) and other applications. Of course
-it also has its downsides, the main one beeing that it is the least flexible solution since it is a compiled
+it also has its downsides, the main one being that it is the least flexible solution since it is a compiled
 binary, but history has shown that this is mostly non-issue, because commands on linux tend to have a
 very stable API or CLI interface (even when its explicitly stated that its not).
 

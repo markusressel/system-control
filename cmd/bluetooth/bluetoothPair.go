@@ -87,6 +87,6 @@ var bluetoothPairCmd = &cobra.Command{
 
 func init() {
 	Command.AddCommand(bluetoothPairCmd)
-	bluetoothPairCmd.Flags().BoolVarP(&autoConnect, "auto-connect", "a", false, "Automatically connect after pairing")
+	bluetoothPairCmd.Flags().BoolVarP(&autoConnect, "connect", "c", false, "Automatically connect after pairing")
 	bluetoothPairCmd.Flags().BoolVarP(&removeExisting, "remove-existing", "r", false, "Remove existing device (if it exists) before pairing")
 }

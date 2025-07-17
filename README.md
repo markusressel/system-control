@@ -192,6 +192,7 @@ hidpp_battery_0
 ```shell
 > system-control bluetooth pair "LG-TONE-FP9"
 > system-control bluetooth pair "00:1D:43:6D:03:1A"
+> system-control bluetooth pair --remove-existing --connect "00:1D:43:6D:03:1A"
 ```
 
 ```shell

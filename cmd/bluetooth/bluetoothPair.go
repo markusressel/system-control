@@ -24,6 +24,7 @@ import (
 )
 
 var autoConnect bool
+var removeExisting bool
 
 var bluetoothPairCmd = &cobra.Command{
 	Use:   "pair",
@@ -32,6 +33,21 @@ var bluetoothPairCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		deviceName := args[0]
+
+		if removeExisting {
+			devices, err := bluetooth.GetBluetoothDevices()
+			if err != nil {
+				return err
+			}
+			for _, device := range devices {
+				if device.Name == deviceName || device.Address == deviceName {
+					err := bluetooth.RemoveBluetoothDevice(device)
+					if err != nil {
+						return fmt.Errorf("failed to remove existing device %s: %v", deviceName, err)
+					}
+				}
+			}
+		}
 
 		defer func() {
 			err := bluetooth.SetBluetoothScan(false)
@@ -72,4 +88,5 @@ var bluetoothPairCmd = &cobra.Command{
 func init() {
 	Command.AddCommand(bluetoothPairCmd)
 	bluetoothPairCmd.Flags().BoolVarP(&autoConnect, "auto-connect", "a", false, "Automatically connect after pairing")
+	bluetoothPairCmd.Flags().BoolVarP(&removeExisting, "remove-existing", "r", false, "Remove existing device (if it exists) before pairing")
 }

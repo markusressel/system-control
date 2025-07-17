@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/markusressel/system-control/internal/bluetooth"
 	"github.com/spf13/cobra"
+	"time"
 )
 
 var autoConnect bool
@@ -58,27 +59,33 @@ var bluetoothPairCmd = &cobra.Command{
 
 		err := bluetooth.SetBluetoothScan(true)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to start Bluetooth scan: %v", err)
 		}
 
-		devices, err := bluetooth.GetBluetoothDevices()
-		if err != nil {
-			return err
-		}
-		for _, device := range devices {
-			if device.Name == deviceName || device.Address == deviceName {
-				err := bluetooth.PairBluetoothDevice(device)
-
-				if err != nil && autoConnect {
-					fmt.Printf("Failed to pair device %s: %v\n", deviceName, err)
-				} else if autoConnect {
-					err = bluetooth.ConnectToBluetoothDevice(device)
-					if err != nil {
-						fmt.Printf("Failed to connect to device %s after pairing: %v\n", deviceName, err)
-					}
-				}
+		startTime := time.Now()
+		// search for device in loop with timeout
+		for time.Now().Sub(startTime) < 30*time.Second {
+			devices, err := bluetooth.GetBluetoothDevices()
+			if err != nil {
 				return err
 			}
+			for _, device := range devices {
+				if device.Name == deviceName || device.Address == deviceName {
+					err := bluetooth.PairBluetoothDevice(device)
+
+					if err != nil && autoConnect {
+						fmt.Printf("Failed to pair device %s: %v\n", deviceName, err)
+					} else if autoConnect {
+						err = bluetooth.ConnectToBluetoothDevice(device)
+						if err != nil {
+							fmt.Printf("Failed to connect to device %s after pairing: %v\n", deviceName, err)
+						}
+					}
+					return err
+				}
+			}
+
+			time.Sleep(1 * time.Second)
 		}
 
 		return fmt.Errorf("device not found: %v", deviceName)

@@ -23,6 +23,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var autoConnect bool
+
 var bluetoothPairCmd = &cobra.Command{
 	Use:   "pair",
 	Short: "Pair a Bluetooth Device",
@@ -50,6 +52,15 @@ var bluetoothPairCmd = &cobra.Command{
 		for _, device := range devices {
 			if device.Name == deviceName || device.Address == deviceName {
 				err := bluetooth.PairBluetoothDevice(device)
+
+				if err != nil && autoConnect {
+					fmt.Printf("Failed to pair device %s: %v\n", deviceName, err)
+				} else if autoConnect {
+					err = bluetooth.ConnectToBluetoothDevice(device)
+					if err != nil {
+						fmt.Printf("Failed to connect to device %s after pairing: %v\n", deviceName, err)
+					}
+				}
 				return err
 			}
 		}
@@ -60,4 +71,5 @@ var bluetoothPairCmd = &cobra.Command{
 
 func init() {
 	Command.AddCommand(bluetoothPairCmd)
+	bluetoothPairCmd.Flags().BoolVarP(&autoConnect, "auto-connect", "a", false, "Automatically connect after pairing")
 }

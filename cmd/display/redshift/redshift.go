@@ -15,16 +15,18 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package display
+package redshift
 
 import (
 	"errors"
 	"fmt"
+	"slices"
+	"strconv"
+
+	display2 "github.com/markusressel/system-control/cmd/display"
 	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
-	"slices"
-	"strconv"
 )
 
 const (
@@ -306,5 +308,5 @@ func init() {
 		"Gamma",
 	)
 
-	Command.AddCommand(redshiftCmd)
+	display2.Command.AddCommand(redshiftCmd)
 }

@@ -15,18 +15,19 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package display
+package redshift
 
 import (
 	"errors"
-	"github.com/markusressel/system-control/internal/configuration"
-	"github.com/nathan-osman/go-sunrise"
-	"github.com/pelletier/go-toml/v2"
-	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/markusressel/system-control/internal/configuration"
+	"github.com/nathan-osman/go-sunrise"
+	"github.com/pelletier/go-toml/v2"
+	"github.com/spf13/cobra"
 )
 
 var redshiftUpdateCmd = &cobra.Command{

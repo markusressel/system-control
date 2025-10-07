@@ -1,8 +1,9 @@
 package persistence
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type dummy struct {

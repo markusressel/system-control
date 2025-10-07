@@ -20,11 +20,12 @@ package device
 import (
 	"cmp"
 	"fmt"
-	orderedmap "github.com/elliotchance/orderedmap/v2"
+	"slices"
+
+	"github.com/elliotchance/orderedmap/v2"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/markusressel/system-control/internal/wifi"
 	"github.com/spf13/cobra"
-	"slices"
 )
 
 var listCmd = &cobra.Command{

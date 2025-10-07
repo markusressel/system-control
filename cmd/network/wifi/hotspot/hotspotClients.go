@@ -19,6 +19,7 @@ package wifi
 
 import (
 	"fmt"
+
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/markusressel/system-control/internal/wifi"

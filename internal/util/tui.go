@@ -19,12 +19,13 @@ package util
 
 import (
 	"fmt"
-	"github.com/elliotchance/orderedmap/v2"
 	"math"
 	"os"
 	"regexp"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/elliotchance/orderedmap/v2"
 )
 
 const (

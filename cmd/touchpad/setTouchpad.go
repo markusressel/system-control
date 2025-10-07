@@ -18,9 +18,10 @@
 package touchpad
 
 import (
+	"strconv"
+
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
 var setTouchpadCmd = &cobra.Command{

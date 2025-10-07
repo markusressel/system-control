@@ -19,13 +19,14 @@ package bluetooth
 
 import (
 	"fmt"
+	"sort"
+	"strconv"
+
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/markusressel/system-control/internal/bluetooth"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
-	"sort"
-	"strconv"
 )
 
 var Name string

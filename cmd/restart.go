@@ -18,10 +18,11 @@
 package cmd
 
 import (
-	"github.com/markusressel/system-control/internal/util"
-	"github.com/spf13/cobra"
 	"strings"
 	"time"
+
+	"github.com/markusressel/system-control/internal/util"
+	"github.com/spf13/cobra"
 )
 
 var restartCmd = &cobra.Command{

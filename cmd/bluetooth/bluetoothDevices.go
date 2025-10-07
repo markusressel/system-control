@@ -18,10 +18,11 @@
 package bluetooth
 
 import (
+	"strconv"
+
 	"github.com/markusressel/system-control/internal/bluetooth"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
 var filterConnected bool

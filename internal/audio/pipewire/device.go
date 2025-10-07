@@ -3,9 +3,10 @@ package pipewire
 import (
 	"errors"
 	"fmt"
-	"github.com/markusressel/system-control/internal/util"
 	"math"
 	"strconv"
+
+	"github.com/markusressel/system-control/internal/util"
 )
 
 type InterfaceDevice struct {

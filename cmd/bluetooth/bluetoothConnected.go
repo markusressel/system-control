@@ -19,6 +19,7 @@ package bluetooth
 
 import (
 	"fmt"
+
 	"github.com/markusressel/system-control/internal/bluetooth"
 	"github.com/spf13/cobra"
 )

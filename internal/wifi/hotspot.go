@@ -2,9 +2,10 @@ package wifi
 
 import (
 	"fmt"
-	"github.com/markusressel/system-control/internal/util"
 	"regexp"
 	"strings"
+
+	"github.com/markusressel/system-control/internal/util"
 )
 
 /**

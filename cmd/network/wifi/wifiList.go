@@ -20,12 +20,13 @@ package wifi
 import (
 	"cmp"
 	"fmt"
-	orderedmap "github.com/elliotchance/orderedmap/v2"
+	"slices"
+	"strconv"
+
+	"github.com/elliotchance/orderedmap/v2"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/markusressel/system-control/internal/wifi"
 	"github.com/spf13/cobra"
-	"slices"
-	"strconv"
 )
 
 var (

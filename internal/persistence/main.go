@@ -2,11 +2,12 @@ package persistence
 
 import (
 	"encoding/json"
-	"github.com/markusressel/system-control/internal/configuration"
-	"github.com/markusressel/system-control/internal/util"
 	"log"
 	"os"
 	"path"
+
+	"github.com/markusressel/system-control/internal/configuration"
+	"github.com/markusressel/system-control/internal/util"
 )
 
 var (

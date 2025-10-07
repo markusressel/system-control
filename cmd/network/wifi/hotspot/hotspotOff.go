@@ -18,9 +18,10 @@
 package wifi
 
 import (
+	"os"
+
 	"github.com/markusressel/system-control/internal/wifi"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 var force bool

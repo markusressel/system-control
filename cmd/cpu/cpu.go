@@ -19,11 +19,12 @@ package cpu
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
-	"strconv"
-	"strings"
 )
 
 var Command = &cobra.Command{

@@ -19,6 +19,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/markusressel/system-control/cmd/audio"
 	"github.com/markusressel/system-control/cmd/battery"
 	"github.com/markusressel/system-control/cmd/bluetooth"
@@ -33,7 +35,6 @@ import (
 	"github.com/markusressel/system-control/cmd/video"
 	"github.com/markusressel/system-control/internal/configuration"
 	"github.com/spf13/cobra"
-	"os"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"

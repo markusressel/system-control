@@ -3,11 +3,12 @@ package bluetooth
 import (
 	"context"
 	"errors"
-	"github.com/google/uuid"
-	"github.com/markusressel/system-control/internal/util"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/markusressel/system-control/internal/util"
 )
 
 // TurnOnBluetoothAdapter turns on the bluetooth adapter

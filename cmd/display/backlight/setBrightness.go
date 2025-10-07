@@ -18,9 +18,10 @@
 package backlight
 
 import (
+	"strconv"
+
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
 var setBrightnessCmd = &cobra.Command{

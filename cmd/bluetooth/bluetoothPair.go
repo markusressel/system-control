@@ -19,9 +19,10 @@ package bluetooth
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/markusressel/system-control/internal/bluetooth"
 	"github.com/spf13/cobra"
-	"time"
 )
 
 var autoConnect bool

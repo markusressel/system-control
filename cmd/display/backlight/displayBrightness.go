@@ -19,6 +19,7 @@ package backlight
 
 import (
 	"fmt"
+
 	"github.com/markusressel/system-control/internal/util"
 
 	"github.com/spf13/cobra"

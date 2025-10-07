@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/markusressel/system-control/internal/util"
 	"log"
 	"strings"
+
+	"github.com/markusressel/system-control/internal/util"
 )
 
 const (

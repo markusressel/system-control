@@ -19,9 +19,10 @@ package battery
 
 import (
 	"fmt"
+	"math"
+
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
-	"math"
 )
 
 var batteryRemainingCmd = &cobra.Command{

@@ -1,9 +1,10 @@
 package wifi
 
 import (
-	"github.com/markusressel/system-control/internal/util"
 	"strconv"
 	"strings"
+
+	"github.com/markusressel/system-control/internal/util"
 )
 
 type NetworkDevice struct {

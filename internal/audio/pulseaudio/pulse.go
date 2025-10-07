@@ -2,11 +2,12 @@ package pulseaudio
 
 import (
 	"fmt"
-	"github.com/markusressel/system-control/internal/util"
 	"log"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/markusressel/system-control/internal/util"
 )
 
 func IsMuted(card int, channel string) bool {

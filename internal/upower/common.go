@@ -1,8 +1,9 @@
 package upower
 
 import (
-	"github.com/markusressel/system-control/internal/util"
 	"strings"
+
+	"github.com/markusressel/system-control/internal/util"
 )
 
 /**

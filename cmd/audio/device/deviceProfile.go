@@ -19,6 +19,7 @@ package device
 
 import (
 	"fmt"
+
 	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/spf13/cobra"
 )

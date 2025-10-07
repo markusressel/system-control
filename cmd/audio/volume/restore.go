@@ -18,11 +18,12 @@
 package volume
 
 import (
+	"strconv"
+
 	"github.com/markusressel/system-control/internal/audio"
 	"github.com/markusressel/system-control/internal/audio/pulseaudio"
 	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
 var restoreCmd = &cobra.Command{

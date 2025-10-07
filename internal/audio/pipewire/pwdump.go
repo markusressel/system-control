@@ -2,9 +2,10 @@ package pipewire
 
 import (
 	"encoding/json"
-	"github.com/markusressel/system-control/internal/util"
 	"log"
 	"strings"
+
+	"github.com/markusressel/system-control/internal/util"
 )
 
 func PwDump() GraphState {

@@ -20,11 +20,12 @@ package battery
 import (
 	"cmp"
 	"fmt"
+	"slices"
+	"strconv"
+
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
-	"slices"
-	"strconv"
 )
 
 var batteryListCmd = &cobra.Command{

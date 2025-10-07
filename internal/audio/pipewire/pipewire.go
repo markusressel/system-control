@@ -2,8 +2,9 @@ package pipewire
 
 import (
 	"fmt"
-	"github.com/markusressel/system-control/internal/util"
 	"strconv"
+
+	"github.com/markusressel/system-control/internal/util"
 )
 
 // RotateActiveSinkPipewire switches the default sink and moves all existing sink inputs to the next available sink in the list

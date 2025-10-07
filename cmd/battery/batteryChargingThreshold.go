@@ -19,10 +19,11 @@ package battery
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
 var batteryChargingThresholdCmd = &cobra.Command{

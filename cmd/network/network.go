@@ -19,7 +19,7 @@ package network
 
 import (
 	"github.com/markusressel/system-control/cmd/network/device"
-	wifi "github.com/markusressel/system-control/cmd/network/wifi"
+	"github.com/markusressel/system-control/cmd/network/wifi"
 	"github.com/spf13/cobra"
 )
 

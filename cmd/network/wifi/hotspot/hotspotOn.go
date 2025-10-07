@@ -19,6 +19,7 @@ package wifi
 
 import (
 	"fmt"
+
 	"github.com/markusressel/system-control/internal/wifi"
 	"github.com/spf13/cobra"
 )

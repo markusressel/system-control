@@ -1,12 +1,13 @@
 package configuration
 
 import (
-	"github.com/mitchellh/go-homedir"
-	"github.com/spf13/viper"
 	"os"
 	"os/user"
 	"path"
 	"time"
+
+	"github.com/mitchellh/go-homedir"
+	"github.com/spf13/viper"
 )
 
 type RedshiftConfig struct {

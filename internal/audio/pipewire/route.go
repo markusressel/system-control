@@ -2,9 +2,10 @@ package pipewire
 
 import (
 	"fmt"
-	"github.com/markusressel/system-control/internal/util"
 	"strconv"
 	"strings"
+
+	"github.com/markusressel/system-control/internal/util"
 )
 
 type DeviceRoute struct {

@@ -19,6 +19,7 @@ package volume
 
 import (
 	"fmt"
+
 	"github.com/markusressel/system-control/internal/audio"
 	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/markusressel/system-control/internal/util"

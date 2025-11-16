@@ -62,7 +62,8 @@ func setDefaultSink(sinkName string) (err error) {
 }
 
 func WpCtlSetVolume(id int, volume float64) error {
-	return runWpCtl("set-volume", strconv.Itoa(id), fmt.Sprint(volume))
+	formattedVolume := fmt.Sprintf("%.3f", volume)
+	return runWpCtl("set-volume", strconv.Itoa(id), formattedVolume)
 }
 
 func WpCtlSetMute(id int, mute bool) error {

@@ -25,6 +25,7 @@ import (
 	"github.com/markusressel/system-control/cmd/battery"
 	"github.com/markusressel/system-control/cmd/bluetooth"
 	"github.com/markusressel/system-control/cmd/cpu"
+	"github.com/markusressel/system-control/cmd/disk"
 	"github.com/markusressel/system-control/cmd/display"
 	"github.com/markusressel/system-control/cmd/global"
 	"github.com/markusressel/system-control/cmd/keyboard"
@@ -70,6 +71,7 @@ func init() {
 	RootCmd.AddCommand(battery.Command)
 	RootCmd.AddCommand(bluetooth.Command)
 	RootCmd.AddCommand(cpu.Command)
+	RootCmd.AddCommand(disk.Command)
 	RootCmd.AddCommand(display.Command)
 	RootCmd.AddCommand(keyboard.Command)
 	RootCmd.AddCommand(mouse.Command)

@@ -50,7 +50,11 @@ func fetchAndPrintSmartCtlData(disk util.DiskInfo, printAllAttributes bool) {
 	// check if any attribute is below threshold, if so, print them as well
 	for _, attr := range smartCtlData.AtaSmartAttributes.Table {
 		if printAllAttributes || attr.WhenFailed != "" || attr.Value <= attr.Thresh {
-			properties.Set(attr.Name, fmt.Sprintf("Value: %d, Worst: %d, Thresh: %d, WhenFailed: %s, Raw: %d", attr.Value, attr.Worst, attr.Thresh, attr.WhenFailed, attr.Raw.Value))
+			text := fmt.Sprintf("%d\t(Worst: %d,\tThresh: %d,\tRaw: %d)", attr.Value, attr.Worst, attr.Thresh, attr.Raw.Value)
+			if attr.WhenFailed != "" {
+				text += " [FAILED]"
+			}
+			properties.Set(attr.Name, text)
 		}
 	}
 

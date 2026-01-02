@@ -23,7 +23,7 @@ import (
 
 var Command = &cobra.Command{
 	Use:   "disk",
-	Short: "Control disks",
+	Short: "Display Disk info",
 	Long:  ``,
 }
 

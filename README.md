@@ -56,9 +56,13 @@ Available Commands:
   battery     Control System Battery
   bluetooth   Control Bluetooth Devices
   completion  Generate the autocompletion script for the specified shell
+  cpu         Control CPU settings
+  disk        Control disks
   display     Control Displays
   help        Help about any command
   keyboard    Control Keyboards
+  mouse       Control Mouse
+  network     Control Network devices and networks
   restart     Reboot the system gracefully
   shutdown    Shutdown the system gracefully
   touchpad    Control Touchpads

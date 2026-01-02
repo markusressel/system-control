@@ -53,7 +53,7 @@ var profileCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			fmt.Printf(profile.Description)
+			fmt.Println(profile.Description)
 			return nil
 		}
 	},

@@ -84,7 +84,7 @@ var batteryRemainingCmd = &cobra.Command{
 		}
 
 		if powerNow == 0 {
-			fmt.Printf("∞")
+			fmt.Println("∞")
 			return nil
 		}
 
@@ -103,7 +103,7 @@ var batteryRemainingCmd = &cobra.Command{
 		placeholders["minutes"] = fmt.Sprintf("%02d", remainingMinutes)
 
 		result := util.ReplacePlaceholders(template, placeholders)
-		fmt.Printf(result)
+		fmt.Println(result)
 
 		return nil
 	},

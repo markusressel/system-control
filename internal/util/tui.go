@@ -68,7 +68,9 @@ func PrintFormattedTable(title string, properties map[string]string) {
 
 // PrintFormattedTableOrdered prints a formatted table to the console
 func PrintFormattedTableOrdered(title string, properties *orderedmap.OrderedMap[string, string]) {
-	fmt.Println(title)
+	if len(title) > 0 {
+		title = fmt.Sprintf("%s", title)
+	}
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
 	for key, value := range properties.Iterator() {
 		_, _ = fmt.Fprintf(w, "  %s:\t%s\t\n", key, value)

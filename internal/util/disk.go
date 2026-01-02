@@ -1,21 +1,425 @@
 package util
 
 import (
+	"encoding/json"
 	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 const (
 	DiskByIdPath = "/dev/disk/by-id/"
 )
 
+// Example smartctl JSON output structure
+//
+//	{
+//	 "json_format_version" : [ 1, 0 ],
+//	 "smartctl" : {
+//	   "version" : [ 7, 5 ],
+//	   "pre_release" : false,
+//	   "svn_revision" : "5714",
+//	   "platform_info" : "x86_64-linux-6.17.8-arch1-1",
+//	   "build_info" : "(local build)",
+//	   "argv" : [ "smartctl", "-json", "-A", "/dev/sdb" ],
+//	   "drive_database_version" : {
+//	     "string" : "7.5/5706"
+//	   },
+//	   "exit_status" : 0
+//	 },
+//	 "local_time" : {
+//	   "time_t" : 1767314623,
+//	   "asctime" : "Fri Jan  2 01:43:43 2026 CET"
+//	 },
+//	 "device" : {
+//	   "name" : "/dev/sdb",
+//	   "info_name" : "/dev/sdb [SAT]",
+//	   "type" : "sat",
+//	   "protocol" : "ATA"
+//	 },
+//	 "ata_smart_attributes" : {
+//	   "revision" : 1,
+//	   "table" : [ {
+//	     "id" : 5,
+//	     "name" : "Reallocated_Sector_Ct",
+//	     "value" : 100,
+//	     "worst" : 100,
+//	     "thresh" : 10,
+//	     "when_failed" : "",
+//	     "flags" : {
+//	       "value" : 51,
+//	       "string" : "PO--CK ",
+//	       "prefailure" : true,
+//	       "updated_online" : true,
+//	       "performance" : false,
+//	       "error_rate" : false,
+//	       "event_count" : true,
+//	       "auto_keep" : true
+//	     },
+//	     "raw" : {
+//	       "value" : 0,
+//	       "string" : "0"
+//	     }
+//	   }, {
+//	     "id" : 9,
+//	     "name" : "Power_On_Hours",
+//	     "value" : 92,
+//	     "worst" : 92,
+//	     "thresh" : 0,
+//	     "when_failed" : "",
+//	     "flags" : {
+//	       "value" : 50,
+//	       "string" : "-O--CK ",
+//	       "prefailure" : false,
+//	       "updated_online" : true,
+//	       "performance" : false,
+//	       "error_rate" : false,
+//	       "event_count" : true,
+//	       "auto_keep" : true
+//	     },
+//	     "raw" : {
+//	       "value" : 36682,
+//	       "string" : "36682"
+//	     }
+//	   }, {
+//	     "id" : 12,
+//	     "name" : "Power_Cycle_Count",
+//	     "value" : 99,
+//	     "worst" : 99,
+//	     "thresh" : 0,
+//	     "when_failed" : "",
+//	     "flags" : {
+//	       "value" : 50,
+//	       "string" : "-O--CK ",
+//	       "prefailure" : false,
+//	       "updated_online" : true,
+//	       "performance" : false,
+//	       "error_rate" : false,
+//	       "event_count" : true,
+//	       "auto_keep" : true
+//	     },
+//	     "raw" : {
+//	       "value" : 354,
+//	       "string" : "354"
+//	     }
+//	   }, {
+//	     "id" : 177,
+//	     "name" : "Wear_Leveling_Count",
+//	     "value" : 30,
+//	     "worst" : 30,
+//	     "thresh" : 0,
+//	     "when_failed" : "",
+//	     "flags" : {
+//	       "value" : 19,
+//	       "string" : "PO--C- ",
+//	       "prefailure" : true,
+//	       "updated_online" : true,
+//	       "performance" : false,
+//	       "error_rate" : false,
+//	       "event_count" : true,
+//	       "auto_keep" : false
+//	     },
+//	     "raw" : {
+//	       "value" : 1259,
+//	       "string" : "1259"
+//	     }
+//	   }, {
+//	     "id" : 179,
+//	     "name" : "Used_Rsvd_Blk_Cnt_Tot",
+//	     "value" : 100,
+//	     "worst" : 100,
+//	     "thresh" : 10,
+//	     "when_failed" : "",
+//	     "flags" : {
+//	       "value" : 19,
+//	       "string" : "PO--C- ",
+//	       "prefailure" : true,
+//	       "updated_online" : true,
+//	       "performance" : false,
+//	       "error_rate" : false,
+//	       "event_count" : true,
+//	       "auto_keep" : false
+//	     },
+//	     "raw" : {
+//	       "value" : 0,
+//	       "string" : "0"
+//	     }
+//	   }, {
+//	     "id" : 181,
+//	     "name" : "Program_Fail_Cnt_Total",
+//	     "value" : 100,
+//	     "worst" : 100,
+//	     "thresh" : 10,
+//	     "when_failed" : "",
+//	     "flags" : {
+//	       "value" : 50,
+//	       "string" : "-O--CK ",
+//	       "prefailure" : false,
+//	       "updated_online" : true,
+//	       "performance" : false,
+//	       "error_rate" : false,
+//	       "event_count" : true,
+//	       "auto_keep" : true
+//	     },
+//	     "raw" : {
+//	       "value" : 0,
+//	       "string" : "0"
+//	     }
+//	   }, {
+//	     "id" : 182,
+//	     "name" : "Erase_Fail_Count_Total",
+//	     "value" : 100,
+//	     "worst" : 100,
+//	     "thresh" : 10,
+//	     "when_failed" : "",
+//	     "flags" : {
+//	       "value" : 50,
+//	       "string" : "-O--CK ",
+//	       "prefailure" : false,
+//	       "updated_online" : true,
+//	       "performance" : false,
+//	       "error_rate" : false,
+//	       "event_count" : true,
+//	       "auto_keep" : true
+//	     },
+//	     "raw" : {
+//	       "value" : 0,
+//	       "string" : "0"
+//	     }
+//	   }, {
+//	     "id" : 183,
+//	     "name" : "Runtime_Bad_Block",
+//	     "value" : 100,
+//	     "worst" : 100,
+//	     "thresh" : 10,
+//	     "when_failed" : "",
+//	     "flags" : {
+//	       "value" : 19,
+//	       "string" : "PO--C- ",
+//	       "prefailure" : true,
+//	       "updated_online" : true,
+//	       "performance" : false,
+//	       "error_rate" : false,
+//	       "event_count" : true,
+//	       "auto_keep" : false
+//	     },
+//	     "raw" : {
+//	       "value" : 0,
+//	       "string" : "0"
+//	     }
+//	   }, {
+//	     "id" : 187,
+//	     "name" : "Uncorrectable_Error_Cnt",
+//	     "value" : 100,
+//	     "worst" : 100,
+//	     "thresh" : 0,
+//	     "when_failed" : "",
+//	     "flags" : {
+//	       "value" : 50,
+//	       "string" : "-O--CK ",
+//	       "prefailure" : false,
+//	       "updated_online" : true,
+//	       "performance" : false,
+//	       "error_rate" : false,
+//	       "event_count" : true,
+//	       "auto_keep" : true
+//	     },
+//	     "raw" : {
+//	       "value" : 0,
+//	       "string" : "0"
+//	     }
+//	   }, {
+//	     "id" : 190,
+//	     "name" : "Airflow_Temperature_Cel",
+//	     "value" : 74,
+//	     "worst" : 47,
+//	     "thresh" : 0,
+//	     "when_failed" : "",
+//	     "flags" : {
+//	       "value" : 50,
+//	       "string" : "-O--CK ",
+//	       "prefailure" : false,
+//	       "updated_online" : true,
+//	       "performance" : false,
+//	       "error_rate" : false,
+//	       "event_count" : true,
+//	       "auto_keep" : true
+//	     },
+//	     "raw" : {
+//	       "value" : 26,
+//	       "string" : "26"
+//	     }
+//	   }, {
+//	     "id" : 195,
+//	     "name" : "ECC_Error_Rate",
+//	     "value" : 200,
+//	     "worst" : 200,
+//	     "thresh" : 0,
+//	     "when_failed" : "",
+//	     "flags" : {
+//	       "value" : 26,
+//	       "string" : "-O-RC- ",
+//	       "prefailure" : false,
+//	       "updated_online" : true,
+//	       "performance" : false,
+//	       "error_rate" : true,
+//	       "event_count" : true,
+//	       "auto_keep" : false
+//	     },
+//	     "raw" : {
+//	       "value" : 0,
+//	       "string" : "0"
+//	     }
+//	   }, {
+//	     "id" : 199,
+//	     "name" : "CRC_Error_Count",
+//	     "value" : 99,
+//	     "worst" : 99,
+//	     "thresh" : 0,
+//	     "when_failed" : "",
+//	     "flags" : {
+//	       "value" : 62,
+//	       "string" : "-OSRCK ",
+//	       "prefailure" : false,
+//	       "updated_online" : true,
+//	       "performance" : true,
+//	       "error_rate" : true,
+//	       "event_count" : true,
+//	       "auto_keep" : true
+//	     },
+//	     "raw" : {
+//	       "value" : 19,
+//	       "string" : "19"
+//	     }
+//	   }, {
+//	     "id" : 235,
+//	     "name" : "POR_Recovery_Count",
+//	     "value" : 99,
+//	     "worst" : 99,
+//	     "thresh" : 0,
+//	     "when_failed" : "",
+//	     "flags" : {
+//	       "value" : 18,
+//	       "string" : "-O--C- ",
+//	       "prefailure" : false,
+//	       "updated_online" : true,
+//	       "performance" : false,
+//	       "error_rate" : false,
+//	       "event_count" : true,
+//	       "auto_keep" : false
+//	     },
+//	     "raw" : {
+//	       "value" : 69,
+//	       "string" : "69"
+//	     }
+//	   }, {
+//	     "id" : 241,
+//	     "name" : "Total_LBAs_Written",
+//	     "value" : 99,
+//	     "worst" : 99,
+//	     "thresh" : 0,
+//	     "when_failed" : "",
+//	     "flags" : {
+//	       "value" : 50,
+//	       "string" : "-O--CK ",
+//	       "prefailure" : false,
+//	       "updated_online" : true,
+//	       "performance" : false,
+//	       "error_rate" : false,
+//	       "event_count" : true,
+//	       "auto_keep" : true
+//	     },
+//	     "raw" : {
+//	       "value" : 493358643370,
+//	       "string" : "493358643370"
+//	     }
+//	   } ]
+//	 },
+//	 "spare_available" : {
+//	   "current_percent" : 100,
+//	   "threshold_percent" : 10
+//	 },
+//	 "power_on_time" : {
+//	   "hours" : 36682
+//	 },
+//	 "power_cycle_count" : 354,
+//	 "endurance_used" : {
+//	   "current_percent" : 70
+//	 },
+//	 "temperature" : {
+//	   "current" : 26
+//	 }
+//	}
 type SmartCtlData struct {
+	JSONFormatVersion []int `json:"json_format_version"`
+	Smartctl          struct {
+		Version              []int    `json:"version"`
+		PreRelease           bool     `json:"pre_release"`
+		SvnRevision          string   `json:"svn_revision"`
+		PlatformInfo         string   `json:"platform_info"`
+		BuildInfo            string   `json:"build_info"`
+		Argv                 []string `json:"argv"`
+		DriveDatabaseVersion struct {
+			String string `json:"string"`
+		} `json:"drive_database_version"`
+		ExitStatus int `json:"exit_status"`
+	} `json:"smartctl"`
+	LocalTime struct {
+		TimeT   int    `json:"time_t"`
+		Asctime string `json:"asctime"`
+	} `json:"local_time"`
+	Device struct {
+		Name     string `json:"name"`
+		InfoName string `json:"info_name"`
+		Type     string `json:"type"`
+		Protocol string `json:"protocol"`
+	} `json:"device"`
+	AtaSmartAttributes struct {
+		Revision int `json:"revision"`
+		Table    []struct {
+			ID         int    `json:"id"`
+			Name       string `json:"name"`
+			Value      int    `json:"value"`
+			Worst      int    `json:"worst"`
+			Thresh     int    `json:"thresh"`
+			WhenFailed string `json:"when_failed"`
+			Flags      struct {
+				Value         int    `json:"value"`
+				String        string `json:"string"`
+				Prefailure    bool   `json:"prefailure"`
+				UpdatedOnline bool   `json:"updated_online"`
+				Performance   bool   `json:"performance"`
+				ErrorRate     bool   `json:"error_rate"`
+				EventCount    bool   `json:"event_count"`
+				AutoKeep      bool   `json:"auto_keep"`
+			} `json:"flags"`
+			Raw struct {
+				Value  int    `json:"value"`
+				String string `json:"string"`
+			} `json:"raw"`
+		} `json:"table"`
+	} `json:"ata_smart_attributes"`
+	SpareAvailable struct {
+		CurrentPercent   int `json:"current_percent"`
+		ThresholdPercent int `json:"threshold_percent"`
+	} `json:"spare_available"`
+	PowerOnTime struct {
+		Hours int `json:"hours"`
+	} `json:"power_on_time"`
+	PowerCycleCount int `json:"power_cycle_count"`
+	EnduranceUsed   struct {
+		CurrentPercent int `json:"current_percent"`
+	} `json:"endurance_used"`
+	Temperature struct {
+		Current int `json:"current"`
+	} `json:"temperature"`
 }
 
 type DiskInfo struct {
-	Name         string
-	Path         string
-	SmartCtlData SmartCtlData
+	Name   string
+	Path   string
+	device string
 }
 
 func GetDisks() ([]DiskInfo, error) {
@@ -33,16 +437,18 @@ func GetDisks() ([]DiskInfo, error) {
 			continue
 		}
 
+		if !regex.MatchString(f.Name()) {
+			continue
+		}
+
 		// resolve symlink
 		entryPath := DiskByIdPath + f.Name()
 		linkTarget, err := os.Readlink(entryPath)
 		if err != nil {
 			continue
 		}
-
-		if !regex.MatchString(f.Name()) {
-			continue
-		}
+		// resolve relative paths (../../sdb -> /dev/sdb)
+		linkTarget = filepath.Join(DiskByIdPath, linkTarget)
 
 		// if link target is already in the result list, skip it
 		skip := false
@@ -64,4 +470,37 @@ func GetDisks() ([]DiskInfo, error) {
 	}
 
 	return result, nil
+}
+
+func (d DiskInfo) GetSmartCtlData() (SmartCtlData, error) {
+	// example command:
+
+	// smartctl -json -A /dev/sdg -v 1,raw48:54 -v 7,raw48:54 -v 241,raw48:54 -v 242,raw48:54
+
+	var args = []string{
+		"smartctl",
+		"-json",
+		"-A",
+		d.Path,
+	}
+
+	var vendorSpecificAttrs = []string{}
+	if strings.Contains(d.Name, "Seagate") || strings.Contains(d.Name, "ST") {
+		vendorSpecificAttrs = []string{
+			"-v 1,raw48:54,",
+			"-v 7,raw48:54",
+			"-v 241,raw48:54",
+			"-v 242,raw48:54",
+		}
+	}
+	args = append(args, vendorSpecificAttrs...)
+
+	output, err := ExecCommand("sudo", args...)
+	if err != nil {
+		return SmartCtlData{}, err
+	}
+
+	var result SmartCtlData
+	err = json.Unmarshal([]byte(output), &result)
+	return result, err
 }

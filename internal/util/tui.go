@@ -57,15 +57,6 @@ func RoundToTwoDecimals(number float64) float64 {
 	return math.Round(number*100) / 100
 }
 
-// PrintFormattedTable prints a formatted table to the console
-func PrintFormattedTable(title string, properties map[string]string) {
-	orderedProperties := orderedmap.NewOrderedMap[string, string]()
-	for key, value := range properties {
-		orderedProperties.Set(key, value)
-	}
-	PrintFormattedTableOrdered(title, orderedProperties)
-}
-
 // PrintFormattedTableOrdered prints a formatted table to the console
 func PrintFormattedTableOrdered(title string, properties *orderedmap.OrderedMap[string, string]) {
 	if len(title) > 0 {
@@ -77,8 +68,6 @@ func PrintFormattedTableOrdered(title string, properties *orderedmap.OrderedMap[
 	}
 	_ = w.Flush()
 }
-
-const DefaultColumnDelimiter = " "
 
 func ParseDelimitedTable[T any](
 	input string,

@@ -8,12 +8,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var allInfo bool
+
 var diskListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "Show current disks",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var printAllAttributes = true
+		var printAllAttributes = allInfo
 
 		disks, err := util.GetDisks()
 		if err != nil {
@@ -77,5 +79,12 @@ func fetchAndPrintSmartCtlData(disk util.DiskInfo, printAllAttributes bool) {
 }
 
 func init() {
+	diskListCmd.PersistentFlags().BoolVarP(
+		&allInfo,
+		"all", "a",
+		false,
+		"all",
+	)
+
 	Command.AddCommand(diskListCmd)
 }

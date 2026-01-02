@@ -23,7 +23,6 @@ import (
 	"slices"
 	"strconv"
 
-	display2 "github.com/markusressel/system-control/cmd/display"
 	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
@@ -43,7 +42,7 @@ var (
 	gamma            float64
 )
 
-var redshiftCmd = &cobra.Command{
+var Command = &cobra.Command{
 	Use:   "redshift",
 	Short: "Apply the given redshift",
 	Long:  ``,
@@ -280,33 +279,31 @@ func ResetRedshift(display util.DisplayInfo) (err error) {
 }
 
 func init() {
-	redshiftCmd.PersistentFlags().StringVarP(
+	Command.PersistentFlags().StringVarP(
 		&display,
 		"display", "d",
 		"",
 		"Display",
 	)
 
-	redshiftCmd.PersistentFlags().Int64VarP(
+	Command.PersistentFlags().Int64VarP(
 		&colorTemperature,
 		"temperature", "t",
 		-1,
 		"Color Temperature",
 	)
 
-	redshiftCmd.PersistentFlags().Float64VarP(
+	Command.PersistentFlags().Float64VarP(
 		&brightness,
 		"brightness", "b",
 		-1,
 		"Brightness",
 	)
 
-	redshiftCmd.PersistentFlags().Float64VarP(
+	Command.PersistentFlags().Float64VarP(
 		&gamma,
 		"gamma", "g",
 		-1,
 		"Gamma",
 	)
-
-	display2.Command.AddCommand(redshiftCmd)
 }

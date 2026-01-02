@@ -153,5 +153,5 @@ func CalculateTargetColorTemperature(
 }
 
 func init() {
-	redshiftCmd.AddCommand(redshiftUpdateCmd)
+	Command.AddCommand(redshiftUpdateCmd)
 }

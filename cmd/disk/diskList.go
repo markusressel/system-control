@@ -79,12 +79,10 @@ func fetchAndPrintSmartCtlData(disk util.DiskInfo, printAllAttributes bool) {
 }
 
 func init() {
-	diskListCmd.PersistentFlags().BoolVarP(
+	diskListCmd.Flags().BoolVarP(
 		&allInfo,
 		"all", "a",
 		false,
 		"all",
 	)
-
-	Command.AddCommand(diskListCmd)
 }

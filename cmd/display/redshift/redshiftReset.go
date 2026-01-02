@@ -43,5 +43,5 @@ var redshiftResetCmd = &cobra.Command{
 }
 
 func init() {
-	redshiftCmd.AddCommand(redshiftResetCmd)
+	Command.AddCommand(redshiftResetCmd)
 }

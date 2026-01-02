@@ -12,7 +12,7 @@ const (
 	DiskByIdPath = "/dev/disk/by-id/"
 )
 
-// Example smartctl JSON output structure
+// Example smartctl JSON output structure for HDD:
 //
 //	{
 //	 "json_format_version" : [ 1, 0 ],
@@ -351,6 +351,80 @@ const (
 //	   "current" : 26
 //	 }
 //	}
+//
+// Example smartctl JSON output structure for SSD:
+//
+//		{
+//	 "json_format_version": [
+//	   1,
+//	   0
+//	 ],
+//	 "smartctl": {
+//	   "version": [
+//	     7,
+//	     5
+//	   ],
+//	   "pre_release": false,
+//	   "svn_revision": "5714",
+//	   "platform_info": "x86_64-linux-6.17.8-arch1-1",
+//	   "build_info": "(local build)",
+//	   "argv": [
+//	     "smartctl",
+//	     "-json",
+//	     "-A",
+//	     "/dev/nvme0n1"
+//	   ],
+//	   "exit_status": 0
+//	 },
+//	 "local_time": {
+//	   "time_t": 1767315439,
+//	   "asctime": "Fri Jan  2 01:57:19 2026 CET"
+//	 },
+//	 "device": {
+//	   "name": "/dev/nvme0n1",
+//	   "info_name": "/dev/nvme0n1",
+//	   "type": "nvme",
+//	   "protocol": "NVMe"
+//	 },
+//	 "nvme_smart_health_information_log": {
+//	   "nsid": 1,
+//	   "critical_warning": 0,
+//	   "temperature": 55,
+//	   "available_spare": 100,
+//	   "available_spare_threshold": 10,
+//	   "percentage_used": 2,
+//	   "data_units_read": 21325779,
+//	   "data_units_written": 129205897,
+//	   "host_reads": 341935150,
+//	   "host_writes": 2571625700,
+//	   "controller_busy_time": 7846,
+//	   "power_cycles": 683,
+//	   "power_on_hours": 12968,
+//	   "unsafe_shutdowns": 97,
+//	   "media_errors": 0,
+//	   "num_err_log_entries": 1860,
+//	   "warning_temp_time": 0,
+//	   "critical_comp_time": 0,
+//	   "temperature_sensors": [
+//	     55,
+//	     61
+//	   ]
+//	 },
+//	 "temperature": {
+//	   "current": 55
+//	 },
+//	 "spare_available": {
+//	   "current_percent": 100,
+//	   "threshold_percent": 10
+//	 },
+//	 "endurance_used": {
+//	   "current_percent": 2
+//	 },
+//	 "power_cycle_count": 683,
+//	 "power_on_time": {
+//	   "hours": 12968
+//	 }
+//	}
 type SmartCtlData struct {
 	JSONFormatVersion []int `json:"json_format_version"`
 	Smartctl          struct {
@@ -400,6 +474,27 @@ type SmartCtlData struct {
 			} `json:"raw"`
 		} `json:"table"`
 	} `json:"ata_smart_attributes"`
+	NvmeSmartHealthInformationLog struct {
+		Nsid                    int   `json:"nsid"`
+		CriticalWarning         int   `json:"critical_warning"`
+		Temperature             int   `json:"temperature"`
+		AvailableSpare          int   `json:"available_spare"`
+		AvailableSpareThreshold int   `json:"available_spare_threshold"`
+		PercentageUsed          int   `json:"percentage_used"`
+		DataUnitsRead           int   `json:"data_units_read"`
+		DataUnitsWritten        int   `json:"data_units_written"`
+		HostReads               int   `json:"host_reads"`
+		HostWrites              int64 `json:"host_writes"`
+		ControllerBusyTime      int   `json:"controller_busy_time"`
+		PowerCycles             int   `json:"power_cycles"`
+		PowerOnHours            int   `json:"power_on_hours"`
+		UnsafeShutdowns         int   `json:"unsafe_shutdowns"`
+		MediaErrors             int   `json:"media_errors"`
+		NumErrLogEntries        int   `json:"num_err_log_entries"`
+		WarningTempTime         int   `json:"warning_temp_time"`
+		CriticalCompTime        int   `json:"critical_comp_time"`
+		TemperatureSensors      []int `json:"temperature_sensors"`
+	} `json:"nvme_smart_health_information_log"`
 	SpareAvailable struct {
 		CurrentPercent   int `json:"current_percent"`
 		ThresholdPercent int `json:"threshold_percent"`

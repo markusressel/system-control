@@ -525,7 +525,8 @@ func GetDisks() ([]DiskInfo, error) {
 		return result, err
 	}
 
-	regex := regexp.MustCompile(`^(ata|^nvme|^scsi|^wwn)-[^-]*$`)
+	regex := regexp.MustCompile(`^(ata|^nvme|^scsi|^wwn)-.*$`)
+	suffixNoPartRegex := regexp.MustCompile(`-part[0-9]+$`)
 
 	for _, f := range files {
 		if f.Type() != os.ModeSymlink {
@@ -533,6 +534,11 @@ func GetDisks() ([]DiskInfo, error) {
 		}
 
 		if !regex.MatchString(f.Name()) {
+			continue
+		}
+
+		if suffixNoPartRegex.MatchString(f.Name()) {
+			// ignore partition entries
 			continue
 		}
 

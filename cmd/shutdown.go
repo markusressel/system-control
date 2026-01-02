@@ -27,7 +27,7 @@ import (
 
 var shutdownCmd = &cobra.Command{
 	Use:   "shutdown",
-	Short: "Shutdown the system gracefully",
+	Short: "Shutdown the System gracefully",
 	Long:  `Shuts down the system in a graceful way, first closing all opened applications.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		openWindows, err := util.FindOpenWindows()

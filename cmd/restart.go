@@ -27,7 +27,7 @@ import (
 
 var restartCmd = &cobra.Command{
 	Use:   "restart",
-	Short: "Reboot the system gracefully",
+	Short: "Reboot the System gracefully",
 	Long:  `Reboots the system gracefully by first closing all currently open windows.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		openWindows, err := util.FindOpenWindows()

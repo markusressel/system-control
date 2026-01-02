@@ -25,7 +25,7 @@ import (
 
 var Command = &cobra.Command{
 	Use:   "network",
-	Short: "Control Network devices and networks",
+	Short: "Control Network Devices and Networks",
 	Long:  ``,
 }
 

@@ -22,11 +22,19 @@ var diskListCmd = &cobra.Command{
 
 		for _, disk := range disks {
 			fmt.Println(disk.Name)
+			printDiskPropertyTable(disk)
 			fetchAndPrintSmartCtlData(disk, printAllAttributes)
 		}
 
 		return nil
 	},
+}
+
+func printDiskPropertyTable(disk util.DiskInfo) {
+	properties := orderedmap.NewOrderedMap[string, string]()
+	properties.Set("Path", fmt.Sprintf("%s", disk.Path))
+
+	util.PrintFormattedTableOrdered("", properties)
 }
 
 // fetchAndPrintSmartCtlData prints the SMART data in a formatted way

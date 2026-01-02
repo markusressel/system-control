@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -569,6 +570,21 @@ func GetDisks() ([]DiskInfo, error) {
 		}
 		result = append(result, disk)
 	}
+
+	// sort by Name
+	sort.SliceStable(result, func(i, j int) bool {
+		a := result[i]
+		b := result[j]
+
+		result := 0
+		result = strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+
+		if result <= 0 {
+			return true
+		} else {
+			return false
+		}
+	})
 
 	return result, nil
 }

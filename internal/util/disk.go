@@ -580,7 +580,7 @@ func (d DiskInfo) GetSmartCtlData() (SmartCtlData, error) {
 	}
 
 	var vendorSpecificAttrs = []string{}
-	if strings.Contains(d.Name, "Seagate") || strings.Contains(d.Name, "ST") {
+	if strings.HasPrefix(d.Name, "ata-ST") {
 		vendorSpecificAttrs = []string{
 			"-v 1,raw48:54,",
 			"-v 7,raw48:54",

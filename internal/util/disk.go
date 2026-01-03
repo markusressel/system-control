@@ -512,10 +512,84 @@ type SmartCtlData struct {
 	} `json:"temperature"`
 }
 
+// sudo nvme smart-log /dev/nvme0n1 -o json -H
+//
+// Example NVMe smart log structure
+//
+//	{
+//	 "critical_warning":{
+//	   "value":0,
+//	   "available_spare":0,
+//	   "temp_threshold":0,
+//	   "reliability_degraded":0,
+//	   "ro":0,
+//	   "vmbu_failed":0,
+//	   "pmr_ro":0
+//	 },
+//	 "temperature":328,
+//	 "avail_spare":100,
+//	 "spare_thresh":10,
+//	 "percent_used":2,
+//	 "endurance_grp_critical_warning_summary":0,
+//	 "data_units_read":21331123,
+//	 "data_units_written":129415397,
+//	 "host_read_commands":342132364,
+//	 "host_write_commands":2576184016,
+//	 "controller_busy_time":7856,
+//	 "power_cycles":683,
+//	 "power_on_hours":12993,
+//	 "unsafe_shutdowns":97,
+//	 "media_errors":0,
+//	 "num_err_log_entries":1860,
+//	 "warning_temp_time":0,
+//	 "critical_comp_time":0,
+//	 "temperature_sensor_1":328,
+//	 "temperature_sensor_2":334,
+//	 "thm_temp1_trans_count":0,
+//	 "thm_temp2_trans_count":0,
+//	 "thm_temp1_total_time":0,
+//	 "thm_temp2_total_time":0
+//	}
+type NvmeData struct {
+	CriticalWarning struct {
+		Value               int `json:"value"`
+		AvailableSpare      int `json:"available_spare"`
+		TempThreshold       int `json:"temp_threshold"`
+		ReliabilityDegraded int `json:"reliability_degraded"`
+		Ro                  int `json:"ro"`
+		VmbuFailed          int `json:"vmbu_failed"`
+		PmrRo               int `json:"pmr_ro"`
+	} `json:"critical_warning"`
+	Temperature                        int `json:"temperature"`
+	AvailSpare                         int `json:"avail_spare"`
+	SpareThresh                        int `json:"spare_thresh"`
+	PercentUsed                        int `json:"percent_used"`
+	EnduranceGrpCriticalWarningSummary int `json:"endurance_grp_critical_warning_summary"`
+	DataUnitsRead                      int `json:"data_units_read"`
+	DataUnitsWritten                   int `json:"data_units_written"`
+	HostReadCommands                   int `json:"host_read_commands"`
+	HostWriteCommands                  int `json:"host_write_commands"`
+	ControllerBusyTime                 int `json:"controller_busy_time"`
+	PowerCycles                        int `json:"power_cycles"`
+	PowerOnHours                       int `json:"power_on_hours"`
+	UnsafeShutdowns                    int `json:"unsafe_shutdowns"`
+	MediaErrors                        int `json:"media_errors"`
+	NumErrLogEntries                   int `json:"num_err_log_entries"`
+	WarningTempTime                    int `json:"warning_temp_time"`
+	CriticalCompTime                   int `json:"critical_comp_time"`
+	TemperatureSensor1                 int `json:"temperature_sensor_1"`
+	TemperatureSensor2                 int `json:"temperature_sensor_2"`
+	ThmTemp1TransCount                 int `json:"thm_temp1_trans_count"`
+	ThmTemp2TransCount                 int `json:"thm_temp2_trans_count"`
+	ThmTemp1TotalTime                  int `json:"thm_temp1_total_time"`
+	ThmTemp2TotalTime                  int `json:"thm_temp2_total_time"`
+}
+
 type DiskInfo struct {
-	Name   string
-	Path   string
-	device string
+	/** f.ex. ata-ST4000DM004-2CV104_Z301XXXX */
+	Name string
+	/** f.ex. /dev/sdb */
+	Path string
 }
 
 func GetDisks() ([]DiskInfo, error) {
@@ -591,7 +665,6 @@ func GetDisks() ([]DiskInfo, error) {
 
 func (d DiskInfo) GetSmartCtlData() (SmartCtlData, error) {
 	// example command:
-
 	// smartctl -json -A /dev/sdg -v 1,raw48:54 -v 7,raw48:54 -v 241,raw48:54 -v 242,raw48:54
 
 	var args = []string{
@@ -618,6 +691,29 @@ func (d DiskInfo) GetSmartCtlData() (SmartCtlData, error) {
 	}
 
 	var result SmartCtlData
+	err = json.Unmarshal([]byte(output), &result)
+	return result, err
+}
+
+func (d DiskInfo) GetNvmeSmartLog() (NvmeData, error) {
+	// example command:
+	// sudo nvme smart-log /dev/nvme0n1 -o json -H
+
+	var args = []string{
+		"nvme",
+		"smart-log",
+		d.Path,
+		"-o",
+		"json",
+		"-H",
+	}
+
+	output, err := ExecCommand("sudo", args...)
+	if err != nil {
+		return NvmeData{}, err
+	}
+
+	var result NvmeData
 	err = json.Unmarshal([]byte(output), &result)
 	return result, err
 }

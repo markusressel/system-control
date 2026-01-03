@@ -61,6 +61,7 @@ func RoundToTwoDecimals(number float64) float64 {
 func PrintFormattedTableOrdered(title string, properties *orderedmap.OrderedMap[string, string]) {
 	if len(title) > 0 {
 		title = fmt.Sprintf("%s", title)
+		fmt.Println(title)
 	}
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
 	for key, value := range properties.Iterator() {

@@ -61,21 +61,20 @@ func fetchAndPrintSmartCtlData(disk util.DiskInfo, printAllAttributes bool) {
 	}
 
 	// also check nvme log info
-	if smartCtlData.NvmeSmartHealthInformationLog.AvailableSpare < smartCtlData.NvmeSmartHealthInformationLog.AvailableSpareThreshold {
+	if printAllAttributes || smartCtlData.NvmeSmartHealthInformationLog.AvailableSpare < smartCtlData.NvmeSmartHealthInformationLog.AvailableSpareThreshold {
 		properties.Set("Available Spare", fmt.Sprintf("Raw: %d, Threshold: %d", smartCtlData.NvmeSmartHealthInformationLog.AvailableSpare, smartCtlData.NvmeSmartHealthInformationLog.AvailableSpareThreshold))
 	}
-	if smartCtlData.NvmeSmartHealthInformationLog.PercentageUsed > 90 {
+	if printAllAttributes || smartCtlData.NvmeSmartHealthInformationLog.PercentageUsed > 90 {
 		properties.Set("Percentage Used", fmt.Sprintf("%d%%", smartCtlData.NvmeSmartHealthInformationLog.PercentageUsed))
 	}
-	if smartCtlData.NvmeSmartHealthInformationLog.Temperature != 0 {
+	if printAllAttributes || smartCtlData.NvmeSmartHealthInformationLog.Temperature != 0 {
 		properties.Set("Temperature", fmt.Sprintf("%d °C", smartCtlData.NvmeSmartHealthInformationLog.Temperature))
 	}
-	if smartCtlData.NvmeSmartHealthInformationLog.MediaErrors > 0 {
+	if printAllAttributes || smartCtlData.NvmeSmartHealthInformationLog.MediaErrors > 0 {
 		properties.Set("Media Errors", fmt.Sprintf("%d", smartCtlData.NvmeSmartHealthInformationLog.MediaErrors))
 	}
 
-	util.PrintFormattedTableOrdered(fmt.Sprintf("SmartCtl"), properties)
-
+	util.PrintFormattedTableOrdered("", properties)
 }
 
 func init() {

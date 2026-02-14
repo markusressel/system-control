@@ -404,6 +404,20 @@ func (state *GraphState) GetVolumeByName(name string) (float64, error) {
 		}
 		node = nodes[0]
 	}
+
+	// Check if the node is linked to a hardware device
+	if deviceIDRaw, ok := node.Info.Props["device.id"]; ok {
+		// device.id is usually a float64 from JSON
+		deviceID := int(deviceIDRaw.(float64))
+		device, err := state.GetDeviceById(deviceID)
+		if err == nil {
+			vols, err := device.GetVolume()
+			if err == nil && len(vols) > 0 {
+				return vols[0], nil
+			}
+		}
+	}
+
 	channelVolumes := node.GetVolume()
 	// use left channel for now
 	return channelVolumes[0], nil

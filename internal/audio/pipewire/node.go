@@ -58,6 +58,32 @@ func (n InterfaceNode) GetVolume() []float64 {
 	return result
 }
 
+func (d InterfaceDevice) GetVolume() ([]float64, error) {
+	routes := d.Info.Params.GetOutputRoutes()
+	if len(routes) == 0 {
+		return nil, errors.New("no output routes found")
+	}
+
+	// Usually, we want the route that is "active" or "save: true"
+	// For most devices, there is only one primary output route.
+	for _, route := range routes {
+		// Look into route.Props for "channelVolumes"
+		// Note: You might need to adjust this depending on how
+		// your DeviceRoute struct is defined.
+		if v, ok := route.Props["channelVolumes"].([]interface{}); ok {
+			result := make([]float64, len(v))
+			for i, val := range v {
+				// PipeWire stores linear volume; pavucontrol uses cubic.
+				// We use Cbrt to convert back to the [0..1] UI scale.
+				result[i] = math.Cbrt(val.(float64))
+			}
+			return result, nil
+		}
+	}
+
+	return nil, errors.New("volume props not found in routes")
+}
+
 func (n InterfaceNode) GetObjectSerial() (int, error) {
 	objectSerial, ok := n.Info.Props["object.serial"].(float64)
 	if !ok {

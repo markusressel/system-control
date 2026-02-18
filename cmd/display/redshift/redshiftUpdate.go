@@ -33,13 +33,7 @@ var redshiftUpdateCmd = &cobra.Command{
 	Short: "Update the currently applied redshift based on the current time of day.",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		configPath := configuration.DetectAndReadConfigFile()
-		//ui.Info("Using configuration file at: %s", configPath)
-		config := configuration.LoadConfig()
-		err = configuration.Validate(configPath)
-		if err != nil {
-			//ui.FatalWithoutStacktrace(err.Error())
-		}
+		config := configuration.CurrentConfig
 
 		redshiftConfig, err := util.ReadRedshiftConfig()
 		if err != nil {

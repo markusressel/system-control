@@ -1,0 +1,5 @@
+redshift:
+  brightness:
+    minimumBrightness: 0.1
+    maximumBrightness: 1.0
+  transitionDuration: 2s

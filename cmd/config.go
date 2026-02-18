@@ -27,9 +27,6 @@ var configCmd = &cobra.Command{
 	Short: "Print the configuration of the system-control tool",
 	Long:  `Print the configuration of the system-control tool.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_ = configuration.DetectAndReadConfigFile()
-		//ui.Info("Using configuration file at: %s", configPath)
-		_ = configuration.LoadConfig()
 		configuration.PrintConfig()
 		return nil
 	},

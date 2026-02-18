@@ -14,11 +14,17 @@ import (
 )
 
 type RedshiftConfig struct {
-	TransitionDuration time.Duration `json:"transitionDuration" yaml:"transitionDuration"`
+	TransitionDuration time.Duration            `mapstructure:"transitionDuration" yaml:"transitionDuration"`
+	Brightness         RedshiftBrightnessConfig `mapstructure:"brightness" yaml:"brightness"`
+}
+
+type RedshiftBrightnessConfig struct {
+	MinimumBrightness float64 `mapstructure:"minimumBrightness" yaml:"minimumBrightness"`
+	MaximumBrightness float64 `mapstructure:"maximumBrightness" yaml:"maximumBrightness"`
 }
 
 type Configuration struct {
-	Redshift RedshiftConfig `json:"redshift" yaml:"redshift"`
+	Redshift RedshiftConfig `mapstructure:"redshift" yaml:"redshift"`
 }
 
 var CurrentConfig Configuration
@@ -44,6 +50,8 @@ func InitConfig(cfgFile string) {
 
 		viper.AddConfigPath(".")
 		viper.AddConfigPath(home)
+		viper.AddConfigPath(home + "/.config/")
+		viper.AddConfigPath(home + "/.config/" + "system-control/")
 		viper.AddConfigPath("/etc/system-control/")
 	}
 
@@ -55,7 +63,9 @@ func ensureConfigDirExists() error {
 }
 
 func setDefaultValues() {
-	viper.SetDefault("Redshift.TransitionDuration", 60*time.Minute)
+	viper.SetDefault("redshift.transitionDuration", 60*time.Minute)
+	viper.SetDefault("redshift.brightness.minimumBrightness", 0.1)
+	viper.SetDefault("redshift.brightness.maximumBrightness", 1.0)
 }
 
 // DetectAndReadConfigFile detects the path of the first existing config file

@@ -11,6 +11,13 @@ var redshiftBrightnessIncCmd = &cobra.Command{
 	Use:   "inc",
 	Short: "Increase the currently applied redshift brightness.",
 	Long:  ``,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		err := stepInputValidator(cmd, args)
+		if err != nil {
+			return err
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 
 		displays, err := parseDisplayParam(display)

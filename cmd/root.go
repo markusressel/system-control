@@ -48,6 +48,12 @@ var RootCmd = &cobra.Command{
 	Use:   "system-control",
 	Short: "A utility to make common system actions a breeze.",
 	Long:  ``,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// 1. Locate and read the file into Viper's internal cache
+		configPath := configuration.DetectAndReadConfigFile()
+		configuration.LoadConfig()
+		return configuration.Validate(configPath)
+	},
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },

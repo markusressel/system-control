@@ -20,17 +20,15 @@ package redshift
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/markusressel/system-control/internal/configuration"
 	"github.com/markusressel/system-control/internal/util"
-	"github.com/nathan-osman/go-sunrise"
 	"github.com/spf13/cobra"
 )
 
-var redshiftUpdateCmd = &cobra.Command{
-	Use:   "update",
-	Short: "Update the currently applied redshift based on the current time of day.",
+var redshiftBrightnessIncCmd = &cobra.Command{
+	Use:   "inc",
+	Short: "Increase the currently applied redshift brightness.",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		configPath := configuration.DetectAndReadConfigFile()
@@ -82,33 +80,6 @@ var redshiftUpdateCmd = &cobra.Command{
 	},
 }
 
-const (
-	// TransitionElevationThreshold is the sun's elevation threshold at which the color temperature should be fully transitioned.
-	TransitionElevationThreshold = 20
-)
-
-func CalculateTargetColorTemperature(
-	_redshiftConfig configuration.RedshiftConfig,
-	redshiftConfig util.RedshiftConfig,
-) int64 {
-	elevation := sunrise.Elevation(
-		redshiftConfig.Manual.Lat,
-		redshiftConfig.Manual.Lon,
-		time.Now(),
-	)
-
-	targetColor := redshiftConfig.Redshift.DayColorTemperature
-	if elevation < 0 {
-		targetColor = redshiftConfig.Redshift.NightColorTemperature
-	} else if elevation > TransitionElevationThreshold {
-		targetColor = redshiftConfig.Redshift.DayColorTemperature
-	} else {
-		targetColor = redshiftConfig.Redshift.NightColorTemperature + int64((float64(redshiftConfig.Redshift.DayColorTemperature)-float64(redshiftConfig.Redshift.NightColorTemperature))*(elevation/TransitionElevationThreshold))
-	}
-
-	return targetColor
-}
-
 func init() {
-	Command.AddCommand(redshiftUpdateCmd)
+	Command.AddCommand(redshiftBrightnessIncCmd)
 }

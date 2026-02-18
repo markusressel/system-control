@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+    <configuration default="false" name="display redshift -t 3000 -b 0.8 -g 1.0" type="GoApplicationRunConfiguration"
+                   factoryName="Go Application">
+        <module name="system-control"/>
+        <working_directory value="$PROJECT_DIR$"/>
+        <parameters value="display redshift -t 3000 -b 0.8 -g 1.0"/>
+        <kind value="FILE"/>
+        <package value="github.com/markusressel/system-control"/>
+        <directory value="$PROJECT_DIR$"/>
+        <filePath value="$PROJECT_DIR$/main.go"/>
+        <method v="2"/>
+    </configuration>
+</component>

@@ -1,6 +1,8 @@
 package configuration
 
 import (
+	"fmt"
+	"log"
 	"os"
 	"os/user"
 	"path"
@@ -8,14 +10,15 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 )
 
 type RedshiftConfig struct {
-	TransitionDuration time.Duration `json:"transitionDuration"`
+	TransitionDuration time.Duration `json:"transitionDuration" yaml:"transitionDuration"`
 }
 
 type Configuration struct {
-	Redshift RedshiftConfig `json:"redshift"`
+	Redshift RedshiftConfig `json:"redshift" yaml:"redshift"`
 }
 
 var CurrentConfig Configuration
@@ -82,4 +85,14 @@ func LoadConfig() Configuration {
 		//ui.Fatal("unable to decode into struct, %v", err)
 	}
 	return CurrentConfig
+}
+
+// PrintConfig prints the configuration to the console in YAML format
+func PrintConfig() {
+	configYaml, err := yaml.Marshal(CurrentConfig)
+	if err != nil {
+		log.Fatalf("Unable to marshal config to YAML: %v", err)
+	}
+
+	fmt.Println(string(configYaml))
 }

@@ -12,18 +12,6 @@ var redshiftBrightnessDecCmd = &cobra.Command{
 	Short: "Decrease the currently applied redshift brightness.",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		//configPath := configuration.DetectAndReadConfigFile()
-		////ui.Info("Using configuration file at: %s", configPath)
-		//config := configuration.LoadConfig()
-		//err = configuration.Validate(configPath)
-		//if err != nil {
-		//	//ui.FatalWithoutStacktrace(err.Error())
-		//}
-		//
-		//redshiftConfig, err := util.ReadRedshiftConfig()
-		//if err != nil {
-		//	return err
-		//}
 
 		displays, err := parseDisplayParam(display)
 		if err != nil {

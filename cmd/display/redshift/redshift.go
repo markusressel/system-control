@@ -45,7 +45,8 @@ var (
 	gamma            float64
 
 	brightnessValue float64
-	stepFloat       = 0.1
+	stepFloat             = 0.1
+	stepInt         int64 = 500
 
 	redshiftLock *flock.Flock
 )
@@ -169,7 +170,15 @@ func getLastSetGamma(display util.DisplayInfo) float64 {
 	key := KeyRedshiftGamma + "." + display.Name
 	lastSetGamma, err := persistence.ReadFloat(key)
 	if err != nil {
-		lastSetGamma = -1
+		lastSetGamma = 1.0
+	}
+	if lastSetGamma < 0.1 {
+		lastSetGamma = 0.1
+		saveLastSetGamma(display, lastSetGamma)
+	}
+	if lastSetGamma > 2.0 {
+		lastSetGamma = 2.0
+		saveLastSetGamma(display, lastSetGamma)
 	}
 	return lastSetGamma
 }

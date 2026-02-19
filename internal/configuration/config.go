@@ -56,6 +56,8 @@ func InitConfig(cfgFile string) {
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
+
+	setDefaultValues()
 }
 
 func ensureConfigDirExists() error {

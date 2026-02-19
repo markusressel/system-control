@@ -3,7 +3,6 @@ package redshift
 import (
 	"fmt"
 
-	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -29,8 +28,7 @@ var redshiftBrightnessDecCmd = &cobra.Command{
 			lastSetBrightness := getLastSetBrightness(display)
 
 			rawNew := lastSetBrightness - stepFloat
-			rounded := util.RoundTo2DP(rawNew)
-			newBrightness := util.Clamp(rounded, 0.1, 1.0)
+			newBrightness := clampBrightnessToConfig(rawNew)
 			err = ApplyRedshift(display, -1, newBrightness, -1)
 			if err != nil {
 				return err

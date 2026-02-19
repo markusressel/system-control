@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+    <configuration default="false" name="L display redshift gamma dec" type="GoApplicationRunConfiguration"
+                   factoryName="Go Application">
+        <module name="system-control"/>
+        <working_directory value="$PROJECT_DIR$"/>
+        <parameters value="display redshift gamma dec -d &quot;DisplayPort-1&quot;"/>
+        <kind value="FILE"/>
+        <package value="github.com/markusressel/system-control"/>
+        <directory value="$PROJECT_DIR$"/>
+        <filePath value="$PROJECT_DIR$/main.go"/>
+        <method v="2"/>
+    </configuration>
+</component>

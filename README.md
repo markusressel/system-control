@@ -261,6 +261,15 @@ Display: DisplayPort-1
 ```shell
 > system-control display redshift reset
 > system-control display redshift update
+> system-control display redshift brightness
+0.7
+> system-control display redshift brightness -b 0.7 -d DisplayPort-2
+> system-control display redshift brightness inc
+> system-control display redshift brightness dec
+> system-control display redshift gamma
+1.0
+> system-control display redshift color-temperature
+4500
 ```
 
 ## Input

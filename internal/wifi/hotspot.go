@@ -166,7 +166,10 @@ type HotspotLease struct {
 	MAC  string
 }
 
-// GetConn
+// GetConnectedHotspotDevices returns a list of devices currently connected to the hotspot with the given SSID.
+// It does this by parsing the output of "iw dev <interface> station dump" and matching it with the leases in the
+// dnsmasq lease file for the given interface. Only devices that have a matching station info entry
+// (i.e. are currently connected) are returned.
 func GetConnectedHotspotDevices(wifiInterface string, ssid string) ([]HotspotLease, error) {
 	result := make([]HotspotLease, 0)
 

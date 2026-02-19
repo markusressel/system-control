@@ -13,9 +13,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type Configuration struct {
+	Redshift RedshiftConfig `mapstructure:"redshift" yaml:"redshift"`
+}
+
 type RedshiftConfig struct {
-	TransitionDuration time.Duration            `mapstructure:"transitionDuration" yaml:"transitionDuration"`
-	Brightness         RedshiftBrightnessConfig `mapstructure:"brightness" yaml:"brightness"`
+	TransitionDuration time.Duration                  `mapstructure:"transitionDuration" yaml:"transitionDuration"`
+	Brightness         RedshiftBrightnessConfig       `mapstructure:"brightness" yaml:"brightness"`
+	ColorTemperature   RedshiftColorTemperatureConfig `mapstructure:"colorTemperature" yaml:"colorTemperature"`
 }
 
 type RedshiftBrightnessConfig struct {
@@ -23,8 +28,9 @@ type RedshiftBrightnessConfig struct {
 	MaximumBrightness float64 `mapstructure:"maximumBrightness" yaml:"maximumBrightness"`
 }
 
-type Configuration struct {
-	Redshift RedshiftConfig `mapstructure:"redshift" yaml:"redshift"`
+type RedshiftColorTemperatureConfig struct {
+	MinimumColorTemperature int64 `mapstructure:"minimumColorTemperature" yaml:"minimumColorTemperature"`
+	MaximumColorTemperature int64 `mapstructure:"maximumColorTemperature" yaml:"maximumColorTemperature"`
 }
 
 var CurrentConfig Configuration
@@ -68,6 +74,8 @@ func setDefaultValues() {
 	viper.SetDefault("redshift.transitionDuration", 60*time.Minute)
 	viper.SetDefault("redshift.brightness.minimumBrightness", 0.1)
 	viper.SetDefault("redshift.brightness.maximumBrightness", 1.0)
+	viper.SetDefault("redshift.colorTemperature.minimumColorTemperature", 1000)
+	viper.SetDefault("redshift.colorTemperature.maximumColorTemperature", 25000)
 }
 
 // DetectAndReadConfigFile detects the path of the first existing config file

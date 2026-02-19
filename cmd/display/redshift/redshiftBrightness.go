@@ -22,7 +22,13 @@ var brightnessCmd = &cobra.Command{
 		for _, display := range displays {
 			if brightnessValue != -1 {
 				newBrightness := clampBrightnessToConfig(brightnessValue)
-				ApplyRedshift(display, -1, newBrightness, -1)
+				lastSetBrightness := getLastSetBrightness(display)
+				if newBrightness != lastSetBrightness {
+					err := ApplyRedshift(display, -1, newBrightness, -1)
+					if err != nil {
+						return err
+					}
+				}
 			}
 
 			lastSetBrightness := getLastSetBrightness(display)

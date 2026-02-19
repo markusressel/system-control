@@ -26,6 +26,9 @@ var redshiftResetCmd = &cobra.Command{
 	Short: "Reset the currently applied redshift",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		redshiftLock = lockRedshift()
+		defer redshiftLock.Unlock()
+
 		displays, err := parseDisplayParam(display)
 		if err != nil {
 			return err

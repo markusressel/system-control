@@ -33,6 +33,9 @@ var redshiftUpdateCmd = &cobra.Command{
 	Short: "Update the currently applied redshift based on the current time of day.",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		redshiftLock = lockRedshift()
+		defer redshiftLock.Unlock()
+
 		config := configuration.CurrentConfig
 
 		redshiftConfig, err := util.ReadRedshiftConfig()

@@ -11,6 +11,8 @@ var gammaCmd = &cobra.Command{
 	Short: "Show current display gamma",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		redshiftLock = lockRedshift()
+		defer redshiftLock.Unlock()
 
 		displays, err := parseDisplayParam(display)
 		if err != nil {

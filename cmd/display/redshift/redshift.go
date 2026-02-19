@@ -20,9 +20,12 @@ package redshift
 import (
 	"errors"
 	"fmt"
+	"log"
+	"os"
 	"slices"
 	"strconv"
 
+	"github.com/gofrs/flock"
 	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
@@ -43,6 +46,8 @@ var (
 
 	brightnessValue float64
 	stepFloat       = 0.1
+
+	redshiftLock *flock.Flock
 )
 
 var Command = &cobra.Command{
@@ -50,6 +55,8 @@ var Command = &cobra.Command{
 	Short: "Apply the given redshift",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		redshiftLock = lockRedshift()
+		defer redshiftLock.Unlock()
 
 		if colorTemperature != -1 && (colorTemperature < 1000 || colorTemperature > 25000) {
 			return errors.New("color temperature must be between 1000 and 25000")
@@ -279,6 +286,24 @@ func ResetRedshift(display util.DisplayInfo) (err error) {
 
 	_, err = util.ExecCommand("redshift", args...)
 	return err
+}
+
+var (
+	TEMP_PATH = os.TempDir() + "/system-control"
+)
+
+func lockRedshift() *flock.Flock {
+	err := os.MkdirAll(TEMP_PATH, 0755)
+	if err != nil {
+		log.Fatalf("Could not create temp directory: %v", err)
+	}
+	fileLock := flock.New(TEMP_PATH + "/cmd-display-redshift.lock")
+	err = fileLock.Lock()
+	if err != nil {
+		log.Fatalf("Could not acquire lock: %v", err)
+	}
+
+	return fileLock
 }
 
 func init() {

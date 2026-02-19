@@ -18,6 +18,8 @@ var redshiftBrightnessIncCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		redshiftLock = lockRedshift()
+		defer redshiftLock.Unlock()
 
 		displays, err := parseDisplayParam(display)
 		if err != nil {

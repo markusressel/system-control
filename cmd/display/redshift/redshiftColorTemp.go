@@ -23,6 +23,8 @@ var colorTempCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		redshiftLock = lockRedshift()
+		defer redshiftLock.Unlock()
 
 		displays, err := parseDisplayParam(display)
 		if err != nil {

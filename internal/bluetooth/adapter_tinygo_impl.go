@@ -96,6 +96,11 @@ func (t *tinyGoAdapterImpl) Scan(enable bool) error {
 }
 
 func (t *tinyGoAdapterImpl) ListDevices() ([]BluetoothDevice, error) {
+	// Prefer BlueZ-managed devices via DBus; fall back to scan-based discovery
+	if devs, err := listAllDevicesFromBlueZ(); err == nil && len(devs) > 0 {
+		return devs, nil
+	}
+
 	// perform a short scan to collect nearby devices
 	_ = t.Scan(true)
 	// wait briefly to collect advertisements

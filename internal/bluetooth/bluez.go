@@ -136,3 +136,48 @@ func getDeviceInfoFromBlueZ(address string) (BluetoothDevice, error) {
 
 	return dev, nil
 }
+
+// listAllDevicesFromBlueZ returns a list of all Device1 objects known to BlueZ,
+// enriched via getDeviceInfoFromBlueZ. It uses the ObjectManager to discover
+// device object paths and then collects their Address property.
+func listAllDevicesFromBlueZ() ([]BluetoothDevice, error) {
+	bus, err := dbus.SystemBus()
+	if err != nil {
+		return nil, fmt.Errorf("dbus: %w", err)
+	}
+	obj := bus.Object("org.bluez", "/")
+
+	var managedObjects map[dbus.ObjectPath]map[string]map[string]dbus.Variant
+	if err := obj.Call("org.freedesktop.DBus.ObjectManager.GetManagedObjects", 0).Store(&managedObjects); err != nil {
+		return nil, fmt.Errorf("GetManagedObjects: %w", err)
+	}
+
+	devices := make([]BluetoothDevice, 0)
+	for _, ifaces := range managedObjects {
+		if props, ok := ifaces["org.bluez.Device1"]; ok {
+			// Extract Address property
+			if v, ok := props["Address"]; ok {
+				if addr, ok := v.Value().(string); ok {
+					// get full device info
+					dev, err := getDeviceInfoFromBlueZ(addr)
+					if err != nil {
+						// If enrichment fails, build minimal device
+						dev = BluetoothDevice{Address: addr}
+					}
+					// ensure Name when missing, try to build from object path or Alias
+					if dev.Name == "" {
+						// try Alias
+						if v2, ok2 := props["Alias"]; ok2 {
+							if s, ok3 := v2.Value().(string); ok3 {
+								dev.Name = s
+							}
+						}
+					}
+					devices = append(devices, dev)
+				}
+			}
+		}
+	}
+
+	return devices, nil
+}

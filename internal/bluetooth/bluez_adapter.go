@@ -9,7 +9,7 @@ import (
 	bt "tinygo.org/x/bluetooth"
 )
 
-type bluezAdapter struct {
+type BluezAdapter struct {
 	adapter    *bt.Adapter
 	mu         sync.Mutex
 	discovered map[string]BluetoothDevice
@@ -19,27 +19,27 @@ type bluezAdapter struct {
 }
 
 // NewBlueZAdapter returns an Adapter backed by tinygo.org/x/bluetooth (BlueZ on Linux).
-func NewBlueZAdapter() *bluezAdapter {
+func NewBlueZAdapter() *BluezAdapter {
 	// Use the package-level variable directly
 	ad := bt.DefaultAdapter
 	_ = ad.Enable()
 
-	return &bluezAdapter{
+	return &BluezAdapter{
 		adapter:    ad, // bt.DefaultAdapter is already *bt.Adapter
 		discovered: make(map[string]BluetoothDevice),
 	}
 }
 
-func (t *bluezAdapter) PowerOn() error {
+func (t *BluezAdapter) PowerOn() error {
 	// powering on the adapter is platform specific; not supported here
 	return ErrNotSupported
 }
 
-func (t *bluezAdapter) PowerOff() error {
+func (t *BluezAdapter) PowerOff() error {
 	return ErrNotSupported
 }
 
-func (t *bluezAdapter) Scan(enable bool) error {
+func (t *BluezAdapter) Scan(enable bool) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -96,7 +96,7 @@ func (t *bluezAdapter) Scan(enable bool) error {
 	return nil
 }
 
-func (t *bluezAdapter) ListDevices() ([]BluetoothDevice, error) {
+func (t *BluezAdapter) ListDevices() ([]BluetoothDevice, error) {
 	// Prefer BlueZ-managed devices via DBus; fall back to scan-based discovery
 	if devs, err := listAllDevicesFromBlueZ(); err == nil && len(devs) > 0 {
 		return devs, nil
@@ -138,7 +138,7 @@ func (t *bluezAdapter) ListDevices() ([]BluetoothDevice, error) {
 	return results, nil
 }
 
-func (t *bluezAdapter) Info(address string) (BluetoothDevice, error) {
+func (t *BluezAdapter) Info(address string) (BluetoothDevice, error) {
 	// Try BlueZ first for rich info
 	if dev, err := getDeviceInfoFromBlueZ(address); err == nil {
 		return dev, nil
@@ -157,8 +157,8 @@ func (t *bluezAdapter) Info(address string) (BluetoothDevice, error) {
 	return BluetoothDevice{}, ErrNotSupported
 }
 
-func (t *bluezAdapter) Pair(address string) error       { return ErrNotSupported }
-func (t *bluezAdapter) Connect(address string) error    { return ErrNotSupported }
-func (t *bluezAdapter) Disconnect(address string) error { return ErrNotSupported }
-func (t *bluezAdapter) DisconnectAll() error            { return ErrNotSupported }
-func (t *bluezAdapter) Remove(address string) error     { return ErrNotSupported }
+func (t *BluezAdapter) Pair(address string) error       { return ErrNotSupported }
+func (t *BluezAdapter) Connect(address string) error    { return ErrNotSupported }
+func (t *BluezAdapter) Disconnect(address string) error { return ErrNotSupported }
+func (t *BluezAdapter) DisconnectAll() error            { return ErrNotSupported }
+func (t *BluezAdapter) Remove(address string) error     { return ErrNotSupported }

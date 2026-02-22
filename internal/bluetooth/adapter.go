@@ -4,7 +4,7 @@ import "errors"
 
 var (
 	// global bluez adapter instance
-	bluez *bluezAdapter
+	bluez *BluezAdapter
 
 	// ErrNotSupported is returned when an adapter doesn't support a specific operation.
 	ErrNotSupported = errors.New("operation not supported by adapter")

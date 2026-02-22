@@ -181,3 +181,121 @@ func listAllDevicesFromBlueZ() ([]BluetoothDevice, error) {
 
 	return devices, nil
 }
+
+// getDefaultAdapterPath finds the first Adapter1 object path via ObjectManager.
+func getDefaultAdapterPath() (dbus.ObjectPath, error) {
+	bus, err := dbus.SystemBus()
+	if err != nil {
+		return "", fmt.Errorf("dbus: %w", err)
+	}
+	obj := bus.Object("org.bluez", "/")
+	var managedObjects map[dbus.ObjectPath]map[string]map[string]dbus.Variant
+	if err := obj.Call("org.freedesktop.DBus.ObjectManager.GetManagedObjects", 0).Store(&managedObjects); err != nil {
+		return "", fmt.Errorf("GetManagedObjects: %w", err)
+	}
+	for path, ifaces := range managedObjects {
+		if _, ok := ifaces["org.bluez.Adapter1"]; ok {
+			return path, nil
+		}
+	}
+	return "", fmt.Errorf("no bluez adapter found")
+}
+
+// setAdapterPowered sets the Powered property on the default adapter.
+func setAdapterPowered(powered bool) error {
+	path, err := getDefaultAdapterPath()
+	if err != nil {
+		return err
+	}
+	bus, err := dbus.SystemBus()
+	if err != nil {
+		return fmt.Errorf("dbus: %w", err)
+	}
+	obj := bus.Object("org.bluez", path)
+	// Use org.freedesktop.DBus.Properties.Set
+	if err := obj.Call("org.freedesktop.DBus.Properties.Set", 0, "org.bluez.Adapter1", "Powered", dbus.MakeVariant(powered)).Err; err != nil {
+		return fmt.Errorf("failed to set Powered: %w", err)
+	}
+	return nil
+}
+
+// removeDeviceByPath removes a device by its object path using Adapter1.RemoveDevice
+func removeDeviceByPath(devicePath dbus.ObjectPath) error {
+	adapterPath, err := getDefaultAdapterPath()
+	if err != nil {
+		return err
+	}
+	bus, err := dbus.SystemBus()
+	if err != nil {
+		return fmt.Errorf("dbus: %w", err)
+	}
+	adapterObj := bus.Object("org.bluez", adapterPath)
+	if err := adapterObj.Call("org.bluez.Adapter1.RemoveDevice", 0, devicePath).Err; err != nil {
+		return fmt.Errorf("RemoveDevice failed: %w", err)
+	}
+	return nil
+}
+
+// findDevicePath looks up the DBus object path for a given device address using ObjectManager.
+func findDevicePath(address string) (dbus.ObjectPath, error) {
+	bus, err := dbus.SystemBus()
+	if err != nil {
+		return "", fmt.Errorf("dbus: %w", err)
+	}
+	obj := bus.Object("org.bluez", "/")
+
+	var managedObjects map[dbus.ObjectPath]map[string]map[string]dbus.Variant
+	if err := obj.Call("org.freedesktop.DBus.ObjectManager.GetManagedObjects", 0).Store(&managedObjects); err != nil {
+		return "", fmt.Errorf("GetManagedObjects: %w", err)
+	}
+
+	for path, ifaces := range managedObjects {
+		if props, ok := ifaces["org.bluez.Device1"]; ok {
+			if v, ok := props["Address"]; ok {
+				if addr, ok := v.Value().(string); ok {
+					if strings.EqualFold(addr, address) {
+						return path, nil
+					}
+				}
+			}
+		}
+	}
+
+	// As a fallback, try constructing the common path using hci0 and probe it
+	constructed := dbus.ObjectPath("/org/bluez/hci0/dev_" + strings.ReplaceAll(address, ":", "_"))
+	constructedObj := bus.Object("org.bluez", constructed)
+	// Probe by attempting to read the Address property
+	if _, err := constructedObj.GetProperty("org.bluez.Device1.Address"); err == nil {
+		return constructed, nil
+	}
+
+	return "", fmt.Errorf("device not found: %s", address)
+}
+
+// callDeviceMethod invokes a method on the Device1 interface for the given device path.
+func callDeviceMethod(devicePath dbus.ObjectPath, method string) error {
+	bus, err := dbus.SystemBus()
+	if err != nil {
+		return fmt.Errorf("dbus: %w", err)
+	}
+	devObj := bus.Object("org.bluez", devicePath)
+	if err := devObj.Call("org.bluez.Device1."+method, 0).Err; err != nil {
+		return fmt.Errorf("Device1.%s failed: %w", method, err)
+	}
+	return nil
+}
+
+// listDevicesMatching allows filtering devices from ObjectManager using a predicate.
+func listDevicesMatching(pred func(BluetoothDevice) bool) ([]BluetoothDevice, error) {
+	all, err := listAllDevicesFromBlueZ()
+	if err != nil {
+		return nil, err
+	}
+	filtered := make([]BluetoothDevice, 0)
+	for _, d := range all {
+		if pred(d) {
+			filtered = append(filtered, d)
+		}
+	}
+	return filtered, nil
+}

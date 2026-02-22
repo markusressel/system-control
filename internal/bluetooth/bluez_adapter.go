@@ -31,12 +31,11 @@ func NewBlueZAdapter() *BluezAdapter {
 }
 
 func (t *BluezAdapter) PowerOn() error {
-	// powering on the adapter is platform specific; not supported here
-	return ErrNotSupported
+	return setAdapterPowered(true)
 }
 
 func (t *BluezAdapter) PowerOff() error {
-	return ErrNotSupported
+	return setAdapterPowered(false)
 }
 
 func (t *BluezAdapter) Scan(enable bool) error {
@@ -138,6 +137,14 @@ func (t *BluezAdapter) ListDevices() ([]BluetoothDevice, error) {
 	return results, nil
 }
 
+func (t *BluezAdapter) ListConnected() ([]BluetoothDevice, error) {
+	return listDevicesMatching(func(d BluetoothDevice) bool { return d.Connected })
+}
+
+func (t *BluezAdapter) ListPaired() ([]BluetoothDevice, error) {
+	return listDevicesMatching(func(d BluetoothDevice) bool { return d.Paired })
+}
+
 func (t *BluezAdapter) Info(address string) (BluetoothDevice, error) {
 	// Try BlueZ first for rich info
 	if dev, err := getDeviceInfoFromBlueZ(address); err == nil {
@@ -157,8 +164,47 @@ func (t *BluezAdapter) Info(address string) (BluetoothDevice, error) {
 	return BluetoothDevice{}, ErrNotSupported
 }
 
-func (t *BluezAdapter) Pair(address string) error       { return ErrNotSupported }
-func (t *BluezAdapter) Connect(address string) error    { return ErrNotSupported }
-func (t *BluezAdapter) Disconnect(address string) error { return ErrNotSupported }
-func (t *BluezAdapter) DisconnectAll() error            { return ErrNotSupported }
-func (t *BluezAdapter) Remove(address string) error     { return ErrNotSupported }
+func (t *BluezAdapter) Pair(address string) error {
+	// Find device path
+	path, err := findDevicePath(address)
+	if err != nil {
+		return err
+	}
+	// call Pair on the device
+	return callDeviceMethod(path, "Pair")
+}
+
+func (t *BluezAdapter) Connect(address string) error {
+	path, err := findDevicePath(address)
+	if err != nil {
+		return err
+	}
+	return callDeviceMethod(path, "Connect")
+}
+
+func (t *BluezAdapter) Disconnect(address string) error {
+	path, err := findDevicePath(address)
+	if err != nil {
+		return err
+	}
+	return callDeviceMethod(path, "Disconnect")
+}
+
+func (t *BluezAdapter) DisconnectAll() error {
+	connected, err := t.ListConnected()
+	if err != nil {
+		return err
+	}
+	for _, d := range connected {
+		_ = t.Disconnect(d.Address)
+	}
+	return nil
+}
+
+func (t *BluezAdapter) Remove(address string) error {
+	path, err := findDevicePath(address)
+	if err != nil {
+		return err
+	}
+	return removeDeviceByPath(path)
+}

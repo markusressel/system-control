@@ -13,8 +13,7 @@ var bluetoothScanCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		defer func() {
-			err = bluetooth.SetBluetoothScan(false)
-			if err != nil {
+			if scanErr := bluetooth.SetBluetoothScan(false); scanErr != nil {
 				println("Failed to turn off Bluetooth scanning")
 			}
 		}()

@@ -1,8 +1,12 @@
 package bluetooth
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -10,6 +14,28 @@ import (
 	"github.com/google/uuid"
 	"github.com/markusressel/system-control/internal/util"
 )
+
+var (
+	ansiEscape    = regexp.MustCompile(`\x1b\[[0-9;]*[mGKHFJ]`)
+	devicePattern = regexp.MustCompile(`Device ([0-9A-Fa-f:]{17})\s+(.+)`)
+)
+
+// execBluetoothCtl runs bluetoothctl in interactive mode, piping the given
+// commands (plus "quit") via stdin, strips ANSI codes, and returns stdout.
+func execBluetoothCtl(commands ...string) (string, error) {
+	input := strings.Join(append(commands, "quit"), "\n")
+
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command("bluetoothctl")
+	cmd.Stdin = strings.NewReader(input)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("bluetoothctl: %w: %s", err, stderr.String())
+	}
+	return ansiEscape.ReplaceAllString(stdout.String(), ""), nil
+}
 
 // TurnOnBluetoothAdapter turns on the bluetooth adapter
 func TurnOnBluetoothAdapter() error {
@@ -90,10 +116,7 @@ func DisconnectBluetoothDevice(device BluetoothDevice) error {
 
 // GetBluetoothDevices returns a list of all paired bluetooth devices
 func GetBluetoothDevices() ([]BluetoothDevice, error) {
-	result, err := util.ExecCommand(
-		"bluetoothctl",
-		"devices",
-	)
+	result, err := execBluetoothCtl("devices")
 	if err != nil {
 		return nil, err
 	}
@@ -104,11 +127,7 @@ func GetBluetoothDevices() ([]BluetoothDevice, error) {
 // GetConnectedBluetoothDevices returns a list of all connected bluetooth devices
 // bluetoothctl devices Connected
 func GetConnectedBluetoothDevices() ([]BluetoothDevice, error) {
-	result, err := util.ExecCommand(
-		"bluetoothctl",
-		"devices",
-		"Connected",
-	)
+	result, err := execBluetoothCtl("devices Connected")
 	if err != nil {
 		return nil, err
 	}
@@ -118,11 +137,7 @@ func GetConnectedBluetoothDevices() ([]BluetoothDevice, error) {
 
 // GetPairedBluetoothDevices returns a list of all paired bluetooth devices
 func GetPairedBluetoothDevices() ([]BluetoothDevice, error) {
-	result, err := util.ExecCommand(
-		"bluetoothctl",
-		"devices",
-		"Paired",
-	)
+	result, err := execBluetoothCtl("devices Paired")
 	if err != nil {
 		return nil, err
 	}
@@ -151,28 +166,22 @@ func getFullInfoDevices(simpleDeviceInfos []simpleDeviceInfo) (devices []Bluetoo
 }
 
 func parseSimpleDeviceList(result string) ([]simpleDeviceInfo, error) {
-	resultLines := strings.Split(result, "\n")
 	devices := make([]simpleDeviceInfo, 0)
-	for _, line := range resultLines {
-		if strings.Contains(line, "Device ") {
-			parts := strings.Split(line, " ")
-			device := simpleDeviceInfo{
-				Address: parts[1],
-				Name:    parts[2],
-			}
-			devices = append(devices, device)
+	for _, line := range strings.Split(result, "\n") {
+		m := devicePattern.FindStringSubmatch(line)
+		if m == nil {
+			continue
 		}
+		devices = append(devices, simpleDeviceInfo{
+			Address: m[1],
+			Name:    strings.TrimSpace(m[2]),
+		})
 	}
-
 	return devices, nil
 }
 
 func GetBluetoothDeviceInfo(device simpleDeviceInfo) (BluetoothDevice, error) {
-	result, err := util.ExecCommand(
-		"bluetoothctl",
-		"info",
-		device.Address,
-	)
+	result, err := execBluetoothCtl("info " + device.Address)
 	if err != nil {
 		return BluetoothDevice{}, err
 	}
@@ -188,8 +197,10 @@ func parseBluetoothDeviceInfo(input string) (result BluetoothDevice, err error) 
 
 	for _, line := range lines {
 		if strings.Contains(line, "Device ") {
-			parts := strings.Split(input, " ")
-			result.Address = parts[1]
+			m := devicePattern.FindStringSubmatch(line)
+			if m != nil {
+				result.Address = m[1]
+			}
 		} else if strings.Contains(line, "Name: ") {
 			result.Name = strings.TrimSpace(strings.ReplaceAll(line, "Name: ", ""))
 		} else if strings.Contains(line, "Alias: ") {
@@ -247,18 +258,20 @@ func retrieveDevicesForResult(result string) ([]BluetoothDevice, error) {
 
 // SetBluetoothScan enables or disables bluetooth scanning
 func SetBluetoothScan(enable bool) error {
-	arg := "off"
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var input string
 	if enable {
-		arg = "on"
+		input = "scan on\n" // no quit — let it run until killed by timeout
+	} else {
+		input = "scan off\nquit\n"
 	}
 
-	err := util.ExecCommandOneshot(
-		5*time.Second,
-		"bluetoothctl",
-		"scan",
-		arg,
-	)
-	if errors.Is(err, context.DeadlineExceeded) {
+	cmd := exec.CommandContext(ctx, "bluetoothctl")
+	cmd.Stdin = strings.NewReader(input)
+	err := cmd.Run()
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		return nil
 	}
 	return err

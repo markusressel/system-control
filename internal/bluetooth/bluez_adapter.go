@@ -9,7 +9,7 @@ import (
 	bt "tinygo.org/x/bluetooth"
 )
 
-type tinyGoAdapterImpl struct {
+type bluezAdapter struct {
 	adapter    *bt.Adapter
 	mu         sync.Mutex
 	discovered map[string]BluetoothDevice
@@ -18,27 +18,28 @@ type tinyGoAdapterImpl struct {
 	scanCancel context.CancelFunc
 }
 
-func NewTinyGoAdapter() *tinyGoAdapterImpl {
+// NewBlueZAdapter returns an Adapter backed by tinygo.org/x/bluetooth (BlueZ on Linux).
+func NewBlueZAdapter() *bluezAdapter {
 	// Use the package-level variable directly
 	ad := bt.DefaultAdapter
 	_ = ad.Enable()
 
-	return &tinyGoAdapterImpl{
+	return &bluezAdapter{
 		adapter:    ad, // bt.DefaultAdapter is already *bt.Adapter
 		discovered: make(map[string]BluetoothDevice),
 	}
 }
 
-func (t *tinyGoAdapterImpl) PowerOn() error {
+func (t *bluezAdapter) PowerOn() error {
 	// powering on the adapter is platform specific; not supported here
 	return ErrNotSupported
 }
 
-func (t *tinyGoAdapterImpl) PowerOff() error {
+func (t *bluezAdapter) PowerOff() error {
 	return ErrNotSupported
 }
 
-func (t *tinyGoAdapterImpl) Scan(enable bool) error {
+func (t *bluezAdapter) Scan(enable bool) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -95,7 +96,7 @@ func (t *tinyGoAdapterImpl) Scan(enable bool) error {
 	return nil
 }
 
-func (t *tinyGoAdapterImpl) ListDevices() ([]BluetoothDevice, error) {
+func (t *bluezAdapter) ListDevices() ([]BluetoothDevice, error) {
 	// Prefer BlueZ-managed devices via DBus; fall back to scan-based discovery
 	if devs, err := listAllDevicesFromBlueZ(); err == nil && len(devs) > 0 {
 		return devs, nil
@@ -137,15 +138,7 @@ func (t *tinyGoAdapterImpl) ListDevices() ([]BluetoothDevice, error) {
 	return results, nil
 }
 
-func (t *tinyGoAdapterImpl) ListConnected() ([]BluetoothDevice, error) {
-	return nil, ErrNotSupported
-}
-
-func (t *tinyGoAdapterImpl) ListPaired() ([]BluetoothDevice, error) {
-	return nil, ErrNotSupported
-}
-
-func (t *tinyGoAdapterImpl) Info(address string) (BluetoothDevice, error) {
+func (t *bluezAdapter) Info(address string) (BluetoothDevice, error) {
 	// Try BlueZ first for rich info
 	if dev, err := getDeviceInfoFromBlueZ(address); err == nil {
 		return dev, nil
@@ -164,8 +157,8 @@ func (t *tinyGoAdapterImpl) Info(address string) (BluetoothDevice, error) {
 	return BluetoothDevice{}, ErrNotSupported
 }
 
-func (t *tinyGoAdapterImpl) Pair(address string) error       { return ErrNotSupported }
-func (t *tinyGoAdapterImpl) Connect(address string) error    { return ErrNotSupported }
-func (t *tinyGoAdapterImpl) Disconnect(address string) error { return ErrNotSupported }
-func (t *tinyGoAdapterImpl) DisconnectAll() error            { return ErrNotSupported }
-func (t *tinyGoAdapterImpl) Remove(address string) error     { return ErrNotSupported }
+func (t *bluezAdapter) Pair(address string) error       { return ErrNotSupported }
+func (t *bluezAdapter) Connect(address string) error    { return ErrNotSupported }
+func (t *bluezAdapter) Disconnect(address string) error { return ErrNotSupported }
+func (t *bluezAdapter) DisconnectAll() error            { return ErrNotSupported }
+func (t *bluezAdapter) Remove(address string) error     { return ErrNotSupported }

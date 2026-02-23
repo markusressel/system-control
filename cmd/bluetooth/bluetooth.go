@@ -44,6 +44,9 @@ func printBluetoothDevice(device bluetooth.BluetoothDevice) {
 	properties.Set("Address", device.Address)
 	properties.Set("Connected", strconv.FormatBool(device.Connected))
 	properties.Set("Paired", strconv.FormatBool(device.Paired))
+	properties.Set("Bonded", strconv.FormatBool(device.Bonded))
+	properties.Set("Trusted", strconv.FormatBool(device.Trusted))
+	properties.Set("Blocked", strconv.FormatBool(device.Blocked))
 
 	if device.BatteryPercentage != nil {
 		properties.Set("Battery", fmt.Sprintf("%v%%", *device.BatteryPercentage))

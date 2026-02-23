@@ -1,6 +1,7 @@
 package bluetooth
 
 import (
+	"sort"
 	"strconv"
 
 	"github.com/markusressel/system-control/internal/bluetooth"
@@ -21,6 +22,9 @@ var bluetoothDevicesCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
+		// sort by name
+		sort.Sort(devices)
 
 		filteredDevices := util.FilterFunc(devices, func(device bluetooth.BluetoothDevice) bool {
 			if filterConnected && !device.Connected {

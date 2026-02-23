@@ -26,7 +26,7 @@ func SetBluetoothScan(enable bool) error {
 	return bluez.Scan(enable)
 }
 
-func GetBluetoothDevices() ([]BluetoothDevice, error) {
+func GetBluetoothDevices() (BluetoothDeviceList, error) {
 	return bluez.ListDevices()
 }
 

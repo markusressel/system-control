@@ -21,6 +21,14 @@ type BluetoothDevice struct {
 	BatteryPercentage *int64 // 0x4b (75)
 }
 
+type BluetoothDeviceList []BluetoothDevice
+
+func (r BluetoothDeviceList) Len() int { return len(r) }
+
+func (r BluetoothDeviceList) Swap(i, j int) { r[i], r[j] = r[j], r[i] }
+
+func (r BluetoothDeviceList) Less(i, j int) bool { return r[i].Name < r[j].Name }
+
 // simpleDeviceInfo is retained for compatibility with callers that may still use it
 // (internal callers should prefer using Address strings directly).
 type simpleDeviceInfo struct {

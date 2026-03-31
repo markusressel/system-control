@@ -7,6 +7,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	ColumnID          = "id"
+	ColumnName        = "name"
+	ColumnDescription = "description"
+)
+
+var columns []string
+var defaultColumns = []string{ColumnID, ColumnName, ColumnDescription}
+
 var activeCmd = &cobra.Command{
 	Use:   "active",
 	Short: "Get active sink index",
@@ -33,12 +42,26 @@ var activeCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			fmt.Println(node.Id)
-			name, err := node.GetName()
-			description, err := node.GetDescription()
-			if err == nil {
-				fmt.Println(name)
-				fmt.Println(description)
+
+			for _, col := range columns {
+				switch col {
+				case ColumnID:
+					fmt.Println(node.Id)
+				case ColumnName:
+					name, err := node.GetName()
+					if err != nil {
+						return err
+					}
+					fmt.Println(name)
+				case ColumnDescription:
+					desc, err := node.GetDescription()
+					if err != nil {
+						return err
+					}
+					fmt.Println(desc)
+				default:
+					return fmt.Errorf("unknown column: %s", col)
+				}
 			}
 		}
 
@@ -47,5 +70,12 @@ var activeCmd = &cobra.Command{
 }
 
 func init() {
+	activeCmd.Flags().StringSliceVarP(
+		&columns,
+		"columns", "c",
+		defaultColumns,
+		"Columns to print (id,name,description)",
+	)
+
 	SinkCmd.AddCommand(activeCmd)
 }

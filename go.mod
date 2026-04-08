@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/elliotchance/orderedmap/v2 v2.7.0
-	github.com/godbus/dbus/v5 v5.1.0
+	github.com/godbus/dbus/v5 v5.2.2
 	github.com/gofrs/flock v0.13.0
 	github.com/google/uuid v1.6.0
 	github.com/lithammer/fuzzysearch v1.1.8

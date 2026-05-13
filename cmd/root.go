@@ -12,6 +12,7 @@ import (
 	"github.com/markusressel/system-control/cmd/display"
 	"github.com/markusressel/system-control/cmd/global"
 	"github.com/markusressel/system-control/cmd/keyboard"
+	"github.com/markusressel/system-control/cmd/media"
 	"github.com/markusressel/system-control/cmd/mouse"
 	"github.com/markusressel/system-control/cmd/network"
 	"github.com/markusressel/system-control/cmd/network/wifi"
@@ -63,6 +64,7 @@ func init() {
 	RootCmd.AddCommand(disk.Command)
 	RootCmd.AddCommand(display.Command)
 	RootCmd.AddCommand(keyboard.Command)
+	RootCmd.AddCommand(media.Command)
 	RootCmd.AddCommand(mouse.Command)
 	RootCmd.AddCommand(touchpad.Command)
 	RootCmd.AddCommand(video.Command)

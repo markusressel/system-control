@@ -61,6 +61,7 @@ Available Commands:
   display     Control Displays
   help        Help about any command
   keyboard    Control Keyboards
+  media       Control media players via playerctl
   mouse       Control Mouse
   network     Control Network devices and networks
   restart     Reboot the system gracefully
@@ -108,6 +109,43 @@ Save and Restore Audio State, f.ex. before and after reboot:
 ```shell
 > system-control audio volume save
 > system-control audio volume restore
+```
+
+## Media
+
+**Requirements:**
+
+* `playerctl`
+
+```shell
+> system-control media
+Playing
+
+> system-control media status
+Paused
+
+> system-control media players
+firefox
+spotify
+```
+
+```shell
+> system-control media play
+> system-control media pause
+> system-control media togglePlayPause
+> system-control media stop
+> system-control media next
+> system-control media previous
+> system-control media position
+```
+
+Filter/select a player with `-p` / `--player` (supports simple regex matching):
+
+```shell
+> system-control media status --player spotify
+> system-control media status -p "spot.*"
+> system-control media play -p firefox
+> system-control media players -p "fire.*"
 ```
 
 ### Device

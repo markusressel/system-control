@@ -65,6 +65,7 @@ Available Commands:
   mouse       Control Mouse
   network     Control Network devices and networks
   restart     Reboot the system gracefully
+  session     Control desktop session state
   shutdown    Shutdown the system gracefully
   touchpad    Control Touchpads
   video       Control Video Inputs (cameras)
@@ -434,6 +435,23 @@ TODO: not yet implemented
 
 ```shell
 > system-control wifi hotspot clients
+```
+
+## Session
+
+**Requirements:**
+
+* `i3lock`
+* `pgrep` / `pkill`
+
+```shell
+> system-control session lock
+> system-control session locked
+yes
+
+> system-control session unlock
+> system-control session locked
+no
 ```
 
 ## Shutdown/Restart

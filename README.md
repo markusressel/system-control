@@ -273,7 +273,8 @@ DisplayPort-1
 
 ```shell
 > system-control display sleep
-> system-control display wake
+> system-control display wakeup
+> system-control display awake
 ```
 
 #### Backlight

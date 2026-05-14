@@ -6,7 +6,7 @@ import (
 )
 
 var displayWakeCmd = &cobra.Command{
-	Use:   "wake",
+	Use:   "wakeup",
 	Short: "Wake connected displays",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {

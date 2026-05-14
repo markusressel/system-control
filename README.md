@@ -265,6 +265,17 @@ DisplayPort-2
 DisplayPort-1
 ````
 
+#### Power State (DPMS)
+
+**Requirements:**
+
+* `xset`
+
+```shell
+> system-control display sleep
+> system-control display wake
+```
+
 #### Backlight
 
 **Requirements:**

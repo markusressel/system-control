@@ -2,6 +2,7 @@ package session
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/markusressel/system-control/internal/util"
@@ -36,6 +37,9 @@ func sessionLockScript() error {
 		return nil
 	}
 
+	if err := setSessionScreenTimeout(10, 10); err != nil {
+		return err
+	}
 	if err := setSessionDPMSTimeout(15, 15, 15); err != nil {
 		return err
 	}
@@ -62,7 +66,14 @@ func sessionLockScript() error {
 }
 
 func runCommandAsSessionUser(command string, args ...string) error {
-	fullArgs := []string{"-u", lockSessionUser, "env", "DISPLAY=" + lockSessionDisplay, command}
+	envArgs := []string{"DISPLAY=" + lockSessionDisplay}
+	if currentPath := os.Getenv("PATH"); currentPath != "" {
+		envArgs = append(envArgs, "PATH="+currentPath)
+	}
+
+	fullArgs := []string{"-u", lockSessionUser, "env"}
+	fullArgs = append(fullArgs, envArgs...)
+	fullArgs = append(fullArgs, command)
 	fullArgs = append(fullArgs, args...)
 
 	_, err := util.ExecCommand("sudo", fullArgs...)
@@ -74,15 +85,16 @@ func runCommandAsSessionUser(command string, args ...string) error {
 }
 
 func setSessionDPMSTimeout(standby int, suspend int, off int) error {
-	if err := runCommandAsSessionUser("xset", "s", "off"); err != nil {
-		return err
-	}
 	return runCommandAsSessionUser("xset", "dpms", fmt.Sprintf("%d", standby), fmt.Sprintf("%d", suspend), fmt.Sprintf("%d", off))
 }
 
 func restoreSessionDPMSTimeout() {
-	_ = runCommandAsSessionUser("xset", "s", "off")
+	_ = runCommandAsSessionUser("xset", "s", "0", "0")
 	_ = runCommandAsSessionUser("xset", "dpms", "0", "0", "0")
+}
+
+func setSessionScreenTimeout(timeout int, cycle int) error {
+	return runCommandAsSessionUser("xset", "s", fmt.Sprintf("%d", timeout), fmt.Sprintf("%d", cycle))
 }
 
 func forceSessionDPMS(mode string) error {
@@ -91,13 +103,9 @@ func forceSessionDPMS(mode string) error {
 
 func runSessionLock() error {
 	return runCommandAsSessionUser(
-		"xss-lock",
-		"--transfer-sleep-lock",
-		"--",
 		"i3lock",
 		"--nofork",
 		"--show-failed-attempts",
-		"--ignore-empty-password",
 		"-c130003",
 	)
 }

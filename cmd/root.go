@@ -30,9 +30,11 @@ var cfgFile string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "system-control",
-	Short: "A utility to make common system actions a breeze.",
-	Long:  ``,
+	Use:           "system-control",
+	Short:         "A utility to make common system actions a breeze.",
+	Long:          ``,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// 1. Locate and read the file into Viper's internal cache
 		configPath := configuration.DetectAndReadConfigFile()
@@ -76,6 +78,17 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "configuration", "", "configuration file (default is $HOME/.system-control.yaml)")
+
+	applyErrorOutputDefaults(RootCmd)
+}
+
+func applyErrorOutputDefaults(command *cobra.Command) {
+	command.SilenceUsage = true
+	command.SilenceErrors = true
+
+	for _, subCommand := range command.Commands() {
+		applyErrorOutputDefaults(subCommand)
+	}
 }
 
 // initConfig reads in configuration file and ENV variables if set.

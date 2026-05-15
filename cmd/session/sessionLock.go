@@ -2,7 +2,10 @@ package session
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
+	"syscall"
 	"time"
 
 	"github.com/markusressel/system-control/internal/util"
@@ -12,6 +15,7 @@ import (
 const (
 	lockSessionUser    = "markus"
 	lockSessionDisplay = ":0"
+	lockRunnerFlag     = "internal-detached-lock-runner"
 )
 
 var lockCmd = &cobra.Command{
@@ -20,12 +24,49 @@ var lockCmd = &cobra.Command{
 	Long:  ``,
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		isDetachedRunner, err := cmd.Flags().GetBool(lockRunnerFlag)
+		if err != nil {
+			return err
+		}
+
+		if !isDetachedRunner {
+			return startDetachedLockProcess()
+		}
+
 		return sessionLockScript()
 	},
 }
 
 func init() {
 	Command.AddCommand(lockCmd)
+	lockCmd.Flags().Bool(lockRunnerFlag, false, "internal flag used to run detached lock process")
+	_ = lockCmd.Flags().MarkHidden(lockRunnerFlag)
+}
+
+func startDetachedLockProcess() error {
+	executablePath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("failed to resolve executable path: %w", err)
+	}
+
+	childArgs := append([]string{}, os.Args[1:]...)
+	childArgs = append(childArgs, "--"+lockRunnerFlag)
+
+	childProcess := exec.Command(executablePath, childArgs...)
+	childProcess.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	childProcess.Stdin = nil
+	childProcess.Stdout = io.Discard
+	childProcess.Stderr = io.Discard
+
+	if err := childProcess.Start(); err != nil {
+		return fmt.Errorf("failed to start detached lock process: %w", err)
+	}
+
+	if err := childProcess.Process.Release(); err != nil {
+		return fmt.Errorf("failed to release detached lock process: %w", err)
+	}
+
+	return nil
 }
 
 func sessionLockScript() error {

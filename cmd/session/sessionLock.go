@@ -15,6 +15,7 @@ import (
 const (
 	lockSessionUser    = "markus"
 	lockSessionDisplay = ":0"
+	lockDetachedFlag   = "detached"
 	lockRunnerFlag     = "internal-detached-lock-runner"
 )
 
@@ -28,8 +29,12 @@ var lockCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		useDetached, err := cmd.Flags().GetBool(lockDetachedFlag)
+		if err != nil {
+			return err
+		}
 
-		if !isDetachedRunner {
+		if useDetached && !isDetachedRunner {
 			return startDetachedLockProcess()
 		}
 
@@ -39,6 +44,7 @@ var lockCmd = &cobra.Command{
 
 func init() {
 	Command.AddCommand(lockCmd)
+	lockCmd.Flags().Bool(lockDetachedFlag, false, "run lock command in a detached background process")
 	lockCmd.Flags().Bool(lockRunnerFlag, false, "internal flag used to run detached lock process")
 	_ = lockCmd.Flags().MarkHidden(lockRunnerFlag)
 }

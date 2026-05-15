@@ -444,8 +444,12 @@ TODO: not yet implemented
 * `i3lock`
 * `pgrep` / `pkill`
 
+`session lock` runs in the current process by default. Use `--detached` when you want
+the command to return immediately while lock handling continues in a background process.
+
 ```shell
 > system-control session lock
+> system-control session lock --detached
 > system-control session locked
 yes
 

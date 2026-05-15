@@ -10,6 +10,7 @@ import (
 	"github.com/markusressel/system-control/cmd/cpu"
 	"github.com/markusressel/system-control/cmd/disk"
 	"github.com/markusressel/system-control/cmd/display"
+	"github.com/markusressel/system-control/cmd/fan"
 	"github.com/markusressel/system-control/cmd/global"
 	"github.com/markusressel/system-control/cmd/keyboard"
 	"github.com/markusressel/system-control/cmd/media"
@@ -66,6 +67,7 @@ func init() {
 	RootCmd.AddCommand(cpu.Command)
 	RootCmd.AddCommand(disk.Command)
 	RootCmd.AddCommand(display.Command)
+	RootCmd.AddCommand(fan.Command)
 	RootCmd.AddCommand(keyboard.Command)
 	RootCmd.AddCommand(media.Command)
 	RootCmd.AddCommand(mouse.Command)

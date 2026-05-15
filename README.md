@@ -59,6 +59,7 @@ Available Commands:
   cpu         Control CPU settings
   disk        Control disks
   display     Control Displays
+  fan         Control fan settings
   help        Help about any command
   keyboard    Control Keyboards
   media       Control media players via playerctl
@@ -339,6 +340,31 @@ Display: DisplayPort-1
 > system-control display redshift gamma inc
 > system-control display redshift gamma dec
 > system-control display redshift gamma reset
+```
+
+## Fan
+
+**Requirements:**
+
+* ASUS WMI thermal policy sysfs files (`/sys/devices/platform/asus-nb-wmi/hwmon/*/device/throttle_thermal_policy`)
+* `root` privileges for `rotate` and `set`
+
+```shell
+# get current fan mode as text (default)
+> system-control fan mode
+Default
+
+# get current fan mode as number
+> system-control fan mode --type number
+0
+```
+
+```shell
+# rotate mode: 0 -> 1 -> 2 -> 0
+> sudo system-control fan mode rotate
+
+# set mode directly (0=Default, 1=Boost, 2=Silent)
+> sudo system-control fan mode set 2
 ```
 
 ## Input

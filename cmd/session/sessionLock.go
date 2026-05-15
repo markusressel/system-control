@@ -1,6 +1,7 @@
 package session
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -75,7 +76,7 @@ func startDetachedLockProcess() error {
 	return nil
 }
 
-func sessionLockScript() error {
+func sessionLockScript() (err error) {
 	locked, err := isProcessRunning("i3lock")
 	if err != nil {
 		return err
@@ -90,7 +91,19 @@ func sessionLockScript() error {
 	if err := setSessionDPMSTimeout(15, 15, 15); err != nil {
 		return err
 	}
-	defer restoreSessionDPMSTimeout()
+	defer func() {
+		restoreErr := restoreSessionDPMSTimeout()
+		if restoreErr == nil {
+			return
+		}
+
+		if err == nil {
+			err = restoreErr
+			return
+		}
+
+		err = fmt.Errorf("%w; additionally failed to restore session DPMS timeout: %v", err, restoreErr)
+	}()
 
 	// Allow releasing the lock keybind before forcing displays off.
 	time.Sleep(500 * time.Millisecond)
@@ -135,9 +148,17 @@ func setSessionDPMSTimeout(standby int, suspend int, off int) error {
 	return runCommandAsSessionUser("xset", "dpms", fmt.Sprintf("%d", standby), fmt.Sprintf("%d", suspend), fmt.Sprintf("%d", off))
 }
 
-func restoreSessionDPMSTimeout() {
-	_ = runCommandAsSessionUser("xset", "s", "0", "0")
-	_ = runCommandAsSessionUser("xset", "dpms", "0", "0", "0")
+func restoreSessionDPMSTimeout() error {
+	var restoreErr error
+
+	if err := runCommandAsSessionUser("xset", "s", "0", "0"); err != nil {
+		restoreErr = errors.Join(restoreErr, err)
+	}
+	if err := runCommandAsSessionUser("xset", "dpms", "0", "0", "0"); err != nil {
+		restoreErr = errors.Join(restoreErr, err)
+	}
+
+	return restoreErr
 }
 
 func setSessionScreenTimeout(timeout int, cycle int) error {

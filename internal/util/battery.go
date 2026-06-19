@@ -1,7 +1,10 @@
 package util
 
 import (
+	"encoding/json"
 	"os"
+	"os/user"
+	"path/filepath"
 	"strings"
 )
 
@@ -20,6 +23,7 @@ type BatteryInfo struct {
 	hidppCapacityLevel string
 	hidppStatus        string
 	hidppErr           error
+	hidppIsCached      bool
 }
 
 const (
@@ -189,6 +193,74 @@ func (battery BatteryInfo) GetCycleCount() (int64, error) {
 	return ReadIntFromFile(path)
 }
 
+type BatteryCache struct {
+	Capacity      int64  `json:"capacity"`
+	CapacityLevel string `json:"capacity_level"`
+	Status        string `json:"status"`
+}
+
+func getPersistenceDir() string {
+	usr, err := user.Current()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(usr.HomeDir, ".config", "system-control", "persistence")
+}
+
+func (battery *BatteryInfo) getCacheFile() string {
+	dir := getPersistenceDir()
+	if dir == "" {
+		return ""
+	}
+	key := battery.SerialNumber
+	if key == "" {
+		key = battery.Name
+	}
+	return filepath.Join(dir, "battery_cache_"+key+".sav")
+}
+
+func (battery *BatteryInfo) saveToCache() {
+	file := battery.getCacheFile()
+	if file == "" {
+		return
+	}
+	_ = os.MkdirAll(filepath.Dir(file), 0755)
+	cache := BatteryCache{
+		Capacity:      battery.hidppCapacity,
+		CapacityLevel: battery.hidppCapacityLevel,
+		Status:        battery.hidppStatus,
+	}
+	data, err := json.MarshalIndent(cache, "", "  ")
+	if err == nil {
+		_ = os.WriteFile(file, data, 0644)
+	}
+}
+
+func (battery *BatteryInfo) loadFromCache() {
+	file := battery.getCacheFile()
+	if file == "" {
+		return
+	}
+	data, err := os.ReadFile(file)
+	if err != nil {
+		return
+	}
+	var cache BatteryCache
+	if err := json.Unmarshal(data, &cache); err == nil {
+		battery.hidppCapacity = cache.Capacity
+		battery.hidppCapacityLevel = cache.CapacityLevel
+		battery.hidppStatus = cache.Status
+		battery.hidppErr = nil
+		battery.hidppIsCached = true
+	}
+}
+
+// IsCached returns true if the battery info was loaded from the persistence cache.
+func (battery *BatteryInfo) IsCached() bool {
+	battery.ResolveHIDPP()
+	return battery.hidppIsCached
+}
+
 // ResolveHIDPP queries the Logitech device if applicable and caches the result.
 func (battery *BatteryInfo) ResolveHIDPP() {
 	if battery.hidppQueried {
@@ -202,18 +274,23 @@ func (battery *BatteryInfo) ResolveHIDPP() {
 	hidrawPath, err := battery.GetHidrawPath()
 	if err != nil {
 		battery.hidppErr = err
+		battery.loadFromCache()
 		return
 	}
 
 	level, capLevel, status, err := QueryLogitechBatteryHIDPP(hidrawPath)
 	if err != nil {
 		battery.hidppErr = err
+		battery.loadFromCache()
 		return
 	}
 
 	battery.hidppCapacity = level
 	battery.hidppCapacityLevel = capLevel
 	battery.hidppStatus = status
+	battery.hidppErr = nil
+	battery.hidppIsCached = false
+	battery.saveToCache()
 }
 
 // GetCapacity returns the current battery capacity in percent.

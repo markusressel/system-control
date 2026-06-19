@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"sync"
 
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/markusressel/system-control/internal/util"
@@ -53,6 +54,17 @@ var batteryListCmd = &cobra.Command{
 				util.CompareIgnoreCase(a.Name, b.Name),
 			)
 		})
+
+		// Query HID++ battery details in parallel
+		var wg sync.WaitGroup
+		for i := range filtered {
+			wg.Add(1)
+			go func(b *util.BatteryInfo) {
+				defer wg.Done()
+				b.ResolveHIDPP()
+			}(&filtered[i])
+		}
+		wg.Wait()
 
 		for i, battery := range filtered {
 			printBatteryInfo(battery)
@@ -144,6 +156,7 @@ func printBatteryInfo(battery util.BatteryInfo) {
 
 	bStatus, _ := battery.GetStatus()
 	properties.Set("Status", bStatus)
+	properties.Set("Cached", strconv.FormatBool(battery.IsCached()))
 	properties.Set("Scope", battery.Scope)
 	bTechnology, _ := battery.GetTechnology()
 	properties.Set("Technology", bTechnology)

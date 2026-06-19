@@ -48,13 +48,13 @@ func QueryLogitechBatteryHIDPP(hidrawPath string) (level int64, levelText string
 
 	// Read response with timeout
 	var res []byte
-	deadline := time.Now().Add(500 * time.Millisecond)
+	deadline := time.Now().Add(1500 * time.Millisecond)
 	for {
 		if time.Now().After(deadline) {
 			return 0, "", "", errors.New("timeout waiting for GetFeature response")
 		}
 
-		err = f.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		err = f.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
 		if err != nil {
 			return 0, "", "", fmt.Errorf("failed to set read deadline: %w", err)
 		}
@@ -102,13 +102,13 @@ func QueryLogitechBatteryHIDPP(hidrawPath string) (level int64, levelText string
 
 	// Read response with timeout
 	var resBatt []byte
-	deadline = time.Now().Add(500 * time.Millisecond)
+	deadline = time.Now().Add(1500 * time.Millisecond)
 	for {
 		if time.Now().After(deadline) {
 			return 0, "", "", errors.New("timeout waiting for battery level response")
 		}
 
-		err = f.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		err = f.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
 		if err != nil {
 			return 0, "", "", fmt.Errorf("failed to set read deadline: %w", err)
 		}

@@ -3,11 +3,9 @@ package util
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -28,7 +26,7 @@ func (battery *BatteryInfo) GetHidrawPath() (string, error) {
 
 // QueryLogitechBatteryHIDPP queries the battery level and status directly from the raw hidraw device using HID++ 2.0.
 func QueryLogitechBatteryHIDPP(hidrawPath string) (level int64, levelText string, status string, err error) {
-	f, err := os.OpenFile(hidrawPath, os.O_RDWR|syscall.O_NONBLOCK, 0)
+	f, err := os.OpenFile(hidrawPath, os.O_RDWR, 0)
 	if err != nil {
 		return 0, "", "", fmt.Errorf("failed to open device: %w", err)
 	}
@@ -50,17 +48,21 @@ func QueryLogitechBatteryHIDPP(hidrawPath string) (level int64, levelText string
 
 	// Read response with timeout
 	var res []byte
-	deadline := time.Now().Add(150 * time.Millisecond)
+	deadline := time.Now().Add(500 * time.Millisecond)
 	for {
 		if time.Now().After(deadline) {
 			return 0, "", "", errors.New("timeout waiting for GetFeature response")
 		}
 
+		err = f.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		if err != nil {
+			return 0, "", "", fmt.Errorf("failed to set read deadline: %w", err)
+		}
+
 		buf := make([]byte, 64)
 		n, err := f.Read(buf)
 		if err != nil {
-			if errors.Is(err, syscall.EAGAIN) || errors.Is(err, syscall.EWOULDBLOCK) || errors.Is(err, io.EOF) {
-				time.Sleep(5 * time.Millisecond)
+			if os.IsTimeout(err) {
 				continue
 			}
 			return 0, "", "", fmt.Errorf("failed to read from device: %w", err)
@@ -100,17 +102,21 @@ func QueryLogitechBatteryHIDPP(hidrawPath string) (level int64, levelText string
 
 	// Read response with timeout
 	var resBatt []byte
-	deadline = time.Now().Add(150 * time.Millisecond)
+	deadline = time.Now().Add(500 * time.Millisecond)
 	for {
 		if time.Now().After(deadline) {
 			return 0, "", "", errors.New("timeout waiting for battery level response")
 		}
 
+		err = f.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		if err != nil {
+			return 0, "", "", fmt.Errorf("failed to set read deadline: %w", err)
+		}
+
 		buf := make([]byte, 64)
 		n, err := f.Read(buf)
 		if err != nil {
-			if errors.Is(err, syscall.EAGAIN) || errors.Is(err, syscall.EWOULDBLOCK) || errors.Is(err, io.EOF) {
-				time.Sleep(5 * time.Millisecond)
+			if os.IsTimeout(err) {
 				continue
 			}
 			return 0, "", "", fmt.Errorf("failed to read from device: %w", err)

@@ -13,6 +13,13 @@ type BatteryInfo struct {
 	Model        string
 	SerialNumber string
 	Scope        string
+
+	// Cached HID++ values
+	hidppQueried       bool
+	hidppCapacity      int64
+	hidppCapacityLevel string
+	hidppStatus        string
+	hidppErr           error
 }
 
 const (
@@ -94,10 +101,8 @@ func (battery BatteryInfo) GetType() (string, error) {
 	return strings.TrimSpace(rawValue), nil
 }
 
-func (battery BatteryInfo) IsCharging() (bool, error) {
-	path := battery.Path + "/status"
-	status, err := ReadTextFromFile(path)
-	status = strings.TrimSpace(status)
+func (battery *BatteryInfo) IsCharging() (bool, error) {
+	status, err := battery.GetStatus()
 	charging := EqualsIgnoreCase(status, "Charging")
 	return charging, err
 }
@@ -184,14 +189,49 @@ func (battery BatteryInfo) GetCycleCount() (int64, error) {
 	return ReadIntFromFile(path)
 }
 
+// ResolveHIDPP queries the Logitech device if applicable and caches the result.
+func (battery *BatteryInfo) ResolveHIDPP() {
+	if battery.hidppQueried {
+		return
+	}
+	battery.hidppQueried = true
+	if strings.ToLower(battery.Manufacturer) != "logitech" {
+		return
+	}
+
+	hidrawPath, err := battery.GetHidrawPath()
+	if err != nil {
+		battery.hidppErr = err
+		return
+	}
+
+	level, capLevel, status, err := QueryLogitechBatteryHIDPP(hidrawPath)
+	if err != nil {
+		battery.hidppErr = err
+		return
+	}
+
+	battery.hidppCapacity = level
+	battery.hidppCapacityLevel = capLevel
+	battery.hidppStatus = status
+}
+
 // GetCapacity returns the current battery capacity in percent.
-func (battery BatteryInfo) GetCapacity() (int64, error) {
+func (battery *BatteryInfo) GetCapacity() (int64, error) {
+	battery.ResolveHIDPP()
+	if battery.hidppErr == nil && battery.hidppQueried && strings.ToLower(battery.Manufacturer) == "logitech" {
+		return battery.hidppCapacity, nil
+	}
 	path := battery.Path + "/capacity"
 	return ReadIntFromFile(path)
 }
 
 // GetCapacityLevel returns the current capacity level of the battery.
-func (battery BatteryInfo) GetCapacityLevel() (string, error) {
+func (battery *BatteryInfo) GetCapacityLevel() (string, error) {
+	battery.ResolveHIDPP()
+	if battery.hidppErr == nil && battery.hidppQueried && strings.ToLower(battery.Manufacturer) == "logitech" {
+		return battery.hidppCapacityLevel, nil
+	}
 	path := battery.Path + "/capacity_level"
 	capacityLevel, err := ReadTextFromFile(path)
 	if err != nil {
@@ -202,7 +242,11 @@ func (battery BatteryInfo) GetCapacityLevel() (string, error) {
 }
 
 // GetStatus returns the current status of the battery. For example, "Charging", "Discharging", "Not Charging", etc.
-func (battery BatteryInfo) GetStatus() (string, error) {
+func (battery *BatteryInfo) GetStatus() (string, error) {
+	battery.ResolveHIDPP()
+	if battery.hidppErr == nil && battery.hidppQueried && strings.ToLower(battery.Manufacturer) == "logitech" {
+		return battery.hidppStatus, nil
+	}
 	path := battery.Path + "/status"
 	status, err := ReadTextFromFile(path)
 	if err != nil {

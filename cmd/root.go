@@ -87,6 +87,7 @@ func init() {
 func applyErrorOutputDefaults(command *cobra.Command) {
 	command.SilenceUsage = true
 	command.SilenceErrors = true
+	command.SetOut(os.Stdout)
 
 	for _, subCommand := range command.Commands() {
 		applyErrorOutputDefaults(subCommand)

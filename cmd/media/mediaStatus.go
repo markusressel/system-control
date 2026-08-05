@@ -7,7 +7,7 @@ var statusCmd = &cobra.Command{
 	Short: "Show media status",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return printPlayerCtlOutput("status", true)
+		return printPlayerCtlOutput("status", false)
 	},
 }
 

@@ -8,7 +8,7 @@ import (
 	"github.com/markusressel/system-control/internal/util"
 )
 
-func PwDump() GraphState {
+func pwDumpDirect() GraphState {
 	result, err := util.ExecCommand("pw-dump")
 	if err != nil {
 		log.Fatal(err)

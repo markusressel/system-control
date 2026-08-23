@@ -1,9 +1,8 @@
 package volume
 
 import (
-	"fmt"
-
 	"github.com/markusressel/system-control/internal/audio/pipewire"
+	"github.com/markusressel/system-control/internal/commandutil"
 	"github.com/spf13/cobra"
 )
 
@@ -13,24 +12,23 @@ import (
 var mutedCmd = &cobra.Command{
 	Use:   "muted",
 	Short: "Show the current mute state",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: commandutil.StateCommandRunE("audio.muted", nil, func(cmd *cobra.Command) (string, error) {
 		state := pipewire.PwDump()
 
 		node, err := state.GetDefaultSinkNode()
 		if err != nil {
-			return err
+			return "", err
 		}
 		muted, err := state.IsMuted(node.Id)
 		if err != nil {
-			return err
+			return "", err
 		}
 		if muted {
-			fmt.Println("yes")
+			return "yes", nil
 		} else {
-			fmt.Println("no")
+			return "no", nil
 		}
-		return nil
-	},
+	}),
 }
 
 func init() {
@@ -47,6 +45,8 @@ func init() {
 	//	"",
 	//	"Stream Name/Description",
 	//)
+
+	mutedCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
 
 	VolumeCmd.AddCommand(mutedCmd)
 }

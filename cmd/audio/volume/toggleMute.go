@@ -2,6 +2,7 @@ package volume
 
 import (
 	"github.com/markusressel/system-control/internal/audio/pipewire"
+	"github.com/markusressel/system-control/internal/commandutil"
 	"github.com/spf13/cobra"
 )
 
@@ -9,31 +10,36 @@ var toggleMuteCmd = &cobra.Command{
 	Use:   "toggle-mute",
 	Short: "Toggle the Mute state",
 	Long:  ``,
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
+	RunE: commandutil.LockedRunE("cmd-audio-volume", commandutil.MutatorRunE(func(cmd *cobra.Command, args []string) ([]commandutil.MutatorResult, error) {
 		state := pipewire.PwDump()
 
-		var targets []pipewire.InterfaceNode
-		if stream != "" {
-			targets = state.FindStreamNodes(stream)
-		} else if device != "" {
-			targets = state.FindNodesByName(device)
-		} else {
-			target, err := state.GetDefaultSinkNode()
-			if err != nil {
-				return err
-			}
-			targets = append(targets, target)
+		targets, err := resolveTargets(state, device, stream)
+		if err != nil {
+			return nil, err
 		}
 
+		var results []commandutil.MutatorResult
 		for _, target := range targets {
+			initialMuted, _ := state.IsMuted(target.Id)
+
 			err = pipewire.WpCtlToggleMute(target.Id)
 			if err != nil {
-				return err
+				return nil, err
 			}
+
+			val := "yes"
+			if initialMuted {
+				val = "no"
+			}
+			results = append(results, commandutil.MutatorResult{
+				CommandId: "audio.muted",
+				Flags:     nil,
+				Value:     val,
+			})
 		}
 
-		return nil
-	},
+		return results, nil
+	})),
 }
 
 func init() {

@@ -3,6 +3,7 @@ package redshift
 import (
 	"fmt"
 
+	"github.com/markusressel/system-control/internal/commandutil"
 	"github.com/markusressel/system-control/internal/configuration"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
@@ -12,32 +13,34 @@ var brightnessCmd = &cobra.Command{
 	Use:   "brightness",
 	Short: "Show current display brightness",
 	Long:  ``,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: commandutil.StateCommandRunE("display.redshift.brightness", func(cmd *cobra.Command) bool {
+		return brightnessValue != -1
+	}, func(cmd *cobra.Command) (string, error) {
 		redshiftLock = lockRedshift()
 		defer redshiftLock.Unlock()
 
 		displays, err := parseDisplayParam(display)
 		if err != nil {
-			return err
+			return "", err
 		}
 
-		for _, display := range displays {
+		var lastSet float64
+		for _, d := range displays {
 			if brightnessValue != -1 {
 				newBrightness := clampBrightnessToConfig(brightnessValue)
-				lastSetBrightness := getLastSetBrightness(display)
+				lastSetBrightness := getLastSetBrightness(d)
 				if newBrightness != lastSetBrightness {
-					err := ApplyRedshift(display, -1, newBrightness, -1)
+					err := ApplyRedshift(d, -1, newBrightness, -1)
 					if err != nil {
-						return err
+						return "", err
 					}
 				}
 			}
 
-			lastSetBrightness := getLastSetBrightness(display)
-			fmt.Println(lastSetBrightness)
+			lastSet = getLastSetBrightness(d)
 		}
-		return nil
-	},
+		return fmt.Sprintf("%.2f", lastSet), nil
+	}),
 }
 
 func clampBrightnessToConfig(value float64) float64 {
@@ -49,6 +52,8 @@ func clampBrightnessToConfig(value float64) float64 {
 }
 
 func init() {
+	brightnessCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+
 	brightnessCmd.Flags().Float64VarP(
 		&brightnessValue,
 		"brightness", "b",

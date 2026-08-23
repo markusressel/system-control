@@ -14,7 +14,12 @@ import (
 )
 
 type Configuration struct {
+	Daemon   DaemonConfig   `mapstructure:"daemon" yaml:"daemon"`
 	Redshift RedshiftConfig `mapstructure:"redshift" yaml:"redshift"`
+}
+
+type DaemonConfig struct {
+	PollIntervals map[string]time.Duration `mapstructure:"pollIntervals" yaml:"pollIntervals"`
 }
 
 type RedshiftConfig struct {

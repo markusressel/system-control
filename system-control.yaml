@@ -3,3 +3,8 @@ redshift:
     minimumBrightness: 0.1
     maximumBrightness: 1.0
   transitionDuration: 2s
+daemon:
+  pollIntervals:
+    cpu: 2s
+    disk: 60s
+    battery: 30s

@@ -151,9 +151,39 @@ func (state *GraphState) GetDefaultSinkNodeName() (string, error) {
 			continue
 		}
 
+		// First try configured sink (what we explicitly set)
+		for _, entry := range item.Metadata {
+			if entry["key"] == "default.configured.audio.sink" {
+				if val, ok := entry["value"].(string); ok {
+					var data map[string]interface{}
+					if err := json.Unmarshal([]byte(val), &data); err == nil {
+						if name, ok := data["name"].(string); ok {
+							return name, nil
+						}
+					}
+				} else if valMap, ok := entry["value"].(map[string]interface{}); ok {
+					if name, ok := valMap["name"].(string); ok {
+						return name, nil
+					}
+				}
+			}
+		}
+
+		// Fallback to active sink (what WirePlumber enforces)
 		for _, entry := range item.Metadata {
 			if entry["key"] == "default.audio.sink" {
-				return entry["value"].(map[string]interface{})["name"].(string), nil
+				if val, ok := entry["value"].(string); ok {
+					var data map[string]interface{}
+					if err := json.Unmarshal([]byte(val), &data); err == nil {
+						if name, ok := data["name"].(string); ok {
+							return name, nil
+						}
+					}
+				} else if valMap, ok := entry["value"].(map[string]interface{}); ok {
+					if name, ok := valMap["name"].(string); ok {
+						return name, nil
+					}
+				}
 			}
 		}
 	}
@@ -425,7 +455,7 @@ func (state *GraphState) GetVolumeByName(name string) (float64, error) {
 
 // GetDefaultSinkNode returns the index of the active device
 func (state *GraphState) GetDefaultSinkNode() (InterfaceNode, error) {
-	currentDefaultSinkName, err := util.ExecCommand("pactl", "get-default-sink")
+	currentDefaultSinkName, err := state.GetDefaultSinkNodeName()
 	if err != nil {
 		return InterfaceNode{}, err
 	}

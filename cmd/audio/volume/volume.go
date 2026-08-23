@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/markusressel/system-control/internal/audio/pipewire"
+	"github.com/markusressel/system-control/internal/commandutil"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
@@ -11,24 +12,41 @@ import (
 var device string
 var stream string
 
+func resolveTargets(state pipewire.GraphState, targetDevice string, targetStream string) ([]pipewire.InterfaceNode, error) {
+	var targets []pipewire.InterfaceNode
+	if targetStream != "" {
+		targets = state.FindStreamNodes(targetStream)
+	} else if targetDevice != "" {
+		targets = state.FindNodesByName(targetDevice)
+	} else {
+		target, err := state.GetDefaultSinkNode()
+		if err != nil {
+			return nil, err
+		}
+		targets = append(targets, target)
+	}
+	return targets, nil
+}
+
 var VolumeCmd = &cobra.Command{
 	Use:   "volume",
 	Short: "Show the current volume",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: commandutil.StateCommandRunE("audio.volume", nil, func(cmd *cobra.Command) (string, error) {
 		state := pipewire.PwDump()
 
 		volume, err := state.GetVolumeByName(device)
 		if err != nil {
-			return err
+			return "", err
 		}
 		volume = util.RoundToTwoDecimals(volume)
 		volumeAsInt := (int)(volume * 100)
-		fmt.Println(volumeAsInt)
-		return nil
-	},
+		return fmt.Sprintf("%d", volumeAsInt), nil
+	}),
 }
 
 func init() {
+	VolumeCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+
 	VolumeCmd.PersistentFlags().StringVarP(
 		&device,
 		"device", "d",

@@ -14,6 +14,7 @@ test:   ## Run all tests
 
 build: clean
 	go build -o "${OUTPUT_DIR}${NAME}" main.go
+	gcc -O3 cmd/sysctrl/main.c -o "${OUTPUT_DIR}sysctrl"
 
 run: build
 	"./${OUTPUT_DIR}${NAME}"
@@ -25,8 +26,17 @@ deploy-custom: build
 
 
 deploy: build
-	sudo cp "./${OUTPUT_DIR}${NAME}" "/usr/bin/${NAME}"
+	-systemctl --user stop system-control.service 2>/dev/null || true
+	sudo install -Dm755 "./${OUTPUT_DIR}${NAME}" "/usr/bin/${NAME}"
+	sudo install -Dm755 "./${OUTPUT_DIR}sysctrl" "/usr/bin/sysctrl"
 	system-control completion fish > ~/.config/fish/completions/system-control.fish
+	$(MAKE) deploy-systemd
+
+deploy-systemd:
+	mkdir -p ~/.config/systemd/user/
+	cp systemd/system-control.service ~/.config/systemd/user/
+	systemctl --user daemon-reload
+	systemctl --user enable --now system-control.service
 
 clean:
 	go clean

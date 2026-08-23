@@ -3,6 +3,7 @@ package redshift
 import (
 	"fmt"
 
+	"github.com/markusressel/system-control/internal/commandutil"
 	"github.com/spf13/cobra"
 )
 
@@ -17,15 +18,13 @@ var redshiftBrightnessIncCmd = &cobra.Command{
 		}
 		return nil
 	},
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		redshiftLock = lockRedshift()
-		defer redshiftLock.Unlock()
-
+	RunE: commandutil.LockedRunE("cmd-display-redshift", commandutil.MutatorRunE(func(cmd *cobra.Command, args []string) ([]commandutil.MutatorResult, error) {
 		displays, err := parseDisplayParam(display)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
+		var results []commandutil.MutatorResult
 		for _, display := range displays {
 			lastSetBrightness := getLastSetBrightness(display)
 
@@ -33,14 +32,18 @@ var redshiftBrightnessIncCmd = &cobra.Command{
 			newBrightness := clampBrightnessToConfig(rawNew)
 			err = ApplyRedshift(display, -1, newBrightness, -1)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
-			fmt.Println(newBrightness)
+			results = append(results, commandutil.MutatorResult{
+				CommandId: "display.redshift.brightness",
+				Flags:     map[string]string{"display": display.Name},
+				Value:     fmt.Sprintf("%.2f", newBrightness),
+			})
 		}
 
-		return nil
-	},
+		return results, nil
+	})),
 }
 
 func init() {

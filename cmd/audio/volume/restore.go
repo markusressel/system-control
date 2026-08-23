@@ -1,51 +1,66 @@
 package volume
 
 import (
-	"strconv"
+	"fmt"
 
-	"github.com/markusressel/system-control/internal/audio"
-	"github.com/markusressel/system-control/internal/audio/pulseaudio"
+	"github.com/markusressel/system-control/internal/audio/pipewire"
+	"github.com/markusressel/system-control/internal/commandutil"
 	"github.com/markusressel/system-control/internal/persistence"
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
 
 var restoreCmd = &cobra.Command{
 	Use:   "restore",
-	Short: "Restore the state of the given audio channel from a previous save",
+	Short: "Restore the state of the given audio device from a previous save",
 	Long:  ``,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		cardFlag := cmd.Flag("card")
-		card := cardFlag.Value.String()
-		cardInt, _ := strconv.Atoi(card)
-
-		channelFlag := cmd.Flag("channel")
-		channel := channelFlag.Value.String()
-
-		headphonesConnected := audio.IsHeadphoneConnected()
-		key := computeKey(headphonesConnected, card, channel)
-
-		data := audioState{}
-		err := persistence.ReadStruct(key, &data)
+	RunE: commandutil.LockedRunE("cmd-audio-volume", commandutil.MutatorRunE(func(cmd *cobra.Command, args []string) ([]commandutil.MutatorResult, error) {
+		state := pipewire.PwDump()
+		targets, err := resolveTargets(state, device, stream)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		err = pulseaudio.SetMuted(cardInt, channel, data.Muted)
-		err = pulseaudio.SetVolume(cardInt, channel, data.Volume)
+		var results []commandutil.MutatorResult
+		for _, target := range targets {
+			name, _ := target.GetName()
+			key := computeKey(name)
+			data := audioState{}
+			err := persistence.ReadStruct(key, &data)
+			if err != nil {
+				continue // No saved state
+			}
 
-		return err
-	},
-}
+			err = pipewire.WpCtlSetMute(target.Id, data.Muted)
+			if err != nil {
+				return nil, err
+			}
+			err = pipewire.WpCtlSetVolume(target.Id, data.Volume)
+			if err != nil {
+				return nil, err
+			}
 
-func computeKey(headphonesConnected bool, card string, channel string) string {
-	var speakerType string
-	if headphonesConnected {
-		speakerType = "headphones"
-	} else {
-		speakerType = "speaker"
-	}
+			val := "yes"
+			if !data.Muted {
+				val = "no"
+			}
+			newVolume := util.RoundToTwoDecimals(data.Volume)
+			volumeAsInt := (int)(newVolume * 100)
 
-	return speakerType + "_" + card + "_" + channel
+			results = append(results, commandutil.MutatorResult{
+				CommandId: "audio.muted",
+				Flags:     map[string]string{"device": device},
+				Value:     val,
+			})
+			results = append(results, commandutil.MutatorResult{
+				CommandId: "audio.volume",
+				Flags:     map[string]string{"device": device},
+				Value:     fmt.Sprintf("%d", volumeAsInt),
+			})
+		}
+
+		return results, nil
+	})),
 }
 
 func init() {

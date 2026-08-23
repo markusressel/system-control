@@ -13,6 +13,7 @@ var nextCmd = &cobra.Command{
 > system-control audio sink next`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// TODO: add "skip" string glob parameter, so that the user can skip certain sinks when switching to the next one
 		return pipewire.RotateActiveSinkPipewire(false)
 	},
 }

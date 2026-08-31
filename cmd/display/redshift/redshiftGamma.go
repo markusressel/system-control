@@ -9,7 +9,8 @@ import (
 )
 
 var (
-	gammaValue float64
+	gammaValue        float64
+	gammaFormatString string
 )
 
 var gammaCmd = &cobra.Command{
@@ -38,7 +39,11 @@ var gammaCmd = &cobra.Command{
 			}
 
 			lastSetGamma := getLastSetGamma(display)
-			fmt.Println(lastSetGamma)
+			if gammaFormatString != "" {
+				fmt.Printf(gammaFormatString+"\n", lastSetGamma)
+			} else {
+				fmt.Println(lastSetGamma)
+			}
 		}
 		return nil
 	},
@@ -58,6 +63,13 @@ func init() {
 		"gamma", "g",
 		-1,
 		"Gamma value to set (between 0.1 and 2.0)",
+	)
+
+	gammaCmd.Flags().StringVarP(
+		&gammaFormatString,
+		"format", "f",
+		"%.2f",
+		"Format string for the output value",
 	)
 
 	Command.AddCommand(gammaCmd)

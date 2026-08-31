@@ -9,6 +9,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	brightnessFormatString string
+)
+
 var brightnessCmd = &cobra.Command{
 	Use:   "brightness",
 	Short: "Show current display brightness",
@@ -39,7 +43,7 @@ var brightnessCmd = &cobra.Command{
 
 			lastSet = getLastSetBrightness(d)
 		}
-		return fmt.Sprintf("%.2f", lastSet), nil
+		return fmt.Sprintf(brightnessFormatString, lastSet), nil
 	}),
 }
 
@@ -59,6 +63,13 @@ func init() {
 		"brightness", "b",
 		-1,
 		"Brightness value to set (between 0.1 and 1.0)",
+	)
+
+	brightnessCmd.Flags().StringVarP(
+		&brightnessFormatString,
+		"format", "f",
+		"%.2f",
+		"Format string for the output value",
 	)
 
 	Command.AddCommand(brightnessCmd)

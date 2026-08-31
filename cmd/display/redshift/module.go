@@ -54,8 +54,16 @@ func (m *DaemonModule) Track(ctx context.Context, command string, flags map[stri
 				return "", fmt.Errorf("no displays found")
 			}
 
+			format := flags["format"]
+			if format == "" {
+				format = flags["f"]
+			}
+			if format == "" {
+				format = "%.2f"
+			}
+
 			lastSet := getLastSetBrightness(dInfo[0])
-			return fmt.Sprintf("%.2f", lastSet), nil
+			return fmt.Sprintf(format, lastSet), nil
 		})
 		m.trackers = append(m.trackers, tracker)
 		go tracker.Start(ctx)

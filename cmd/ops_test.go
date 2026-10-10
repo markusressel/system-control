@@ -35,19 +35,24 @@ func TestDaemonUnderstandsRealCommandLines(t *testing.T) {
 	}
 
 	handled := map[string][]string{
-		"audio.volume":                    {"audio", "volume"},
-		"audio.volume.muted":              {"audio", "volume", "muted", "--watch"},
-		"audio.volume.inc":                {"audio", "volume", "inc", "--device", "X"},
-		"audio.volume.set":                {"audio", "volume", "set", "50"},
-		"audio.volume.toggle-mute":        {"audio", "volume", "toggle-mute"},
-		"audio.sink.active":               {"audio", "sink", "active", "-c", "description", "-w"},
-		"audio.sink.switch":               {"audio", "sink", "switch", "headphone"},
-		"audio.device.profile":            {"audio", "device", "profile", "-d", "X"},
-		"bluetooth.connected":             {"bluetooth", "connected", "Headset", "--watch"},
-		"fan.mode":                        {"fan", "mode", "--type", "number", "-w"},
-		"display.redshift.brightness":     {"display", "redshift", "brightness", "-d", "DP-1", "--format", "%.1f", "--watch"},
-		"display.redshift.brightness.inc": {"display", "redshift", "brightness", "inc", "-d", "DP-1"},
-		"display.redshift.brightness.dec": {"display", "redshift", "brightness", "dec", "--step", "0.2"},
+		"audio.volume":                     {"audio", "volume"},
+		"audio.volume.muted":               {"audio", "volume", "muted", "--watch"},
+		"audio.volume.inc":                 {"audio", "volume", "inc", "--device", "X"},
+		"audio.volume.set":                 {"audio", "volume", "set", "50"},
+		"audio.volume.toggle-mute":         {"audio", "volume", "toggle-mute"},
+		"audio.sink.active":                {"audio", "sink", "active", "-c", "description", "-w"},
+		"audio.sink.switch":                {"audio", "sink", "switch", "headphone"},
+		"audio.device.profile":             {"audio", "device", "profile", "-d", "X"},
+		"bluetooth.connected":              {"bluetooth", "connected", "Headset", "--watch"},
+		"fan.mode":                         {"fan", "mode", "--type", "number", "-w"},
+		"display.redshift.brightness":      {"display", "redshift", "brightness", "-d", "DP-1", "--format", "%.1f", "--watch"},
+		"display.redshift.brightness.inc":  {"display", "redshift", "brightness", "inc", "-d", "DP-1"},
+		"display.backlight.brightness":     {"display", "backlight", "brightness", "--watch"},
+		"display.backlight.brightness.inc": {"display", "backlight", "brightness", "inc"},
+		"display.backlight.brightness.set": {"display", "backlight", "brightness", "set", "30"},
+		"keyboard.brightness":              {"keyboard", "brightness", "-w"},
+		"keyboard.brightness.dec":          {"keyboard", "brightness", "dec"},
+		"display.redshift.brightness.dec":  {"display", "redshift", "brightness", "dec", "--step", "0.2"},
 	}
 	for want, argv := range handled {
 		op, _, ok := daemon.Default.MatchArgv(argv)
@@ -61,9 +66,11 @@ func TestDaemonUnderstandsRealCommandLines(t *testing.T) {
 		{"display", "redshift", "brightness", "reset"},                // other sub command of an op
 		{"display", "redshift", "brightness", "-b", "0.5", "--watch"}, // a set can't be watched
 		{"display", "redshift", "gamma", "inc"},                       // not an op
-		{"audio", "volume", "set"},                                    // cobra.ExactArgs(1)
-		{"audio", "volume", "set", "1", "2"},                          // cobra.ExactArgs(1)
-		{"audio", "volume", "--configuration", "x.yaml"},              // root flag
+		{"audio", "volume", "set"},
+		{"keyboard", "brightness", "2", "--watch"},       // a set can't be watched
+		{"display", "backlight", "list"},                 // not an op                                    // cobra.ExactArgs(1)
+		{"audio", "volume", "set", "1", "2"},             // cobra.ExactArgs(1)
+		{"audio", "volume", "--configuration", "x.yaml"}, // root flag
 		{"audio", "volume", "--help"},
 		{"audio", "device", "profile", "hdmi", "--watch"}, // set can't be watched
 		{"audio", "sink", "next", "--watch"},

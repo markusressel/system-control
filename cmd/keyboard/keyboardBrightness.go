@@ -1,10 +1,7 @@
 package keyboard
 
 import (
-	"fmt"
-	"strconv"
-
-	"github.com/markusressel/system-control/internal/util"
+	"github.com/markusressel/system-control/internal/commandutil"
 
 	"github.com/spf13/cobra"
 )
@@ -14,28 +11,10 @@ var keyboardBrightnessCmd = &cobra.Command{
 	Short: "Get/Set the current keyboard backlight brightness",
 	Long:  ``,
 	Args:  cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) > 0 {
-			p, err := strconv.Atoi(args[0])
-			if err != nil {
-				return err
-			}
-			_, err = util.SetKeyboardBrightness(p)
-			if err != nil {
-				return err
-			}
-		} else {
-			brightness, err := util.GetKeyboardBrightness()
-			if err != nil {
-				return err
-			}
-			fmt.Println(brightness)
-		}
-
-		return nil
-	},
+	RunE:  commandutil.OpRunE("keyboard.brightness"),
 }
 
 func init() {
+	keyboardBrightnessCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
 	Command.AddCommand(keyboardBrightnessCmd)
 }

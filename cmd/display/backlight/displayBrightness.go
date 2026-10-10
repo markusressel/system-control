@@ -1,9 +1,7 @@
 package backlight
 
 import (
-	"fmt"
-
-	"github.com/markusressel/system-control/internal/util"
+	"github.com/markusressel/system-control/internal/commandutil"
 
 	"github.com/spf13/cobra"
 )
@@ -12,27 +10,11 @@ var brightnessCmd = &cobra.Command{
 	Use:   "brightness",
 	Short: "Show current display brightness",
 	Long:  ``,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		mainBacklight, err := util.GetMainBacklight()
-		if err != nil {
-			return err
-		}
-		brightness, err := mainBacklight.GetBrightness()
-		if err != nil {
-			return err
-		}
-		maxBrightness, err := mainBacklight.GetMaxBrightness()
-		if err != nil {
-			return err
-		}
-
-		percentage := int((float32(brightness) / float32(maxBrightness)) * 100.0)
-
-		fmt.Println(percentage)
-		return nil
-	},
+	Args:  cobra.NoArgs,
+	RunE:  commandutil.OpRunE("display.backlight.brightness"),
 }
 
 func init() {
+	brightnessCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
 	Command.AddCommand(brightnessCmd)
 }

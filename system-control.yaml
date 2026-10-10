@@ -11,6 +11,9 @@ daemon:
     display: 5s
     # audio is driven by PipeWire events, set an interval only as a safety net
     # audio: 30s
+    # backlights are changed by hardware keys without any event (default 2s)
+    # backlight: 2s
+    # keyboard: 2s
     # fan mode can only be polled
     fan: 5s
 

@@ -15,6 +15,7 @@ import (
 
 	// registers the display ops
 	_ "github.com/markusressel/system-control/cmd/display/redshift"
+	_ "github.com/markusressel/system-control/internal/backlight"
 )
 
 var DaemonCmd = &cobra.Command{

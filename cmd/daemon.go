@@ -67,23 +67,6 @@ every command works on its own.`,
 	},
 }
 
-var daemonStatusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Show the state of the running daemon",
-	Long:  ``,
-	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		lines, err := daemon.Status()
-		if err != nil {
-			return err
-		}
-		for _, line := range lines {
-			fmt.Println(line)
-		}
-		return nil
-	},
-}
-
 func init() {
 	RootCmd.AddCommand(DaemonCmd)
 	DaemonCmd.AddCommand(daemonStatusCmd)

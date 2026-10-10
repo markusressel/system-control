@@ -143,7 +143,7 @@ func TestStatus_ReportsExecutions(t *testing.T) {
 	}
 
 	joined := strings.Join(eng.status(), "\n")
-	for _, want := range []string{"executions:", "test.echo: 1 calls", "1 failed", "boom", "extra: 1"} {
+	for _, want := range []string{"Executions", "test.echo", "last error", "boom", "extra: 1"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("status lacks %q:\n%s", want, joined)
 		}

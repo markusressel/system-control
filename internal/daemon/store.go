@@ -255,23 +255,3 @@ func (e *entry) refresh(ctx context.Context) (err error) {
 	}
 	return nil
 }
-
-// describe lists the watched entries with their number of subscribers.
-func (s *store) describe() []string {
-	s.mu.Lock()
-	entries := make([]*entry, 0, len(s.entries))
-	for _, e := range s.entries {
-		entries = append(entries, e)
-	}
-	s.mu.Unlock()
-
-	lines := make([]string, 0, len(entries))
-	for _, e := range entries {
-		e.mu.Lock()
-		subscribers := len(e.subs)
-		e.mu.Unlock()
-		lines = append(lines, fmt.Sprintf("%s (%d subscribers)", strings.ReplaceAll(e.key, "\x00", " "), subscribers))
-	}
-	slices.Sort(lines)
-	return lines
-}

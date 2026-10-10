@@ -2,7 +2,6 @@ package daemon
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 )
@@ -38,38 +37,4 @@ func (s *opStats) record(took time.Duration, dropped bool, err error) {
 	s.calls++
 	s.total += took
 	s.slowest = max(s.slowest, took)
-}
-
-// line returns a summary, or "" if the op was never executed.
-func (s *opStats) line(name string) string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.calls == 0 && s.unhandled == 0 {
-		return ""
-	}
-	line := fmt.Sprintf("%s: %d calls", name, s.calls)
-	if s.calls > 0 {
-		line += fmt.Sprintf(", avg %s, max %s",
-			shortDuration(s.total/time.Duration(s.calls)), shortDuration(s.slowest))
-	}
-	if s.dropped > 0 {
-		line += fmt.Sprintf(", %d dropped", s.dropped)
-	}
-	if s.unhandled > 0 {
-		line += fmt.Sprintf(", %d unhandled", s.unhandled)
-	}
-	if s.failed > 0 {
-		line += fmt.Sprintf(", %d failed (last %s ago: %s)",
-			s.failed, time.Since(s.lastErrAt).Round(time.Second), s.lastErr)
-	}
-	return line
-}
-
-// shortDuration keeps sub-millisecond latencies visible instead of rounding them to 0s.
-func shortDuration(d time.Duration) time.Duration {
-	if d < time.Millisecond {
-		return d.Round(time.Microsecond)
-	}
-	return d.Round(100 * time.Microsecond)
 }

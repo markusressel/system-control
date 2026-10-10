@@ -59,8 +59,9 @@ Run the three CI checks before reporting a task done.
 - **Mutations** hold `Op.Lock` (cross-process, shared with the CLI). Waiters beyond `daemon.MaxQueueWait` are dropped
   on purpose (scroll spam): a command waits for its lock at most `MaxQueueWait` in total. An op that queries and
   mutates by argument sets `Op.LockFor` instead of `Op.Lock`.
-- **Observability:** `system-control daemon status` shows watchers, per-op calls/latency/drops/failures and the
-  PipeWire monitor restarts. Add new event sources' health with `Engine.AddStatus`.
+- **Observability:** `system-control daemon status` (`-w` live view, `--json`) shows watchers with their current
+  value, per-op calls/latency/drops/failures and source health. Add a source's health with `Engine.AddStatus`.
+  The structured form is `StatusInfo` (`STATUS json`), `RenderStatus` draws it.
 - **Configuration is a snapshot:** read it with `configuration.Get()` for every use, never keep it. `Get()` reloads
   the file when its mtime changed (checked once per second), a broken file keeps the old values. SIGHUP forces it.
   Poll intervals are asked for again after every tick.

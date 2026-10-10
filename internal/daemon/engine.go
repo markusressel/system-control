@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -74,36 +75,8 @@ func (e *Engine) Start(ctx context.Context) error {
 	return nil
 }
 
-// status describes the engine for `daemon status`.
+// status describes the engine as plain text, for clients that do not ask for the structured
+// form (`STATUS json`).
 func (e *Engine) status() []string {
-	watched := e.store.describe()
-	lines := []string{
-		fmt.Sprintf("pid: %d", os.Getpid()),
-		fmt.Sprintf("socket: %s", SocketPath()),
-		fmt.Sprintf("uptime: %s", time.Since(e.startedAt).Round(time.Second)),
-		fmt.Sprintf("ops: %d", len(e.registry.Ops())),
-		fmt.Sprintf("watched states: %d", len(watched)),
-	}
-	for _, w := range watched {
-		lines = append(lines, "  "+w)
-	}
-
-	var stats []string
-	for _, op := range e.registry.Ops() {
-		if op.stats == nil {
-			continue
-		}
-		if line := op.stats.line(op.Name); line != "" {
-			stats = append(stats, "  "+line)
-		}
-	}
-	if len(stats) > 0 {
-		lines = append(lines, "executions:")
-		lines = append(lines, stats...)
-	}
-
-	for _, f := range e.statuses {
-		lines = append(lines, f()...)
-	}
-	return lines
+	return strings.Split(strings.TrimRight(RenderStatus(e.statusInfo(), RenderOptions{}), "\n"), "\n")
 }

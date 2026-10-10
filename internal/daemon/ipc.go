@@ -3,6 +3,7 @@ package daemon
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -23,7 +24,7 @@ import (
 //
 //	ARGV <n>\n          followed by n arguments, each encoded as "<len>\n<len bytes>"
 //	NOTIFY <prefix>...\n  state behind the given op name prefixes changed, re-query watchers
-//	STATUS\n            describe the daemon, answered with O frames
+//	STATUS [json]\n     describe the daemon, answered with O frames (one JSON object with "json")
 //
 // The server answers with frames, one per line:
 //
@@ -119,8 +120,20 @@ func (s *ipcServer) handle(ctx context.Context, conn net.Conn) {
 		writeFrames(conn, 'X', "0")
 
 	case "STATUS":
-		for _, line := range s.engine.status() {
-			writeFrames(conn, 'O', line)
+		// `STATUS json` is answered with one O frame holding a StatusInfo, a plain `STATUS`
+		// (and clients that predate the structured form) with rendered text lines.
+		if len(fields) > 1 && fields[1] == "json" {
+			payload, err := json.Marshal(s.engine.statusInfo())
+			if err != nil {
+				writeFrames(conn, 'E', err.Error())
+				writeFrames(conn, 'X', "1")
+				return
+			}
+			writeFrames(conn, 'O', string(payload))
+		} else {
+			for _, line := range s.engine.status() {
+				writeFrames(conn, 'O', line)
+			}
 		}
 		writeFrames(conn, 'X', "0")
 
@@ -311,6 +324,27 @@ func TryRemote(argv []string, stdout, stderr io.Writer) (handled bool, exitCode 
 
 // Status asks the running daemon to describe itself.
 func Status() ([]string, error) {
+	lines, err := requestStatus("STATUS\n")
+	return lines, err
+}
+
+// FetchStatus asks the running daemon to describe itself. A daemon that predates the structured
+// answer returns its text lines as legacy instead.
+func FetchStatus() (info *StatusInfo, legacy []string, err error) {
+	lines, err := requestStatus("STATUS json\n")
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(lines) == 1 && strings.HasPrefix(lines[0], "{") {
+		var decoded StatusInfo
+		if err := json.Unmarshal([]byte(lines[0]), &decoded); err == nil {
+			return &decoded, nil, nil
+		}
+	}
+	return nil, lines, nil
+}
+
+func requestStatus(request string) ([]string, error) {
 	conn, err := net.DialTimeout("unix", SocketPath(), 200*time.Millisecond)
 	if err != nil {
 		return nil, fmt.Errorf("daemon is not running (%s): %w", SocketPath(), err)
@@ -318,7 +352,7 @@ func Status() ([]string, error) {
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(answerTimeout))
 
-	if _, err := io.WriteString(conn, "STATUS\n"); err != nil {
+	if _, err := io.WriteString(conn, request); err != nil {
 		return nil, err
 	}
 

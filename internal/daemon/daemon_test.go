@@ -354,7 +354,7 @@ func TestStatus(t *testing.T) {
 	}
 
 	joined := strings.Join(lines, "\n")
-	for _, want := range []string{"pid: ", "socket: ", "uptime: ", "ops: ", "watched states: 0"} {
+	for _, want := range []string{"running", "pid ", "socket ", "5 ops", "Watchers (0)"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("status lacks %q:\n%s", want, joined)
 		}

@@ -1,8 +1,11 @@
 package util
 
 import (
+	"slices"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 )
 
 const (
@@ -14,8 +17,44 @@ type DisplayInfo struct {
 	Name string
 }
 
+var displayCache struct {
+	mu        sync.Mutex
+	ttl       time.Duration
+	fetchedAt time.Time
+	displays  []DisplayInfo
+}
+
+// EnableDisplayCache makes GetDisplays reuse its result for the given duration, so that
+// frequent queries of a long running process (the daemon) do not run xrandr each time.
+// A duration <= 0 disables the cache again.
+func EnableDisplayCache(ttl time.Duration) {
+	displayCache.mu.Lock()
+	defer displayCache.mu.Unlock()
+	displayCache.ttl = ttl
+	displayCache.displays = nil
+}
+
 // GetDisplays returns a list of all connected displays
 func GetDisplays() (displays []DisplayInfo, err error) {
+	displayCache.mu.Lock()
+	defer displayCache.mu.Unlock()
+
+	if displayCache.ttl > 0 && displayCache.displays != nil && time.Since(displayCache.fetchedAt) < displayCache.ttl {
+		return slices.Clone(displayCache.displays), nil
+	}
+
+	displays, err = queryDisplays()
+	if err == nil && displayCache.ttl > 0 {
+		displayCache.displays = slices.Clone(displays)
+		if displayCache.displays == nil {
+			displayCache.displays = []DisplayInfo{}
+		}
+		displayCache.fetchedAt = time.Now()
+	}
+	return displays, err
+}
+
+func queryDisplays() (displays []DisplayInfo, err error) {
 	result, err := ExecCommand(
 		xrandrExecutable,
 		"--listmonitors",

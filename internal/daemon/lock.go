@@ -76,3 +76,10 @@ func WithLock(name string, queuedAt time.Time, fn func() error) (dropped bool, e
 
 	return false, fn()
 }
+
+// AcquireLockWithin is like AcquireLock, but gives up after `wait` and reports ok=false instead
+// of an error. Ops that coalesce their work (see Accumulator) use it: giving up is harmless
+// there, the work stays pending for whoever holds the lock next.
+func AcquireLockWithin(name string, wait time.Duration) (unlock func(), ok bool, err error) {
+	return acquireLock(name, wait)
+}

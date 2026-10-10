@@ -43,7 +43,6 @@ func init() {
 
 	daemon.Register(daemon.Op{
 		Name:        "display.redshift.brightness.inc",
-		Lock:        redshiftLockName,
 		Requires:    []string{"DISPLAY"},
 		Run:         stepBrightness(1),
 		Invalidates: []string{"display."},
@@ -51,7 +50,6 @@ func init() {
 
 	daemon.Register(daemon.Op{
 		Name:        "display.redshift.brightness.dec",
-		Lock:        redshiftLockName,
 		Requires:    []string{"DISPLAY"},
 		Run:         stepBrightness(-1),
 		Invalidates: []string{"display."},
@@ -110,7 +108,7 @@ func setBrightness(displayName string, value float64, format string) ([]string, 
 }
 
 // stepBrightness returns the op implementation to change the brightness by --step.
-// The op holds the redshift lock.
+// Steps are coalesced, see coalescedStep.
 func stepBrightness(direction float64) func(ctx context.Context, a daemon.Args) ([]string, error) {
 	return func(ctx context.Context, a daemon.Args) ([]string, error) {
 		step, err := a.Float("step")
@@ -121,20 +119,22 @@ func stepBrightness(direction float64) func(ctx context.Context, a daemon.Args) 
 			return nil, err
 		}
 
-		displays, err := parseDisplayParam(a.Flag("display"))
-		if err != nil {
-			return nil, err
-		}
-
-		var lines []string
-		for _, d := range displays {
-			newBrightness := clampBrightnessToConfig(getLastSetBrightness(d) + direction*step)
-			if err := ApplyRedshift(d, -1, newBrightness, -1); err != nil {
+		return coalescedStep("brightness|"+a.Flag("display"), direction*step, func(total float64) ([]string, error) {
+			displays, err := parseDisplayParam(a.Flag("display"))
+			if err != nil {
 				return nil, err
 			}
-			lines = append(lines, fmt.Sprintf("%.2f", newBrightness))
-		}
-		return lines, nil
+
+			var lines []string
+			for _, d := range displays {
+				newBrightness := clampBrightnessToConfig(getLastSetBrightness(d) + total)
+				if err := ApplyRedshift(d, -1, newBrightness, -1); err != nil {
+					return nil, err
+				}
+				lines = append(lines, fmt.Sprintf("%.2f", newBrightness))
+			}
+			return lines, nil
+		})
 	}
 }
 

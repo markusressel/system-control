@@ -3,6 +3,7 @@ package redshift
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"github.com/markusressel/system-control/internal/daemon"
 	"github.com/markusressel/system-control/internal/util"
@@ -17,16 +18,16 @@ const (
 func init() {
 	// gamma
 	register("display.redshift.gamma", withSetLock(isQuery("gamma", "-1")), true, runGamma)
-	register("display.redshift.gamma.inc", constLock, false, stepGamma(1))
-	register("display.redshift.gamma.dec", constLock, false, stepGamma(-1))
+	register("display.redshift.gamma.inc", noLock, false, stepGamma(1))
+	register("display.redshift.gamma.dec", noLock, false, stepGamma(-1))
 	register("display.redshift.gamma.reset", constLock, false, resetEach(func(d util.DisplayInfo) error {
 		return ApplyRedshift(d, -1, -1, 1.0)
 	}, "1"))
 
 	// color temperature
 	register("display.redshift.color-temperature", withSetLock(isQuery("temperature", "-1")), true, runColorTemperature)
-	register("display.redshift.color-temperature.inc", constLock, false, stepColorTemperature(1))
-	register("display.redshift.color-temperature.dec", constLock, false, stepColorTemperature(-1))
+	register("display.redshift.color-temperature.inc", noLock, false, stepColorTemperature(1))
+	register("display.redshift.color-temperature.dec", noLock, false, stepColorTemperature(-1))
 	register("display.redshift.color-temperature.reset", constLock, false, resetEach(func(d util.DisplayInfo) error {
 		return ApplyRedshift(d, 6500, -1, -1)
 	}, "6500"))
@@ -40,6 +41,9 @@ type lockPolicy func(a daemon.Args) string
 
 // constLock holds the redshift lock for every invocation.
 func constLock(daemon.Args) string { return redshiftLockName }
+
+// noLock is for ops that coalesce and take the lock themselves, see coalescedStep.
+func noLock(daemon.Args) string { return "" }
 
 // isQuery reports whether the flag still has its "not set" value.
 func isQuery(flag, unset string) func(daemon.Args) bool {
@@ -113,20 +117,23 @@ func stepGamma(direction float64) func(context.Context, daemon.Args) ([]string, 
 		if step <= 0 {
 			return nil, fmt.Errorf("step size must be a positive number (found: %f)", step)
 		}
-		displays, err := parseDisplayParam(a.Flag("display"))
-		if err != nil {
-			return nil, err
-		}
 
-		var lines []string
-		for _, d := range displays {
-			newGamma := clampGammaToConfig(getLastSetGamma(d) + direction*step)
-			if err := ApplyRedshift(d, -1, -1, newGamma); err != nil {
+		return coalescedStep("gamma|"+a.Flag("display"), direction*step, func(total float64) ([]string, error) {
+			displays, err := parseDisplayParam(a.Flag("display"))
+			if err != nil {
 				return nil, err
 			}
-			lines = append(lines, fmt.Sprint(newGamma))
-		}
-		return lines, nil
+
+			var lines []string
+			for _, d := range displays {
+				newGamma := clampGammaToConfig(getLastSetGamma(d) + total)
+				if err := ApplyRedshift(d, -1, -1, newGamma); err != nil {
+					return nil, err
+				}
+				lines = append(lines, fmt.Sprint(newGamma))
+			}
+			return lines, nil
+		})
 	}
 }
 
@@ -171,20 +178,23 @@ func stepColorTemperature(direction int64) func(context.Context, daemon.Args) ([
 		if step <= 0 {
 			return nil, fmt.Errorf("step size must be a positive number (found: %d)", step)
 		}
-		displays, err := parseDisplayParam(a.Flag("display"))
-		if err != nil {
-			return nil, err
-		}
 
-		var lines []string
-		for _, d := range displays {
-			newTemperature := clampColorTemperatureToConfig(getLastSetColorTemperature(d) + direction*int64(step))
-			if err := ApplyRedshift(d, newTemperature, -1, -1); err != nil {
+		return coalescedStep("color-temperature|"+a.Flag("display"), float64(direction)*float64(step), func(total float64) ([]string, error) {
+			displays, err := parseDisplayParam(a.Flag("display"))
+			if err != nil {
 				return nil, err
 			}
-			lines = append(lines, fmt.Sprint(newTemperature))
-		}
-		return lines, nil
+
+			var lines []string
+			for _, d := range displays {
+				newTemperature := clampColorTemperatureToConfig(getLastSetColorTemperature(d) + int64(math.Round(total)))
+				if err := ApplyRedshift(d, newTemperature, -1, -1); err != nil {
+					return nil, err
+				}
+				lines = append(lines, fmt.Sprint(newTemperature))
+			}
+			return lines, nil
+		})
 	}
 }
 

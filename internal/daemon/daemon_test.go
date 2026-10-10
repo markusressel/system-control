@@ -37,6 +37,17 @@ func testRegistry(counter *atomic.Int64) *Registry {
 	})
 
 	r.Register(Op{
+		Name: "test.flaky",
+		Run: func(ctx context.Context, a Args) ([]string, error) {
+			if counter.Load() == 0 {
+				return nil, errors.New("not there yet")
+			}
+			return []string{fmt.Sprint(counter.Load())}, nil
+		},
+		Watch: func(Args) bool { return true },
+	})
+
+	r.Register(Op{
 		Name: "test.counter",
 		Run: func(ctx context.Context, a Args) ([]string, error) {
 			return []string{fmt.Sprint(counter.Load())}, nil
@@ -63,10 +74,13 @@ func testRegistry(counter *atomic.Int64) *Registry {
 	counterCmd := &cobra.Command{Use: "counter", Run: func(*cobra.Command, []string) {}}
 	counterCmd.Flags().BoolP("watch", "w", false, "")
 
+	flakyCmd := &cobra.Command{Use: "flaky", Run: func(*cobra.Command, []string) {}}
+	flakyCmd.Flags().BoolP("watch", "w", false, "")
+
 	unhandledCmd := &cobra.Command{Use: "unhandled", Run: func(*cobra.Command, []string) {}}
 	unhandledCmd.Flags().BoolP("watch", "w", false, "")
 
-	group.AddCommand(echo, counterCmd, unhandledCmd, &cobra.Command{Use: "bump", Run: func(*cobra.Command, []string) {}})
+	group.AddCommand(echo, counterCmd, unhandledCmd, flakyCmd, &cobra.Command{Use: "bump", Run: func(*cobra.Command, []string) {}})
 
 	if err := r.Bind(root); err != nil {
 		panic(err)
@@ -298,5 +312,33 @@ func TestExecute_DropsStaleQueuedCommands(t *testing.T) {
 	lines, err = op.Execute(context.Background(), Args{}, time.Now())
 	if err != nil || !ran || len(lines) != 1 {
 		t.Errorf("fresh command must run: ran=%v lines=%v err=%v", ran, lines, err)
+	}
+}
+
+// A watch of state that is not available yet reports that and keeps watching.
+func TestWatch_SurvivesInitialError(t *testing.T) {
+	var counter atomic.Int64
+	eng := startTestEngine(t, &counter)
+
+	conn, err := net.Dial("unix", SocketPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	fmt.Fprintf(conn, "ARGV 3\n4\ntest5\nflaky7\n--watch")
+	r := bufio.NewReader(conn)
+
+	if got := readFrame(t, r); got != "W" {
+		t.Fatalf("first frame = %q", got)
+	}
+	if got := readFrame(t, r); got != "E not there yet" {
+		t.Fatalf("second frame = %q", got)
+	}
+
+	counter.Store(3)
+	eng.Refresh("test.")
+	if got := readFrame(t, r); got != "O 3" {
+		t.Fatalf("frame after the state appeared = %q", got)
 	}
 }

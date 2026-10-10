@@ -172,19 +172,19 @@ func (s *ipcServer) serveWatch(ctx context.Context, conn net.Conn, r *bufio.Read
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	updates, release, err := s.engine.store.subscribe(ctx, op, args)
-	if errors.Is(err, ErrUnhandled) {
+	updates, release, pending := s.engine.store.subscribe(ctx, op, args)
+	if updates == nil {
+		// only ErrUnhandled ends a subscription before it started
 		writeFrames(conn, 'U', "")
-		return
-	}
-	if err != nil {
-		writeFrames(conn, 'E', err.Error())
-		writeFrames(conn, 'X', "1")
 		return
 	}
 	defer release()
 
 	writeFrames(conn, 'W', "")
+	if pending != nil {
+		// not available yet, values follow once it is
+		writeFrames(conn, 'E', pending.Error())
+	}
 
 	// The client sends nothing after its request, so a read only returns once it went away.
 	go func() {

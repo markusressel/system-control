@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"slices"
 	"strings"
 
 	"github.com/markusressel/system-control/internal/util"
@@ -143,52 +144,70 @@ func (state *GraphState) SetMuted(deviceId int, muted bool) error {
 	return device.SetMuted(muted)
 }
 
-// GetDefaultSinkNodeName returns the "node.name" value of the InterfaceNode that is
-// currently used as the default "audio.sink".
-func (state *GraphState) GetDefaultSinkNodeName() (string, error) {
-	for _, item := range state.Metadatas {
-		if item.Props["metadata.name"] != "default" {
-			continue
+// metadataNodeName reads the node name out of a "default.*" metadata entry, which
+// holds either a JSON string or an already decoded object like {"name": "..."}.
+func metadataNodeName(value interface{}) string {
+	var data map[string]interface{}
+	switch v := value.(type) {
+	case string:
+		if err := json.Unmarshal([]byte(v), &data); err != nil {
+			return ""
 		}
+	case map[string]interface{}:
+		data = v
+	}
+	name, _ := data["name"].(string)
+	return name
+}
 
-		// First try configured sink (what we explicitly set)
-		for _, entry := range item.Metadata {
-			if entry["key"] == "default.configured.audio.sink" {
-				if val, ok := entry["value"].(string); ok {
-					var data map[string]interface{}
-					if err := json.Unmarshal([]byte(val), &data); err == nil {
-						if name, ok := data["name"].(string); ok {
-							return name, nil
-						}
-					}
-				} else if valMap, ok := entry["value"].(map[string]interface{}); ok {
-					if name, ok := valMap["name"].(string); ok {
-						return name, nil
-					}
-				}
+// defaultSinkCandidates returns the names that may identify the default "audio.sink", best first:
+//
+//   - default.configured.audio.sink is what was explicitly set. It is empty or names a device
+//     that is currently not present (a headset that is switched off) more often than one would think.
+//   - default.audio.sink is the sink that is actually used, WirePlumber falls back to another one
+//     while the configured sink is missing.
+func (state *GraphState) defaultSinkCandidates() []string {
+	var names []string
+	for _, key := range []string{"default.configured.audio.sink", "default.audio.sink"} {
+		for _, item := range state.Metadatas {
+			if item.Props["metadata.name"] != "default" {
+				continue
 			}
-		}
-
-		// Fallback to active sink (what WirePlumber enforces)
-		for _, entry := range item.Metadata {
-			if entry["key"] == "default.audio.sink" {
-				if val, ok := entry["value"].(string); ok {
-					var data map[string]interface{}
-					if err := json.Unmarshal([]byte(val), &data); err == nil {
-						if name, ok := data["name"].(string); ok {
-							return name, nil
-						}
-					}
-				} else if valMap, ok := entry["value"].(map[string]interface{}); ok {
-					if name, ok := valMap["name"].(string); ok {
-						return name, nil
-					}
+			for _, entry := range item.Metadata {
+				if entry["key"] != key {
+					continue
+				}
+				if name := metadataNodeName(entry["value"]); name != "" && !slices.Contains(names, name) {
+					names = append(names, name)
 				}
 			}
 		}
 	}
+	return names
+}
 
-	return "", errors.New("default sink not found")
+// findNodeByExactName returns the node with exactly the given "node.name".
+// If there is none, a single node containing the name is accepted.
+func (state *GraphState) findNodeByExactName(name string) (InterfaceNode, bool) {
+	for _, node := range state.Nodes {
+		if nodeName, _ := node.Info.Props["node.name"].(string); nodeName == name {
+			return node, true
+		}
+	}
+	if nodes := state.FindNodesByName(name); len(nodes) == 1 {
+		return nodes[0], true
+	}
+	return InterfaceNode{}, false
+}
+
+// GetDefaultSinkNodeName returns the "node.name" value of the InterfaceNode that is
+// currently used as the default "audio.sink".
+func (state *GraphState) GetDefaultSinkNodeName() (string, error) {
+	node, err := state.GetDefaultSinkNode()
+	if err != nil {
+		return "", err
+	}
+	return node.GetName()
 }
 
 func (state *GraphState) GetDefaultSource() (string, error) {
@@ -286,7 +305,7 @@ func (state *GraphState) FindNodesByName(name string) []InterfaceNode {
 	result := make([]InterfaceNode, 0)
 	for _, node := range state.Nodes {
 		nodeInfoProperties := node.Info.Props
-		nodeName := nodeInfoProperties["node.name"].(string)
+		nodeName, _ := nodeInfoProperties["node.name"].(string)
 		nodeDescription, ok := nodeInfoProperties["node.description"].(string)
 		if !ok {
 			nodeDescription = ""
@@ -370,7 +389,7 @@ func (state *GraphState) FindStreamNodes(name string) []InterfaceNode {
 	streamNodes := state.GetStreamNodes()
 	for _, node := range streamNodes {
 		nodeInfoProperties := node.Info.Props
-		nodeName := nodeInfoProperties["node.name"].(string)
+		nodeName, _ := nodeInfoProperties["node.name"].(string)
 		nodeDescription, ok := nodeInfoProperties["node.description"].(string)
 		if !ok {
 			nodeDescription = ""
@@ -453,20 +472,19 @@ func (state *GraphState) GetVolumeByName(name string) (float64, error) {
 	return channelVolumes[0], nil
 }
 
-// GetDefaultSinkNode returns the index of the active device
+// GetDefaultSinkNode returns the node that is currently used as the default "audio.sink".
 func (state *GraphState) GetDefaultSinkNode() (InterfaceNode, error) {
-	currentDefaultSinkName, err := state.GetDefaultSinkNodeName()
-	if err != nil {
-		return InterfaceNode{}, err
+	names := state.defaultSinkCandidates()
+	if len(names) == 0 {
+		return InterfaceNode{}, errors.New("default sink not found")
 	}
-	nodes := state.FindNodesByName(currentDefaultSinkName)
-	if len(nodes) <= 0 {
-		return InterfaceNode{}, errors.New("node not found")
+
+	for _, name := range names {
+		if node, ok := state.findNodeByExactName(name); ok {
+			return node, nil
+		}
 	}
-	if len(nodes) > 1 {
-		return InterfaceNode{}, errors.New("ambiguous node name")
-	}
-	return nodes[0], nil
+	return InterfaceNode{}, fmt.Errorf("node not found: %s", strings.Join(names, ", "))
 }
 
 // ContainsActiveSink returns

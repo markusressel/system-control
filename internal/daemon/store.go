@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"slices"
@@ -42,7 +43,11 @@ func newStore() *store {
 
 // subscribe returns a channel that receives the current value immediately and then every change.
 // Slow consumers only ever see the latest value. cancel must be called to release the subscription.
-func (s *store) subscribe(ctx context.Context, op *Op, a Args) (updates <-chan []string, cancel func(), err error) {
+//
+// If the first query fails (the state may just not be there yet, e.g. a device that is about
+// to show up), the subscription stays valid and the error is returned as pending. The values
+// follow once a query succeeds. Only ErrUnhandled ends the subscription right away.
+func (s *store) subscribe(ctx context.Context, op *Op, a Args) (updates <-chan []string, cancel func(), pending error) {
 	key := a.key(op.Name)
 
 	s.mu.Lock()
@@ -55,22 +60,27 @@ func (s *store) subscribe(ctx context.Context, op *Op, a Args) (updates <-chan [
 
 	ch := make(chan []string, 1)
 
-	// Take the first value synchronously, so the subscriber starts with a valid state or an error.
-	if err := e.refresh(ctx); err != nil && !e.hasValue() {
+	err := e.refresh(ctx)
+	if errors.Is(err, ErrUnhandled) && !e.hasValue() {
 		s.release(e, nil)
 		return nil, nil, err
+	}
+	if err != nil && !e.hasValue() {
+		pending = err
 	}
 
 	e.mu.Lock()
 	e.subs[ch] = struct{}{}
-	ch <- slices.Clone(e.last)
+	if e.hasLast {
+		ch <- slices.Clone(e.last)
+	}
 	e.mu.Unlock()
 
 	if !exists {
 		s.startPolling(e)
 	}
 
-	return ch, func() { s.release(e, ch) }, nil
+	return ch, func() { s.release(e, ch) }, pending
 }
 
 func (s *store) release(e *entry, ch chan []string) {

@@ -17,6 +17,23 @@ import (
 type Configuration struct {
 	Daemon   DaemonConfig   `mapstructure:"daemon" yaml:"daemon"`
 	Redshift RedshiftConfig `mapstructure:"redshift" yaml:"redshift"`
+	Hotspot  HotspotConfig  `mapstructure:"hotspot" yaml:"hotspot"`
+	Fan      FanConfig      `mapstructure:"fan" yaml:"fan"`
+}
+
+// FanConfig describes where the fan policy of the laptop is controlled.
+type FanConfig struct {
+	// PolicyFileGlob is a glob matching the sysfs file(s) holding the fan mode (0, 1, 2).
+	// Defaults to the ASUS WMI policy file.
+	PolicyFileGlob string `mapstructure:"policyFileGlob" yaml:"policyFileGlob"`
+}
+
+// HotspotConfig contains the defaults of `network wifi hotspot`. Empty values are detected or
+// generated when the hotspot is turned on.
+type HotspotConfig struct {
+	Interface string `mapstructure:"interface" yaml:"interface"`
+	SSID      string `mapstructure:"ssid" yaml:"ssid"`
+	Password  string `mapstructure:"password" yaml:"password"`
 }
 
 type DaemonConfig struct {

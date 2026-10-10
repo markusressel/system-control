@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	batteryutil "github.com/markusressel/system-control/internal/battery"
 	"github.com/markusressel/system-control/internal/persistence"
-	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -15,45 +15,49 @@ var batteryChargingThresholdCmd = &cobra.Command{
 	Long:  ``,
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		batteryFlag := cmd.Flag("name")
-		battery := batteryFlag.Value.String()
-
-		if len(args) > 0 {
-			newValueString := args[0]
-			newValue, err := strconv.Atoi(newValueString)
-			if err != nil {
-				return err
-			}
-			err = setBatteryThreshold(battery, newValue)
-			if err != nil {
-				return err
-			}
-		} else {
-			value, err := getBatteryThreshold(battery)
-			if err != nil {
-				return err
-			}
-			fmt.Println(value)
+		battery, err := batteryutil.FindBattery(Name)
+		if err != nil {
+			return err
 		}
 
+		if len(args) > 0 {
+			newValue, err := strconv.Atoi(args[0])
+			if err != nil {
+				return err
+			}
+			return battery.SetChargeControlEndThreshold(newValue)
+		}
+
+		value, err := battery.ReadChargeControlEndThreshold()
+		if err != nil {
+			return err
+		}
+		fmt.Println(value)
 		return nil
 	},
+}
+
+func thresholdKey(battery batteryutil.BatteryInfo) string {
+	return battery.Name + "_charge_control_end_threshold"
 }
 
 var batteryChargingThresholdSaveCmd = &cobra.Command{
 	Use:   "save",
 	Short: "Save the current battery charging threshold on disk",
 	Long:  ``,
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		batteryFlag := cmd.Flag("name")
-		battery := batteryFlag.Value.String()
-
-		current, err := getBatteryThreshold(battery)
+		battery, err := batteryutil.FindBattery(Name)
 		if err != nil {
 			return err
 		}
 
-		return persistence.SaveInt(battery+"_charge_control_end_threshold", current)
+		current, err := battery.ReadChargeControlEndThreshold()
+		if err != nil {
+			return err
+		}
+
+		return persistence.SaveInt(thresholdKey(battery), current)
 	},
 }
 
@@ -61,31 +65,19 @@ var batteryChargingThresholdRestoreCmd = &cobra.Command{
 	Use:   "restore",
 	Short: "Restore the last saved battery charging threshold",
 	Long:  ``,
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		batteryFlag := cmd.Flag("name")
-		battery := batteryFlag.Value.String()
-
-		value, err := persistence.ReadInt(battery + "_charge_control_end_threshold")
+		battery, err := batteryutil.FindBattery(Name)
 		if err != nil {
 			return err
 		}
-		return setBatteryThreshold(battery, int(value))
+
+		value, err := persistence.ReadInt(thresholdKey(battery))
+		if err != nil {
+			return err
+		}
+		return battery.SetChargeControlEndThreshold(int(value))
 	},
-}
-
-func setBatteryThreshold(battery string, value int) error {
-	file := "/sys/class/power_supply/" + battery + "/charge_control_end_threshold"
-	return util.WriteIntToFile(value, file)
-}
-
-func getBatteryThreshold(battery string) (int, error) {
-	file := "/sys/class/power_supply/" + battery + "/charge_control_end_threshold"
-
-	value, err := util.ReadIntFromFile(file)
-	if err != nil {
-		return -1, err
-	}
-	return int(value), err
 }
 
 func init() {

@@ -25,6 +25,10 @@ type FlagDef struct {
 	Short   string
 	Kind    FlagKind
 	Default string
+
+	// valid rejects values cobra would reject (e.g. a number flag), nil accepts everything.
+	// A command line with an invalid value is left to cobra, which produces the error message.
+	valid func(value string) error
 }
 
 // Args are the parsed arguments of one Op invocation.
@@ -326,6 +330,9 @@ func applyFlag(a *Args, def *FlagDef, value string, hasValue bool, following []s
 			}
 			value = following[0]
 			consumed = 1
+		}
+		if def.valid != nil && def.valid(value) != nil {
+			return 0, false
 		}
 		a.Flags[def.Name] = value
 		return consumed, true

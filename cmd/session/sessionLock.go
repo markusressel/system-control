@@ -1,11 +1,13 @@
 package session
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"os/user"
 	"syscall"
 	"time"
 
@@ -14,10 +16,8 @@ import (
 )
 
 const (
-	lockSessionUser    = "markus"
-	lockSessionDisplay = ":0"
-	lockDetachedFlag   = "detached"
-	lockRunnerFlag     = "internal-detached-lock-runner"
+	lockDetachedFlag = "detached"
+	lockRunnerFlag   = "internal-detached-lock-runner"
 )
 
 var lockCmd = &cobra.Command{
@@ -125,23 +125,72 @@ func sessionLockScript() (err error) {
 	return nil
 }
 
-func runCommandAsSessionUser(command string, args ...string) error {
-	envArgs := []string{"DISPLAY=" + lockSessionDisplay}
-	if currentPath := os.Getenv("PATH"); currentPath != "" {
-		envArgs = append(envArgs, "PATH="+currentPath)
+// sessionCommand builds the command line that runs a command as the session user on the
+// session display. sudo is only used if the current user is not the session user.
+func sessionCommand(sessionUser string, currentUser string, display string, path string, command string, args ...string) (string, []string) {
+	envArgs := []string{"DISPLAY=" + display}
+	if path != "" {
+		envArgs = append(envArgs, "PATH="+path)
 	}
 
-	fullArgs := []string{"-u", lockSessionUser, "env"}
+	var fullArgs []string
+	name := "env"
+	if sessionUser != currentUser {
+		name = "sudo"
+		fullArgs = append(fullArgs, "-u", sessionUser, "env")
+	}
 	fullArgs = append(fullArgs, envArgs...)
 	fullArgs = append(fullArgs, command)
 	fullArgs = append(fullArgs, args...)
+	return name, fullArgs
+}
 
-	_, err := util.ExecCommand("sudo", fullArgs...)
-	if err != nil {
+// runCommandAsSessionUser runs a short lived command in the desktop session.
+func runCommandAsSessionUser(command string, args ...string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return runInSessionContext(ctx, util.ExecCommandContext, command, args...)
+}
+
+type contextRunner func(ctx context.Context, command string, args ...string) (string, error)
+
+func runInSessionContext(ctx context.Context, run contextRunner, command string, args ...string) error {
+	currentUser := ""
+	if u, err := user.Current(); err == nil {
+		currentUser = u.Username
+	}
+	name, fullArgs := sessionCommand(resolveSessionUser(), currentUser, resolveSessionDisplay(), os.Getenv("PATH"), command, args...)
+
+	if _, err := run(ctx, name, fullArgs...); err != nil {
 		return fmt.Errorf("failed to execute %s: %w", command, err)
 	}
-
 	return nil
+}
+
+// resolveSessionUser returns the user whose desktop session is controlled: the --user flag,
+// else the user that invoked sudo, else the current user.
+func resolveSessionUser() string {
+	if sessionUser != "" {
+		return sessionUser
+	}
+	if sudoUser := os.Getenv("SUDO_USER"); sudoUser != "" {
+		return sudoUser
+	}
+	if u, err := user.Current(); err == nil {
+		return u.Username
+	}
+	return ""
+}
+
+// resolveSessionDisplay returns the X display of the session: the --display flag, else $DISPLAY, else ":0".
+func resolveSessionDisplay() string {
+	if sessionDisplay != "" {
+		return sessionDisplay
+	}
+	if display := os.Getenv("DISPLAY"); display != "" {
+		return display
+	}
+	return ":0"
 }
 
 func setSessionDPMSTimeout(standby int, suspend int, off int) error {
@@ -169,8 +218,11 @@ func forceSessionDPMS(mode string) error {
 	return runCommandAsSessionUser("xset", "dpms", "force", mode)
 }
 
+// runSessionLock runs the screen locker until the session is unlocked. It must not be
+// bound by a timeout: killing the locker would unlock the session.
 func runSessionLock() error {
-	return runCommandAsSessionUser(
+	return runInSessionContext(
+		context.Background(), util.ExecCommandContext,
 		"i3lock",
 		"--nofork",
 		"--show-failed-attempts",

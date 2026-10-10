@@ -23,6 +23,7 @@ import (
 //
 //	ARGV <n>\n          followed by n arguments, each encoded as "<len>\n<len bytes>"
 //	NOTIFY <prefix>...\n  state behind the given op name prefixes changed, re-query watchers
+//	STATUS\n            describe the daemon, answered with O frames
 //
 // The server answers with frames, one per line:
 //
@@ -115,6 +116,12 @@ func (s *ipcServer) handle(ctx context.Context, conn net.Conn) {
 	switch fields[0] {
 	case "NOTIFY":
 		s.engine.Refresh(fields[1:]...)
+		writeFrames(conn, 'X', "0")
+
+	case "STATUS":
+		for _, line := range s.engine.status() {
+			writeFrames(conn, 'O', line)
+		}
 		writeFrames(conn, 'X', "0")
 
 	case "ARGV":
@@ -298,6 +305,38 @@ func TryRemote(argv []string, stdout, stderr io.Writer) (handled bool, exitCode 
 		case strings.HasPrefix(line, "X "):
 			code, _ := strconv.Atoi(line[2:])
 			return true, code
+		}
+	}
+}
+
+// Status asks the running daemon to describe itself.
+func Status() ([]string, error) {
+	conn, err := net.DialTimeout("unix", SocketPath(), 200*time.Millisecond)
+	if err != nil {
+		return nil, fmt.Errorf("daemon is not running (%s): %w", SocketPath(), err)
+	}
+	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(answerTimeout))
+
+	if _, err := io.WriteString(conn, "STATUS\n"); err != nil {
+		return nil, err
+	}
+
+	var lines []string
+	r := bufio.NewReader(conn)
+	for {
+		line, err := r.ReadString('\n')
+		if err != nil {
+			return nil, fmt.Errorf("daemon did not answer: %w", err)
+		}
+		line = strings.TrimSuffix(line, "\n")
+		switch {
+		case strings.HasPrefix(line, "O "):
+			lines = append(lines, line[2:])
+		case strings.HasPrefix(line, "X "):
+			return lines, nil
+		case line == "U":
+			return nil, errors.New("daemon does not know the status request, it is older than this binary")
 		}
 	}
 }

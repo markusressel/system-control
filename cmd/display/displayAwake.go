@@ -26,7 +26,9 @@ var displayAwakeCmd = &cobra.Command{
 		case strings.Contains(output, "Monitor is On"):
 			fmt.Println("yes")
 			return nil
-		case strings.Contains(output, "Monitor is Off"):
+		case strings.Contains(output, "Monitor is Off"),
+			strings.Contains(output, "Monitor is in Standby"),
+			strings.Contains(output, "Monitor is in Suspend"):
 			fmt.Println("no")
 			return nil
 		default:

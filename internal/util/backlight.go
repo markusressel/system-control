@@ -2,7 +2,6 @@ package util
 
 import (
 	"errors"
-	"fmt"
 	"os"
 )
 
@@ -30,12 +29,8 @@ func GetMainBacklight() (Backlight, error) {
 	if len(backlights) == 0 {
 		return Backlight{}, errors.New("no backlights found")
 	}
-	mainBacklight := backlights[0]
-	if len(backlights) > 1 {
-		fmt.Printf("multiple backlights found, using first as main: %s\n", mainBacklight.Name)
-	}
-
-	return mainBacklight, nil
+	// with multiple backlights the first one is the main one
+	return backlights[0], nil
 }
 
 // Represents a display backlight
@@ -74,6 +69,7 @@ func (b Backlight) SetBrightness(percentage int) error {
 		return err
 	}
 
+	percentage = min(max(percentage, 0), 100)
 	targetValue := int((float32(percentage) / 100.0) * float32(maxBrightness))
 	return WriteIntToFile(targetValue, brightnessPath)
 }

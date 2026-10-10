@@ -9,8 +9,8 @@ var touchpadOnCmd = &cobra.Command{
 	Use:   "on",
 	Short: "Turn on the Touchpad",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		util.SetTouchpadEnabled(true)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return util.SetTouchpadEnabled(true)
 	},
 }
 

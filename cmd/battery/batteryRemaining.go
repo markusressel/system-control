@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	batteryutil "github.com/markusressel/system-control/internal/battery"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
@@ -17,51 +18,25 @@ var batteryRemainingCmd = &cobra.Command{
 
 		template := "%hours%:%minutes%"
 
-		batteries, err := util.GetBatteryList()
+		batteryInfo, err := batteryutil.FindBattery(Name)
 		if err != nil {
 			return err
 		}
-
-		if len(batteries) <= 0 {
-			return fmt.Errorf("no batteries found")
-		}
-
-		var batteryInfo *util.BatteryInfo
-		for _, battery := range batteries {
-			if util.EqualsIgnoreCase(battery.Name, Name) {
-				batteryInfo = &battery
-			} else if util.EqualsIgnoreCase(battery.SerialNumber, Name) {
-				batteryInfo = &battery
-			} else if util.EqualsIgnoreCase(battery.Model, Name) {
-				batteryInfo = &battery
-			} else if util.EqualsIgnoreCase(battery.Path, Name) {
-				batteryInfo = &battery
-			}
-		}
-
-		if batteryInfo == nil {
-			return fmt.Errorf("no battery found matching '%s'", Name)
-		}
-
-		batteryInfoNonNull := *batteryInfo
 
 		// get value
-		charging, err := batteryInfoNonNull.IsCharging()
+		charging, err := batteryInfo.IsCharging()
 		if err != nil {
 			return err
 		}
-		energyTarget, err := batteryInfoNonNull.GetEnergyTarget()
+		energyTarget, err := batteryInfo.GetEnergyTarget()
 		if err != nil {
 			return err
 		}
-		energyNow, err := batteryInfoNonNull.GetEnergyNow()
+		energyNow, err := batteryInfo.GetEnergyNow()
 		if err != nil {
 			return err
 		}
-		powerNow, err := batteryInfoNonNull.GetPowerNow()
-		if err != nil {
-			return err
-		}
+		powerNow, err := batteryInfo.GetPowerNow()
 		if err != nil {
 			return err
 		}
@@ -73,10 +48,12 @@ var batteryRemainingCmd = &cobra.Command{
 
 		var remainingTimeInSeconds int64
 		if charging == true {
-			remainingTimeInSeconds = util.CalculateRemainingTime(energyTarget-energyNow, powerNow)
+			remainingTimeInSeconds = batteryutil.CalculateRemainingTime(energyTarget-energyNow, powerNow)
 		} else {
-			remainingTimeInSeconds = util.CalculateRemainingTime(energyNow, powerNow)
+			remainingTimeInSeconds = batteryutil.CalculateRemainingTime(energyNow, powerNow)
 		}
+
+		remainingTimeInSeconds = max(0, remainingTimeInSeconds)
 
 		remainingHours := int(math.Min(99, float64(remainingTimeInSeconds/60/60)))
 		remainingMinutes := (remainingTimeInSeconds / 60) % 60

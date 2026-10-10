@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/markusressel/system-control/internal/daemon"
 )
 
 var redshiftColorTempResetCmd = &cobra.Command{
@@ -11,8 +13,11 @@ var redshiftColorTempResetCmd = &cobra.Command{
 	Short: "Reset the display color temperature to 6500K.",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		redshiftLock = lockRedshift()
-		defer redshiftLock.Unlock()
+		unlock, err := daemon.AcquireLock(redshiftLockName)
+		if err != nil {
+			return err
+		}
+		defer unlock()
 
 		displays, err := parseDisplayParam(display)
 		if err != nil {

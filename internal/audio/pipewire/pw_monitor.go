@@ -71,17 +71,13 @@ func PwDump() GraphState {
 		defer liveMu.RUnlock()
 		return *liveState
 	}
-	monitored := monitorStarted
 	liveMu.RUnlock()
 
 	state, err := pwDumpDirect()
 	if err != nil {
-		if monitored {
-			// a long running daemon must survive PipeWire being unavailable
-			log.Printf("pw-dump failed: %v", err)
-			return GraphState{}
-		}
-		log.Fatal(err)
+		// callers see an empty graph, a long running daemon must survive PipeWire being unavailable
+		log.Printf("pw-dump failed: %v", err)
+		return GraphState{}
 	}
 	return state
 }

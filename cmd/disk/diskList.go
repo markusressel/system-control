@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/elliotchance/orderedmap/v2"
+	diskutil "github.com/markusressel/system-control/internal/disk"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
@@ -17,7 +18,7 @@ var diskListCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var printAllAttributes = allInfo
 
-		disks, err := util.GetDisks()
+		disks, err := diskutil.GetDisks()
 		if err != nil {
 			return err
 		}
@@ -32,7 +33,7 @@ var diskListCmd = &cobra.Command{
 	},
 }
 
-func printDiskPropertyTable(disk util.DiskInfo) {
+func printDiskPropertyTable(disk diskutil.DiskInfo) {
 	properties := orderedmap.NewOrderedMap[string, string]()
 	properties.Set("Path", fmt.Sprintf("%s", disk.Path))
 
@@ -40,7 +41,7 @@ func printDiskPropertyTable(disk util.DiskInfo) {
 }
 
 // fetchAndPrintSmartCtlData prints the SMART data in a formatted way
-func fetchAndPrintSmartCtlData(disk util.DiskInfo, printAllAttributes bool) {
+func fetchAndPrintSmartCtlData(disk diskutil.DiskInfo, printAllAttributes bool) {
 	smartCtlData, err := disk.GetSmartCtlData()
 	if err != nil {
 		fmt.Printf("  Error fetching SMART data: %v\n", err)

@@ -7,7 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/markusressel/system-control/cmd/bluetooth"
 	"github.com/markusressel/system-control/internal/audio"
+	"github.com/markusressel/system-control/internal/configuration"
 	"github.com/markusressel/system-control/internal/daemon"
 	"github.com/spf13/cobra"
 
@@ -31,6 +33,7 @@ every command works on its own.`,
 
 		eng := daemon.NewEngine(daemon.Default)
 		eng.AddSource(audio.EventSource)
+		eng.AddSource(bluetooth.EventSource)
 
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
@@ -40,12 +43,46 @@ every command works on its own.`,
 		}
 		fmt.Println("Daemon started on", daemon.SocketPath())
 
-		<-ctx.Done()
-		fmt.Println("Shutting down...")
+		// SIGHUP (systemctl --user reload system-control) reads the configuration file again
+		reload := make(chan os.Signal, 1)
+		signal.Notify(reload, syscall.SIGHUP)
+		defer signal.Stop(reload)
+
+		for {
+			select {
+			case <-reload:
+				if err := configuration.Reload(); err != nil {
+					fmt.Fprintln(os.Stderr, "Could not reload the configuration:", err)
+					continue
+				}
+				fmt.Println("Configuration reloaded")
+				eng.Refresh("")
+			case <-ctx.Done():
+				fmt.Println("Shutting down...")
+				return nil
+			}
+		}
+	},
+}
+
+var daemonStatusCmd = &cobra.Command{
+	Use:   "status",
+	Short: "Show the state of the running daemon",
+	Long:  ``,
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		lines, err := daemon.Status()
+		if err != nil {
+			return err
+		}
+		for _, line := range lines {
+			fmt.Println(line)
+		}
 		return nil
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(DaemonCmd)
+	DaemonCmd.AddCommand(daemonStatusCmd)
 }

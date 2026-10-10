@@ -1,7 +1,7 @@
 package wifi
 
 import (
-	"os"
+	"errors"
 
 	"github.com/markusressel/system-control/internal/wifi"
 	"github.com/spf13/cobra"
@@ -13,19 +13,17 @@ var offCmd = &cobra.Command{
 	Use:   "off",
 	Short: "Turn off the WiFi Hotspot",
 	Long:  ``,
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if wifiInterface == "" {
-			wifiInterface = "wlo1"
+		iface, ssid, err := hotspotSettings()
+		if err != nil {
+			return err
 		}
-		if hotspotSSID == "" {
-			hotspotSSID = "M16"
-		}
-
-		hotspotName := createHotspotConfigName(hotspotSSID)
+		hotspotName := createHotspotConfigName(ssid)
 
 		if !force {
 			// check if there are still devices connected
-			hotspotDevices, err := wifi.GetConnectedHotspotDevices(wifiInterface, hotspotSSID)
+			hotspotDevices, err := wifi.GetConnectedHotspotDevices(iface, hotspotName)
 			if err != nil {
 				return err
 			}
@@ -34,13 +32,11 @@ var offCmd = &cobra.Command{
 				for _, device := range hotspotDevices {
 					printHotspotDevice(device)
 				}
-				println("There are still devices connected to the hotspot. Please disconnect them first or use --force parameter.")
-				os.Exit(1)
+				return errors.New("there are still devices connected to the hotspot, disconnect them first or use --force")
 			}
 		}
 
-		err := wifi.TurnOffHotspot(hotspotName)
-		return err
+		return wifi.TurnOffHotspot(hotspotName)
 	},
 }
 
@@ -52,12 +48,5 @@ func init() {
 		"force", "f",
 		false,
 		"Force turn off the Hotspot",
-	)
-
-	offCmd.PersistentFlags().StringVarP(
-		&hotspotSSID,
-		"ssid", "s",
-		"",
-		"SSID of the hotspot",
 	)
 }

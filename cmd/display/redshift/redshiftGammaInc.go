@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/markusressel/system-control/internal/daemon"
 )
 
 var redshiftGammaIncCmd = &cobra.Command{
@@ -14,8 +16,11 @@ var redshiftGammaIncCmd = &cobra.Command{
 		return gammaStepInputValidator(cmd, args)
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		redshiftLock = lockRedshift()
-		defer redshiftLock.Unlock()
+		unlock, err := daemon.AcquireLock(redshiftLockName)
+		if err != nil {
+			return err
+		}
+		defer unlock()
 
 		displays, err := parseDisplayParam(display)
 		if err != nil {

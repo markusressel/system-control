@@ -10,7 +10,10 @@ var toggleTouchpadCmd = &cobra.Command{
 	Short: "Toggle the Touchpad state",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		isTouchpadEnabled := util.IsTouchpadEnabled()
+		isTouchpadEnabled, err := util.IsTouchpadEnabled()
+		if err != nil {
+			return err
+		}
 		return util.SetTouchpadEnabled(!isTouchpadEnabled)
 	},
 }

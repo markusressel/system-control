@@ -2,7 +2,9 @@ package daemon
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -70,6 +72,14 @@ func flagDef(f *pflag.Flag) FlagDef {
 	case "stringSlice":
 		def.Kind = FlagList
 		def.Default = strings.Trim(f.DefValue, "[]")
+	case "int", "int8", "int16", "int32", "int64":
+		def.valid = func(v string) error { _, err := strconv.ParseInt(v, 0, 64); return err }
+	case "uint", "uint8", "uint16", "uint32", "uint64":
+		def.valid = func(v string) error { _, err := strconv.ParseUint(v, 0, 64); return err }
+	case "float32", "float64":
+		def.valid = func(v string) error { _, err := strconv.ParseFloat(v, 64); return err }
+	case "duration":
+		def.valid = func(v string) error { _, err := time.ParseDuration(v); return err }
 	}
 	return def
 }

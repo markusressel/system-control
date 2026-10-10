@@ -1,4 +1,4 @@
-package util
+package battery
 
 import (
 	"errors"

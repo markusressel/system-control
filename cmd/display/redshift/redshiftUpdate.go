@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/markusressel/system-control/internal/configuration"
+	"github.com/markusressel/system-control/internal/daemon"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/nathan-osman/go-sunrise"
 	"github.com/spf13/cobra"
@@ -16,8 +17,11 @@ var redshiftUpdateCmd = &cobra.Command{
 	Short: "Update the currently applied redshift based on the current time of day.",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		redshiftLock = lockRedshift()
-		defer redshiftLock.Unlock()
+		unlock, err := daemon.AcquireLock(redshiftLockName)
+		if err != nil {
+			return err
+		}
+		defer unlock()
 
 		config := configuration.Get()
 

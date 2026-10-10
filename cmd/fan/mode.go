@@ -7,15 +7,19 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/markusressel/system-control/internal/commandutil"
+	"github.com/markusressel/system-control/internal/configuration"
+	"github.com/markusressel/system-control/internal/daemon"
 	"github.com/spf13/cobra"
 )
 
 const (
-	fanModeTypeFlag        = "type"
-	fanModeTypeText        = "text"
-	fanModeTypeNumber      = "number"
-	fanPolicyFileGlob      = "/sys/devices/platform/asus-nb-wmi/hwmon/*/device/throttle_thermal_policy"
-	intelPstateNoTurboFile = "/sys/devices/system/cpu/intel_pstate/no_turbo"
+	fanModeTypeFlag   = "type"
+	fanModeTypeText   = "text"
+	fanModeTypeNumber = "number"
+	// defaultFanPolicyFileGlob is the fan policy of ASUS laptops, see fan.policyFileGlob in the configuration
+	defaultFanPolicyFileGlob = "/sys/devices/platform/asus-nb-wmi/hwmon/*/device/throttle_thermal_policy"
+	intelPstateNoTurboFile   = "/sys/devices/system/cpu/intel_pstate/no_turbo"
 
 	fanModeDefault = 0
 	fanModeBoost   = 1
@@ -34,37 +38,12 @@ var modeCmd = &cobra.Command{
 	Short: "Get the current fan mode",
 	Long:  ``,
 	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		modeType, err := cmd.Flags().GetString(fanModeTypeFlag)
-		if err != nil {
-			return err
-		}
-
-		mode, err := readFanMode()
-		if err != nil {
-			return err
-		}
-
-		switch modeType {
-		case fanModeTypeNumber:
-			fmt.Println(mode)
-			return nil
-		case fanModeTypeText:
-			modeName, ok := fanModeNames[mode]
-			if !ok {
-				fmt.Printf("Unknown (%d)\n", mode)
-				return nil
-			}
-			fmt.Println(modeName)
-			return nil
-		default:
-			return fmt.Errorf("invalid value for --%s: %q (expected %q or %q)", fanModeTypeFlag, modeType, fanModeTypeText, fanModeTypeNumber)
-		}
-	},
+	RunE:  commandutil.OpRunE("fan.mode"),
 }
 
 func init() {
 	modeCmd.Flags().String(fanModeTypeFlag, fanModeTypeText, "output format: text or number")
+	modeCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
 }
 
 func ensureRoot() error {
@@ -75,13 +54,25 @@ func ensureRoot() error {
 	return nil
 }
 
-func readFanMode() (int, error) {
-	policyFiles, err := filepath.Glob(fanPolicyFileGlob)
+func fanPolicyFiles() ([]string, error) {
+	pattern := configuration.Get().Fan.PolicyFileGlob
+	if pattern == "" {
+		pattern = defaultFanPolicyFileGlob
+	}
+	policyFiles, err := filepath.Glob(pattern)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	if len(policyFiles) == 0 {
-		return 0, fmt.Errorf("no fan policy files found matching %q", fanPolicyFileGlob)
+		return nil, fmt.Errorf("no fan policy files found matching %q", pattern)
+	}
+	return policyFiles, nil
+}
+
+func readFanMode() (int, error) {
+	policyFiles, err := fanPolicyFiles()
+	if err != nil {
+		return 0, err
 	}
 
 	fileContent, err := os.ReadFile(policyFiles[0])
@@ -98,12 +89,9 @@ func readFanMode() (int, error) {
 }
 
 func setFanMode(mode int) error {
-	policyFiles, err := filepath.Glob(fanPolicyFileGlob)
+	policyFiles, err := fanPolicyFiles()
 	if err != nil {
 		return err
-	}
-	if len(policyFiles) == 0 {
-		return fmt.Errorf("no fan policy files found matching %q", fanPolicyFileGlob)
 	}
 
 	modeString := strconv.Itoa(mode)
@@ -118,9 +106,13 @@ func setFanMode(mode int) error {
 		noTurbo = "1"
 	}
 
-	if err := os.WriteFile(intelPstateNoTurboFile, []byte(noTurbo), 0); err != nil {
-		return err
+	// not available on every CPU (e.g. AMD)
+	if _, err := os.Stat(intelPstateNoTurboFile); err == nil {
+		if err := os.WriteFile(intelPstateNoTurboFile, []byte(noTurbo), 0); err != nil {
+			return err
+		}
 	}
 
+	daemon.Notify("fan.")
 	return nil
 }

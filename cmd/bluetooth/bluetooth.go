@@ -89,3 +89,20 @@ func createDeviceNameList(devices []bluetooth.BluetoothDevice) []string {
 		return fmt.Sprintf("%s (%s)", device.Name, device.Address)
 	})
 }
+
+// resolveDevice finds the one device matching the given address or (fuzzy) name.
+func resolveDevice(name string, devices []bluetooth.BluetoothDevice) (bluetooth.BluetoothDevice, error) {
+	matchingDevices := findBluetoothDeviceFuzzy(name, devices)
+	switch len(matchingDevices) {
+	case 0:
+		return bluetooth.BluetoothDevice{}, fmt.Errorf("device not found: %v", name)
+	case 1:
+		return matchingDevices[0], nil
+	default:
+		return bluetooth.BluetoothDevice{}, multipleDevicesError(matchingDevices)
+	}
+}
+
+func multipleDevicesError(devices []bluetooth.BluetoothDevice) error {
+	return fmt.Errorf("multiple matching devices found: %v", createDeviceNameList(devices))
+}

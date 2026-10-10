@@ -1,12 +1,16 @@
-package util
+package disk
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/markusressel/system-control/internal/util"
 )
 
 const (
@@ -650,17 +654,21 @@ func GetDisks() ([]DiskInfo, error) {
 		a := result[i]
 		b := result[j]
 
-		result := 0
-		result = strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
-
-		if result <= 0 {
-			return true
-		} else {
-			return false
-		}
+		return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name)) < 0
 	})
 
 	return result, nil
+}
+
+// smartctlResultIsUsable reports whether a failed smartctl run still produced a result.
+// The exit status of smartctl is a bit mask: bits 0 to 2 mean the command failed, all
+// other bits only describe the health of the disk (e.g. old entries in the error log).
+func smartctlResultIsUsable(err error, output string) bool {
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) {
+		return false
+	}
+	return exitErr.ExitCode()&0b111 == 0 && strings.HasPrefix(output, "{")
 }
 
 func (d DiskInfo) GetSmartCtlData() (SmartCtlData, error) {
@@ -685,8 +693,8 @@ func (d DiskInfo) GetSmartCtlData() (SmartCtlData, error) {
 	}
 	args = append(args, vendorSpecificAttrs...)
 
-	output, err := ExecCommand("sudo", args...)
-	if err != nil {
+	output, err := util.ExecCommand("sudo", args...)
+	if err != nil && !smartctlResultIsUsable(err, output) {
 		return SmartCtlData{}, err
 	}
 
@@ -708,7 +716,7 @@ func (d DiskInfo) GetNvmeSmartLog() (NvmeData, error) {
 		"-H",
 	}
 
-	output, err := ExecCommand("sudo", args...)
+	output, err := util.ExecCommand("sudo", args...)
 	if err != nil {
 		return NvmeData{}, err
 	}

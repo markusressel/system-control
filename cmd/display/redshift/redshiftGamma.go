@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/markusressel/system-control/internal/configuration"
+	"github.com/markusressel/system-control/internal/daemon"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
@@ -18,8 +19,11 @@ var gammaCmd = &cobra.Command{
 	Short: "Show current display gamma",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		redshiftLock = lockRedshift()
-		defer redshiftLock.Unlock()
+		unlock, err := daemon.AcquireLock(redshiftLockName)
+		if err != nil {
+			return err
+		}
+		defer unlock()
 
 		displays, err := parseDisplayParam(display)
 		if err != nil {

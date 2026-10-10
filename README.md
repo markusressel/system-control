@@ -67,8 +67,16 @@ arguments as `system-control`, but starts in about 1 ms and uses very little mem
 ```
 
 Commands the daemon handles today: `audio volume` (+ `inc`, `dec`, `set`, `mute`, `unmute`, `toggle-mute`,
-`muted`, `save`, `restore`), `audio sink` (`active`, `next`, `previous`, `switch`), `audio device profile`
-and `display redshift brightness` (+ `inc`, `dec`).
+`muted`, `save`, `restore`), `audio sink` (`active`, `next`, `previous`, `switch`), `audio device profile`,
+`display redshift brightness` (+ `inc`, `dec`), `bluetooth connected` and `fan mode`.
+
+```shell
+# what the daemon does right now
+> system-control daemon status
+
+# read the configuration file again (also done by `systemctl --user reload system-control`)
+> kill -HUP "$(pgrep -xo system-control)"
+```
 
 Optional settings in the [config file](system-control.yaml):
 
@@ -76,6 +84,7 @@ Optional settings in the [config file](system-control.yaml):
 daemon:
   pollIntervals:
     display: 5s
+    fan: 5s
 ```
 
 # Usage
@@ -261,7 +270,7 @@ hidpp_battery_0
 
 **Requirements:**
 
-* `bluetoothctl`
+* BlueZ (`bluetoothd`), talked to over D-Bus
 
 ```shell
 > system-control bluetooth on
@@ -294,6 +303,15 @@ hidpp_battery_0
 
 # disconnect all devices
 > system-control bluetooth disconnect
+```
+
+```shell
+# scan for nearby devices for 5 seconds (default)
+> system-control bluetooth scan
+> system-control bluetooth scan --duration 15s
+
+# yes/no, can be watched
+> system-control bluetooth connected "LG-TONE-FP9" --watch
 ```
 
 ## Display / Screen
@@ -488,18 +506,28 @@ FRITZ!Box 6591 Cable NM
 
 #### Hotspot
 
-TODO: not yet implemented
-
 ```shell
-> system-control wifi hotspot on -n "MyHotspot"
+> system-control network wifi hotspot on
+> system-control network wifi hotspot on --ssid "MyHotspot" --password "secret123" --interface wlan0
 ```
 
 ```shell
-> system-control wifi hotspot off -n "MyHotspot"
+> system-control network wifi hotspot off
+> system-control network wifi hotspot off --force
 ```
 
 ```shell
-> system-control wifi hotspot clients
+> system-control network wifi hotspot clients
+```
+
+Without options the first WiFi device and the hostname are used, and NetworkManager generates a password.
+Defaults can be set in the [config file](system-control.yaml):
+
+```yaml
+hotspot:
+  interface: wlan0
+  ssid: MyHotspot
+  password: secret123
 ```
 
 ## Session
@@ -511,6 +539,9 @@ TODO: not yet implemented
 
 `session lock` runs in the current process by default. Use `--detached` when you want
 the command to return immediately while lock handling continues in a background process.
+
+The session of the user that invoked `sudo` (or the current user) on `$DISPLAY` (or `:0`) is controlled.
+Use `--user` and `--display` to select another one.
 
 ```shell
 > system-control session lock
@@ -525,10 +556,12 @@ no
 
 ## Shutdown/Restart
 
-TODO: not yet fully working
+All windows are asked to close first. If one does not close within `--timeout` (default 30s, e.g. a
+"save changes?" dialog), nothing happens, unless `--force` is given.
 
 ```shell
 > system-control shutdown
+> system-control shutdown --timeout 10s --force
 ```
 
 ```shell

@@ -3,13 +3,9 @@ package redshift
 import (
 	"errors"
 	"fmt"
-	"log"
-	"os"
-	"path/filepath"
 	"slices"
 	"strconv"
 
-	"github.com/gofrs/flock"
 	"github.com/markusressel/system-control/internal/daemon"
 	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/markusressel/system-control/internal/util"
@@ -32,8 +28,6 @@ var (
 	brightnessValue float64
 	stepFloat             = 0.1
 	stepInt         int64 = 500
-
-	redshiftLock *flock.Flock
 )
 
 var Command = &cobra.Command{
@@ -41,8 +35,11 @@ var Command = &cobra.Command{
 	Short: "Apply the given redshift",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		redshiftLock = lockRedshift()
-		defer redshiftLock.Unlock()
+		unlock, err := daemon.AcquireLock(redshiftLockName)
+		if err != nil {
+			return err
+		}
+		defer unlock()
 
 		if colorTemperature != -1 && (colorTemperature < 1000 || colorTemperature > 25000) {
 			return errors.New("color temperature must be between 1000 and 25000")
@@ -140,15 +137,8 @@ func getLastSetBrightness(display util.DisplayInfo) float64 {
 	if err != nil {
 		lastSetBrightness = -1
 	}
-	if lastSetBrightness < 0.1 {
-		lastSetBrightness = 0.1
-		saveLastSetBrightness(display, lastSetBrightness)
-	}
-	if lastSetBrightness > 1.0 {
-		lastSetBrightness = 1.0
-		saveLastSetBrightness(display, lastSetBrightness)
-	}
-	return lastSetBrightness
+	// Only clamp, never write back: a failed read must not overwrite the stored value.
+	return min(max(lastSetBrightness, 0.1), 1.0)
 }
 
 func getLastSetGamma(display util.DisplayInfo) float64 {
@@ -157,15 +147,7 @@ func getLastSetGamma(display util.DisplayInfo) float64 {
 	if err != nil {
 		lastSetGamma = 1.0
 	}
-	if lastSetGamma < 0.1 {
-		lastSetGamma = 0.1
-		saveLastSetGamma(display, lastSetGamma)
-	}
-	if lastSetGamma > 2.0 {
-		lastSetGamma = 2.0
-		saveLastSetGamma(display, lastSetGamma)
-	}
-	return lastSetGamma
+	return min(max(lastSetGamma, 0.1), 2.0)
 }
 
 func saveLastSetColorTemperature(display util.DisplayInfo, colorTemperature int64) error {
@@ -281,28 +263,6 @@ func ResetRedshift(display util.DisplayInfo) (err error) {
 
 	_, err = util.ExecCommand("redshift", args...)
 	return err
-}
-
-// acquireRedshiftLock takes the lock shared with all other redshift commands.
-func acquireRedshiftLock() (*flock.Flock, error) {
-	dir := daemon.RuntimeDir()
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return nil, err
-	}
-	fileLock := flock.New(filepath.Join(dir, redshiftLockName+".lock"))
-	if err := fileLock.Lock(); err != nil {
-		return nil, err
-	}
-	return fileLock, nil
-}
-
-// lockRedshift is acquireRedshiftLock for commands that can't continue without the lock.
-func lockRedshift() *flock.Flock {
-	fileLock, err := acquireRedshiftLock()
-	if err != nil {
-		log.Fatalf("Could not acquire lock: %v", err)
-	}
-	return fileLock
 }
 
 func init() {

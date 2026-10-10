@@ -342,3 +342,29 @@ func TestWatch_SurvivesInitialError(t *testing.T) {
 		t.Fatalf("frame after the state appeared = %q", got)
 	}
 }
+
+func TestStatus(t *testing.T) {
+	var counter atomic.Int64
+	counter.Store(1)
+	startTestEngine(t, &counter)
+
+	lines, err := Status()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	joined := strings.Join(lines, "\n")
+	for _, want := range []string{"pid: ", "socket: ", "uptime: ", "ops: ", "watched states: 0"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("status lacks %q:\n%s", want, joined)
+		}
+	}
+}
+
+func TestStatus_NoDaemon(t *testing.T) {
+	t.Setenv(EnvRuntimeDir, t.TempDir())
+
+	if _, err := Status(); err == nil {
+		t.Error("expected an error without a running daemon")
+	}
+}

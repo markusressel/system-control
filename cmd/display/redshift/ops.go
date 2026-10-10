@@ -125,11 +125,11 @@ func queryBrightness(displayName string, format string) (string, error) {
 }
 
 func setBrightness(displayName string, value float64, format string) ([]string, error) {
-	lock, err := acquireRedshiftLock()
+	unlock, err := daemon.AcquireLock(redshiftLockName)
 	if err != nil {
 		return nil, err
 	}
-	defer lock.Unlock()
+	defer unlock()
 	reloadConfig()
 
 	displays, err := parseDisplayParam(displayName)

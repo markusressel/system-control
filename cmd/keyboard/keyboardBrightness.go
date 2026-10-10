@@ -13,6 +13,7 @@ var keyboardBrightnessCmd = &cobra.Command{
 	Use:   "brightness",
 	Short: "Get/Set the current keyboard backlight brightness",
 	Long:  ``,
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) > 0 {
 			p, err := strconv.Atoi(args[0])

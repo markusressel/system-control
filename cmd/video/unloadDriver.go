@@ -9,6 +9,7 @@ var unloadDriverCmd = &cobra.Command{
 	Use:   "unload",
 	Short: "Unload the video driver, preventing access to any video device",
 	Long:  ``,
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_, err := util.ExecCommand("rmmod", "-f", "uvcvideo")
 		return err

@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/elliotchance/orderedmap/v2"
+	batteryutil "github.com/markusressel/system-control/internal/battery"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
@@ -26,7 +27,7 @@ var batteryListCmd = &cobra.Command{
 	Long:  ``,
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		batteries, err := util.GetBatteryList()
+		batteries, err := batteryutil.GetBatteryList()
 		if err != nil {
 			return err
 		}
@@ -39,7 +40,7 @@ var batteryListCmd = &cobra.Command{
 			Serial:       filterSerial,
 		}
 
-		var filtered []util.BatteryInfo
+		var filtered []batteryutil.BatteryInfo
 		for _, battery := range batteries {
 			bType, _ := battery.GetType()
 			if filter.Matches(battery.Path, bType, battery.Manufacturer, battery.Model, battery.SerialNumber) {
@@ -48,7 +49,7 @@ var batteryListCmd = &cobra.Command{
 		}
 
 		// sort entries
-		slices.SortFunc(filtered, func(a, b util.BatteryInfo) int {
+		slices.SortFunc(filtered, func(a, b batteryutil.BatteryInfo) int {
 			return cmp.Or(
 				// sort by battery name
 				util.CompareIgnoreCase(a.Name, b.Name),
@@ -59,7 +60,7 @@ var batteryListCmd = &cobra.Command{
 		var wg sync.WaitGroup
 		for i := range filtered {
 			wg.Add(1)
-			go func(b *util.BatteryInfo) {
+			go func(b *batteryutil.BatteryInfo) {
 				defer wg.Done()
 				b.ResolveHIDPP()
 			}(&filtered[i])
@@ -77,7 +78,7 @@ var batteryListCmd = &cobra.Command{
 	},
 }
 
-func printBatteryInfo(battery util.BatteryInfo) {
+func printBatteryInfo(battery batteryutil.BatteryInfo) {
 	properties := orderedmap.NewOrderedMap[string, string]()
 
 	bPresent, e := battery.IsPresent()

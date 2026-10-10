@@ -10,6 +10,23 @@ import (
 	"time"
 )
 
+// DefaultCommandTimeout bounds every ExecCommand call, so a hung external tool can't block
+// the caller (and the locks it holds) forever.
+const DefaultCommandTimeout = 60 * time.Second
+
+// Runner executes an external command and returns its trimmed stdout.
+type Runner func(ctx context.Context, command string, args ...string) (string, error)
+
+var runner Runner = runCommand
+
+// SetRunner replaces the function used to execute external commands and returns a function that
+// restores the previous one. It exists to test code that shells out.
+func SetRunner(r Runner) (restore func()) {
+	previous := runner
+	runner = r
+	return func() { runner = previous }
+}
+
 // ExecCommandAndFork executes a shell command with the given arguments
 // and disowns the process, resulting in the process continuing to run
 // even after the parent process (this golang application) has exited.
@@ -22,46 +39,37 @@ func ExecCommandAndFork(command string, args ...string) error {
 	return nil
 }
 
-// ExecCommand executes a shell command with the given arguments
-// and returns its stdout as a []byte.
-// If an error occurs the content of stderr is printed
-// and an error is returned.
+// ExecCommand executes a command with the given arguments and returns its trimmed stdout.
+// If the command fails, the returned error contains the content of stderr (and stdout
+// holds whatever the command printed before failing).
 func ExecCommand(command string, args ...string) (string, error) {
-	//log.Printf("Executing command: %s %s", command, args)
-	cmd := exec.Command(command, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultCommandTimeout)
+	defer cancel()
+	return runner(ctx, command, args...)
+}
+
+// ExecCommandContext is like ExecCommand, but is bound to the given context.
+func ExecCommandContext(ctx context.Context, command string, args ...string) (string, error) {
+	return runner(ctx, command, args...)
+}
+
+func runCommand(ctx context.Context, command string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, command, args...)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	//err := cmd.Run()
-	err := cmd.Start()
+	// children that inherited the pipes must not keep us waiting after a kill
+	cmd.WaitDelay = 2 * time.Second
+
+	err := cmd.Run()
 	if err != nil {
-		fmt.Println(err.Error())
-		fmt.Println(stderr.String())
-		return "", errors.New("Command '" + fmt.Sprintf("%s", cmd) + "' failed with message: " + err.Error() + " " + stdout.String() + " " + stderr.String())
-	}
-	err = cmd.Wait()
-	if err != nil {
-		fmt.Println(err.Error())
-		fmt.Println(stderr.String())
-		return "", errors.New("Command '" + fmt.Sprintf("%s", cmd) + "' failed with message: " + err.Error() + " " + stdout.String() + " " + stderr.String())
-	}
-
-	result := stdout.String()
-	result = strings.TrimSpace(result)
-
-	return result, nil
-}
-
-func ExecCommandOneshot(timeout time.Duration, command string, args ...string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	if err := exec.CommandContext(ctx, command, args...).Run(); err != nil {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return ctx.Err()
+			err = fmt.Errorf("timed out: %w", err)
 		}
-		return err
+		// stdout is returned too, some tools (e.g. smartctl) report results with a non zero exit code
+		return strings.TrimSpace(stdout.String()), fmt.Errorf("command '%s' failed: %w %s", cmd.String(), err, strings.TrimSpace(stderr.String()))
 	}
-	return nil
+
+	return strings.TrimSpace(stdout.String()), nil
 }

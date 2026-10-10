@@ -15,10 +15,11 @@ type Source func(ctx context.Context, refresh func(prefixes ...string))
 
 // Engine serves ops over the daemon socket.
 type Engine struct {
-	registry *Registry
-	store    *store
-	sources  []Source
-	server   *ipcServer
+	startedAt time.Time
+	registry  *Registry
+	store     *store
+	sources   []Source
+	server    *ipcServer
 }
 
 func NewEngine(registry *Registry) *Engine {
@@ -57,10 +58,27 @@ func (e *Engine) Start(ctx context.Context) error {
 	if err := e.server.start(ctx, path); err != nil {
 		return err
 	}
+	e.startedAt = time.Now()
 	runningEngine.Store(e)
 
 	for _, s := range e.sources {
 		s(ctx, e.Refresh)
 	}
 	return nil
+}
+
+// status describes the engine for `daemon status`.
+func (e *Engine) status() []string {
+	watched := e.store.describe()
+	lines := []string{
+		fmt.Sprintf("pid: %d", os.Getpid()),
+		fmt.Sprintf("socket: %s", SocketPath()),
+		fmt.Sprintf("uptime: %s", time.Since(e.startedAt).Round(time.Second)),
+		fmt.Sprintf("ops: %d", len(e.registry.Ops())),
+		fmt.Sprintf("watched states: %d", len(watched)),
+	}
+	for _, w := range watched {
+		lines = append(lines, "  "+w)
+	}
+	return lines
 }

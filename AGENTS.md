@@ -29,18 +29,25 @@ go test ./internal/audio/pipewire/... -run TestParsePwDump -v
   `cmd/display/redshift/`). Each subdirectory corresponds to a command group.
 - **`internal/`** — Business logic, isolated from CLI layer:
     - `internal/audio/pipewire/` — PipeWire integration: parses `pw-dump` JSON, manages sinks/devices/profiles
-    - `internal/audio/pulseaudio/` — Legacy PulseAudio fallback
-    - `internal/bluetooth/` — Wraps `bluetoothctl`, parses its output, fuzzy-matches device names
-    - `internal/wifi/` — Wraps `nmcli`, parses output into typed structs
+    - `internal/bluetooth/` — BlueZ over D-Bus (one `GetManagedObjects` call per query, change signals for
+      `--watch`)
+    - `internal/wifi/` — Wraps `nmcli` (terse mode), parses output into typed structs
+    - `internal/battery/`, `internal/disk/` — sysfs batteries (incl. Logitech HID++), smartctl/nvme disk data
     - `internal/configuration/` — Viper-based config; searches `~/.system-control.yaml`, `~/.config/system-control/`,
       `/etc/system-control/`
     - `internal/persistence/` — Key-value store backed by `~/.config/system-control/persistence/*.sav` files (integers,
-      floats, or JSON structs); uses file locking (`gofrs/flock`) to prevent race conditions
+      floats, or JSON structs); files are replaced atomically, keys must be plain file names
     - `internal/daemon/` — Optional background daemon: op registry, state store for `--watch`, unix socket server
       and client (see "Daemon" below)
     - `internal/commandutil/` — Glue between cobra commands and ops (`OpRunE`), locking helpers
-    - `internal/util/` — Shared helpers: `ExecCommand`/`ExecCommandAndFork` wrappers, file I/O for sysfs paths,
-      string/math utilities
+    - `internal/util/` — Shared helpers: `ExecCommand` (bounded by a timeout, swappable with `util.SetRunner` in
+      tests), file I/O for sysfs paths, string/math utilities, X11 tool wrappers (xrandr, xinput, wmctrl)
+
+### Testing
+
+External tools are never run in tests: replace `util.SetRunner` with a fake, and point the sysfs path variables
+(`battery.PowerSupplyBasePath`, `util.DisplayBacklightPath`, ...) to a temp directory. Parsers are pure functions
+with table tests. `cmd/match_test.go` compares the daemon's command line parsing with cobra's.
 
 ### Daemon
 

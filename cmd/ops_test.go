@@ -29,6 +29,8 @@ func TestDaemonUnderstandsRealCommandLines(t *testing.T) {
 		"audio.sink.active":               {"audio", "sink", "active", "-c", "description", "-w"},
 		"audio.sink.switch":               {"audio", "sink", "switch", "headphone"},
 		"audio.device.profile":            {"audio", "device", "profile", "-d", "X"},
+		"bluetooth.connected":             {"bluetooth", "connected", "Headset", "--watch"},
+		"fan.mode":                        {"fan", "mode", "--type", "number", "-w"},
 		"display.redshift.brightness":     {"display", "redshift", "brightness", "-d", "DP-1", "--format", "%.1f", "--watch"},
 		"display.redshift.brightness.inc": {"display", "redshift", "brightness", "inc", "-d", "DP-1"},
 		"display.redshift.brightness.dec": {"display", "redshift", "brightness", "dec", "--step", "0.2"},
@@ -52,6 +54,9 @@ func TestDaemonUnderstandsRealCommandLines(t *testing.T) {
 		{"audio", "device", "profile", "hdmi", "--watch"}, // set can't be watched
 		{"audio", "sink", "next", "--watch"},
 		{"--configuration", "x.yaml", "audio", "volume"},
+		{"bluetooth", "connected"},          // cobra.ExactArgs(1)
+		{"bluetooth", "connect", "Headset"}, // not an op
+		{"fan", "mode", "set", "1"},         // needs root, not an op
 	}
 	for _, argv := range unhandled {
 		if op, _, ok := daemon.Default.MatchArgv(argv); ok {

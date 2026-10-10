@@ -1,10 +1,10 @@
 package pipewire
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"slices"
 	"strings"
 
@@ -29,11 +29,17 @@ type GraphState struct {
 	SecurityContexts []InterfaceSecurityContext
 }
 
+// infoOf returns the typed info of an object, or the zero value if it has none (or another type).
+func infoOf[T any](object GraphObject) T {
+	info, _ := object.Info.(T)
+	return info
+}
+
 func (state *GraphState) UnmarshalJSON(data []byte) error {
 
 	var objectDataList []GraphObject
-	if err := json.NewDecoder(strings.NewReader(string(data))).Decode(&objectDataList); err != nil {
-		log.Fatalf("decode: %s", err)
+	if err := json.NewDecoder(bytes.NewReader(data)).Decode(&objectDataList); err != nil {
+		return fmt.Errorf("decode pipewire graph: %w", err)
 	}
 
 	for _, object := range objectDataList {
@@ -41,72 +47,63 @@ func (state *GraphState) UnmarshalJSON(data []byte) error {
 		case TypeNode:
 			state.Nodes = append(state.Nodes, InterfaceNode{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceNodeInfo),
+				Info:       infoOf[InterfaceNodeInfo](object),
 			})
 		case TypeFactory:
 			state.Factories = append(state.Factories, InterfaceFactory{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceFactoryInfo),
+				Info:       infoOf[InterfaceFactoryInfo](object),
 			})
 		case TypeModule:
 			state.Modules = append(state.Modules, InterfaceModule{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceModuleInfo),
+				Info:       infoOf[InterfaceModuleInfo](object),
 			})
 		case TypeCore:
 			state.Cores = append(state.Cores, InterfaceCore{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceCoreInfo),
+				Info:       infoOf[InterfaceCoreInfo](object),
 			})
 		case TypeClient:
 			state.Clients = append(state.Clients, InterfaceClient{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceClientInfo),
+				Info:       infoOf[InterfaceClientInfo](object),
 			})
 		case TypeLink:
 			state.Links = append(state.Links, InterfaceLink{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceLinkInfo),
+				Info:       infoOf[InterfaceLinkInfo](object),
 			})
 		case TypePort:
 			state.Ports = append(state.Ports, InterfacePort{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfacePortInfo),
+				Info:       infoOf[InterfacePortInfo](object),
 			})
 		case TypeDevice:
 			state.Devices = append(state.Devices, InterfaceDevice{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceDeviceInfo),
+				Info:       infoOf[InterfaceDeviceInfo](object),
 			})
 		case TypeProfiler:
-			var info InterfaceProfilerInfo = nil
-			if object.Info != nil {
-				info = object.Info.(InterfaceProfilerInfo)
-			}
+			info := infoOf[InterfaceProfilerInfo](object)
 			state.Profilers = append(state.Profilers, InterfaceProfiler{
 				CommonData: object.CommonData,
 				Info:       info,
 			})
 		case TypeMetadata:
-			var info InterfaceMetadataInfo = nil
-			if object.Info != nil {
-				info = object.Info.(InterfaceMetadataInfo)
-			}
+			info := infoOf[InterfaceMetadataInfo](object)
 			state.Metadatas = append(state.Metadatas, InterfaceMetadata{
 				CommonData: object.CommonData,
 				Info:       info,
 			})
 		case TypeSecurityContext:
-			var info InterfaceSecurityContextInfo = nil
-			if object.Info != nil {
-				info = object.Info.(InterfaceSecurityContextInfo)
-			}
+			info := infoOf[InterfaceSecurityContextInfo](object)
 			state.SecurityContexts = append(state.SecurityContexts, InterfaceSecurityContext{
 				CommonData: object.CommonData,
 				Info:       info,
 			})
 		default:
-			fmt.Println("Unknown type: ", object.Type)
+			// unknown object types are not needed
 		}
 	}
 

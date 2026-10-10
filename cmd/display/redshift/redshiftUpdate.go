@@ -19,7 +19,7 @@ var redshiftUpdateCmd = &cobra.Command{
 		redshiftLock = lockRedshift()
 		defer redshiftLock.Unlock()
 
-		config := configuration.CurrentConfig
+		config := configuration.Get()
 
 		redshiftConfig, err := util.ReadRedshiftConfig()
 		if err != nil {

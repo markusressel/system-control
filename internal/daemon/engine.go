@@ -57,6 +57,7 @@ func (e *Engine) Start(ctx context.Context) error {
 	if err := e.server.start(ctx, path); err != nil {
 		return err
 	}
+	runningEngine.Store(e)
 
 	for _, s := range e.sources {
 		s(ctx, e.Refresh)

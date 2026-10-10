@@ -8,6 +8,7 @@ import (
 
 	"github.com/markusressel/system-control/internal/daemon"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 // OpRunE returns the RunE of a cobra command that implements the registered op `opName`.
@@ -22,7 +23,7 @@ func OpRunE(opName string) func(cmd *cobra.Command, args []string) error {
 		if !ok {
 			return fmt.Errorf("op %s is not registered", opName)
 		}
-		a := ArgsFromCommand(cmd, args, op)
+		a := ArgsFromCommand(cmd, args)
 
 		lines, err := op.Execute(cmd.Context(), a, queuedAt)
 		if err != nil {
@@ -44,24 +45,22 @@ func OpRunE(opName string) func(cmd *cobra.Command, args []string) error {
 }
 
 // ArgsFromCommand collects the arguments of a parsed cobra command for an op.
-func ArgsFromCommand(cmd *cobra.Command, args []string, op *daemon.Op) daemon.Args {
-	a := op.DefaultArgs()
-	a.Pos = args
+// Every flag of the command is included, ops pick the ones they know by name.
+func ArgsFromCommand(cmd *cobra.Command, args []string) daemon.Args {
+	a := daemon.Args{Flags: map[string]string{}, Pos: args}
 	a.Watch, _ = cmd.Flags().GetBool("watch")
 
-	for _, def := range op.Flags {
-		flag := cmd.Flags().Lookup(def.Name)
-		if flag == nil {
-			continue
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		if f.Name == "watch" {
+			return
 		}
-		if def.Kind == daemon.FlagList {
-			values, err := cmd.Flags().GetStringSlice(def.Name)
-			if err == nil {
-				a.Flags[def.Name] = strings.Join(values, ",")
-				continue
+		if f.Value.Type() == "stringSlice" {
+			if values, err := cmd.Flags().GetStringSlice(f.Name); err == nil {
+				a.Flags[f.Name] = strings.Join(values, ",")
+				return
 			}
 		}
-		a.Flags[def.Name] = flag.Value.String()
-	}
+		a.Flags[f.Name] = f.Value.String()
+	})
 	return a
 }

@@ -12,21 +12,28 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/spf13/cobra"
 )
 
+// testRegistry returns a registry bound to a small command tree, like the real application.
 func testRegistry(counter *atomic.Int64) *Registry {
 	r := NewRegistry()
 
 	r.Register(Op{
-		Name:   "test.echo",
-		Flags:  []FlagDef{{Name: "prefix", Short: "p"}, {Name: "cols", Short: "c", Kind: FlagList, Default: "a,b"}, {Name: "level", Short: "l", Default: "-1", Mutating: true}},
-		MaxPos: 1,
+		Name: "test.echo",
 		Run: func(ctx context.Context, a Args) ([]string, error) {
 			if len(a.Pos) == 1 && a.Pos[0] == "fail" {
 				return nil, errors.New("boom")
 			}
 			return []string{a.Flag("prefix") + strings.Join(a.Pos, ","), a.Flag("cols")}, nil
 		},
+	})
+
+	r.Register(Op{
+		Name:  "test.unhandled",
+		Run:   func(ctx context.Context, a Args) ([]string, error) { return nil, fmt.Errorf("later: %w", ErrUnhandled) },
+		Watch: func(Args) bool { return true },
 	})
 
 	r.Register(Op{
@@ -43,6 +50,27 @@ func testRegistry(counter *atomic.Int64) *Registry {
 		Invalidates: []string{"test.counter"},
 	})
 
+	root := &cobra.Command{Use: "app"}
+	root.PersistentFlags().String("configuration", "", "")
+	group := &cobra.Command{Use: "test"}
+	root.AddCommand(group)
+
+	echo := &cobra.Command{Use: "echo", Args: cobra.MaximumNArgs(1), Run: func(*cobra.Command, []string) {}}
+	echo.Flags().StringP("prefix", "p", "", "")
+	echo.Flags().StringSliceP("cols", "c", []string{"a", "b"}, "")
+	echo.AddCommand(&cobra.Command{Use: "child", Run: func(*cobra.Command, []string) {}})
+
+	counterCmd := &cobra.Command{Use: "counter", Run: func(*cobra.Command, []string) {}}
+	counterCmd.Flags().BoolP("watch", "w", false, "")
+
+	unhandledCmd := &cobra.Command{Use: "unhandled", Run: func(*cobra.Command, []string) {}}
+	unhandledCmd.Flags().BoolP("watch", "w", false, "")
+
+	group.AddCommand(echo, counterCmd, unhandledCmd, &cobra.Command{Use: "bump", Run: func(*cobra.Command, []string) {}})
+
+	if err := r.Bind(root); err != nil {
+		panic(err)
+	}
 	return r
 }
 
@@ -71,7 +99,8 @@ func TestMatchArgv(t *testing.T) {
 		{name: "double dash", argv: []string{"test", "echo", "--", "-x"}, ok: true, opName: "test.echo", pos: []string{"-x"}},
 		{name: "unknown flag", argv: []string{"test", "echo", "--nope"}, ok: false},
 		{name: "missing value", argv: []string{"test", "echo", "--prefix"}, ok: false},
-		{name: "mutating flag set", argv: []string{"test", "echo", "-l", "3"}, ok: false},
+		{name: "sub command of an op", argv: []string{"test", "echo", "child"}, ok: false},
+		{name: "root flag", argv: []string{"test", "echo", "--configuration", "x"}, ok: false},
 		{name: "unknown command", argv: []string{"test", "nope"}, ok: false},
 		{name: "flag before command is left to cobra", argv: []string{"--prefix", "x", "test", "echo"}, ok: false},
 		{name: "watch", argv: []string{"test", "counter", "--watch"}, ok: true, opName: "test.counter", watch: true},
@@ -138,6 +167,15 @@ func TestTryRemote(t *testing.T) {
 		t.Errorf("handled=%v code=%d stderr=%q", handled, code, stderr.String())
 	}
 
+	// an op that can't serve the request right now hands it back to the caller, also for watches
+	for _, argv := range [][]string{{"test", "unhandled"}, {"test", "unhandled", "--watch"}} {
+		stdout.Reset()
+		stderr.Reset()
+		if handled, _ := TryRemote(argv, &stdout, &stderr); handled || stdout.Len() > 0 || stderr.Len() > 0 {
+			t.Errorf("%v: ErrUnhandled must be answered with \"unhandled\"", argv)
+		}
+	}
+
 	// an error is an answer, only unknown commands go back to the caller
 	handled, _ = TryRemote([]string{"test", "nope"}, &stdout, &stderr)
 	if handled {
@@ -194,6 +232,9 @@ func TestWatch(t *testing.T) {
 	fmt.Fprintf(conn, "ARGV 3\n4\ntest7\ncounter7\n--watch")
 	r := bufio.NewReader(conn)
 
+	if got := readFrame(t, r); got != "W" {
+		t.Fatalf("first frame = %q, want the watch announcement", got)
+	}
 	if got := readFrame(t, r); got != "O 0" {
 		t.Fatalf("initial frame = %q", got)
 	}

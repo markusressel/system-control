@@ -18,17 +18,13 @@ const (
 	FlagList
 )
 
-// FlagDef describes a CLI flag of an Op. The daemon parses raw argv with these definitions,
-// the cobra command that implements the same Op must declare the same flags
-// (verified by a test in package cmd).
+// FlagDef describes a CLI flag of an Op. Definitions are derived from the cobra command
+// that implements the op (see Registry.Bind), cobra is the single source of the CLI surface.
 type FlagDef struct {
 	Name    string
 	Short   string
 	Kind    FlagKind
 	Default string
-	// Mutating flags turn an otherwise read-only invocation into a mutation
-	// that the daemon does not handle. Setting one makes the CLI run locally.
-	Mutating bool
 }
 
 // Args are the parsed arguments of one Op invocation.
@@ -73,12 +69,11 @@ func (a Args) key(opName string) string {
 }
 
 // Op is a single CLI operation that can run in the daemon or in-process, with one implementation.
+//
+// An op is bound to the cobra command at its CLI path, which declares flags, arguments and help.
 type Op struct {
 	// Name is the dotted CLI path, e.g. "audio.volume.inc" for `system-control audio volume inc`.
-	Name   string
-	Flags  []FlagDef
-	MinPos int
-	MaxPos int
+	Name string
 
 	// Lock names a cross-process lock held while Run executes (mutating ops).
 	Lock string
@@ -96,6 +91,11 @@ type Op struct {
 
 	// Invalidates lists name prefixes of watchable ops whose state may change after Run.
 	Invalidates []string
+
+	// set by Registry.Bind
+	flags       []FlagDef
+	validate    func(pos []string) error
+	subcommands map[string]bool
 }
 
 func (op *Op) path() []string {
@@ -103,28 +103,29 @@ func (op *Op) path() []string {
 }
 
 func (op *Op) flagByName(name string) *FlagDef {
-	for i := range op.Flags {
-		if op.Flags[i].Name == name {
-			return &op.Flags[i]
+	for i := range op.flags {
+		if op.flags[i].Name == name {
+			return &op.flags[i]
 		}
 	}
 	return nil
 }
 
 func (op *Op) flagByShort(short string) *FlagDef {
-	for i := range op.Flags {
-		if op.Flags[i].Short == short {
-			return &op.Flags[i]
+	for i := range op.flags {
+		if op.flags[i].Short == short {
+			return &op.flags[i]
 		}
 	}
 	return nil
 }
 
-// DefaultArgs returns Args with all flag defaults filled in.
-func (op *Op) DefaultArgs() Args {
-	a := Args{Flags: make(map[string]string, len(op.Flags))}
-	for _, f := range op.Flags {
-		a.Flags[f.Name] = f.Default
+func (op *Op) defaultArgs() Args {
+	a := Args{Flags: make(map[string]string, len(op.flags))}
+	for _, f := range op.flags {
+		if f.Name != "watch" {
+			a.Flags[f.Name] = f.Default
+		}
 	}
 	return a
 }
@@ -221,8 +222,11 @@ func (r *Registry) MatchArgv(argv []string) (op *Op, a Args, ok bool) {
 		return nil, Args{}, false
 	}
 	op = n.op
+	if op.flags == nil {
+		return nil, Args{}, false // not bound to a command
+	}
 
-	a = op.DefaultArgs()
+	a = op.defaultArgs()
 	rest := argv[i:]
 	for j := 0; j < len(rest); j++ {
 		tok := rest[j]
@@ -234,14 +238,6 @@ func (r *Registry) MatchArgv(argv []string) (op *Op, a Args, ok bool) {
 
 		case strings.HasPrefix(tok, "--"):
 			name, value, hasValue := strings.Cut(tok[2:], "=")
-			if name == "watch" && op.Watch != nil {
-				if !hasValue || value == "true" {
-					a.Watch = true
-				} else if value != "false" {
-					return nil, Args{}, false
-				}
-				continue
-			}
 			def := op.flagByName(name)
 			if def == nil {
 				return nil, Args{}, false
@@ -257,10 +253,6 @@ func (r *Registry) MatchArgv(argv []string) (op *Op, a Args, ok bool) {
 			value, hasValue := tok[2:], len(tok) > 2
 			if hasValue && value[0] == '=' {
 				value = value[1:]
-			}
-			if short == "w" && op.Watch != nil && !hasValue {
-				a.Watch = true
-				continue
 			}
 			def := op.flagByShort(short)
 			if def == nil {
@@ -282,16 +274,15 @@ func (r *Registry) MatchArgv(argv []string) (op *Op, a Args, ok bool) {
 		}
 	}
 
-	if len(a.Pos) < op.MinPos || len(a.Pos) > op.MaxPos {
+	// the first positional would select another (sub)command, e.g. `brightness inc`
+	if len(a.Pos) > 0 && op.subcommands[a.Pos[0]] {
+		return nil, Args{}, false
+	}
+	if op.validate != nil && op.validate(a.Pos) != nil {
 		return nil, Args{}, false
 	}
 	if a.Watch && (op.Watch == nil || !op.Watch(a)) {
 		return nil, Args{}, false
-	}
-	for _, f := range op.Flags {
-		if f.Mutating && a.Flags[f.Name] != f.Default {
-			return nil, Args{}, false
-		}
 	}
 
 	return op, a, true
@@ -302,11 +293,14 @@ func applyFlag(a *Args, def *FlagDef, value string, hasValue bool, following []s
 	switch def.Kind {
 	case FlagBool:
 		if !hasValue {
-			a.Flags[def.Name] = "true"
-		} else if value == "true" || value == "false" {
-			a.Flags[def.Name] = value
-		} else {
+			value = "true"
+		} else if value != "true" && value != "false" {
 			return 0, false
+		}
+		if def.Name == "watch" {
+			a.Watch = value == "true"
+		} else {
+			a.Flags[def.Name] = value
 		}
 		return 0, true
 

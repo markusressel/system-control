@@ -48,15 +48,23 @@ go test ./internal/audio/pipewire/... -run TestParsePwDump -v
 every command also works on its own, and that in-process path is the reference behavior.
 
 - **One implementation per operation.** A command that the daemon can serve is a `daemon.Op` (name = CLI path, e.g.
-  `audio.volume.inc`), registered from an `init()` (`internal/audio/ops.go`). The cobra command only
-  declares flags/help and runs `commandutil.OpRunE("<op name>")`. Do not implement daemon behavior twice.
-- **Flags are declared twice** (cobra and `Op.Flags`), because the daemon parses the raw command line itself.
-  `cmd/ops_test.go` fails if they drift apart.
+  `audio.volume.inc`), registered from an `init()` (`internal/audio/ops.go`). The cobra command declares
+  flags, arguments and help and runs `commandutil.OpRunE("<op name>")`. Do not implement daemon behavior twice.
+- **Cobra is the only declaration of the CLI surface.** `Registry.Bind` (called by `cmd/daemon.go`) derives flags,
+  argument validation and sub commands of an op from its cobra command, so the daemon parses raw command lines like
+  cobra. Adding an op needs only the `daemon.Register` call; `cmd/ops_test.go` checks that every op binds and that
+  lookalike command lines are left to cobra.
+- **Ops that can't run in the daemon right now** return `daemon.ErrUnhandled` before changing anything (e.g. no
+  `DISPLAY`), the client then runs the command itself. `daemon.Running()` tells the two execution contexts apart.
+- **Configuration in the daemon is a snapshot**: read it with `configuration.Get()`, and call
+  `configuration.Reload()` before using values that users edit (see the redshift ops).
 - **Request flow**: `cmd.Execute()` first calls `daemon.TryRemote(os.Args[1:])`. The daemon matches the command line
   to an op and answers with output and exit code; for anything it does not fully understand (unknown flag, `--help`,
   set-flags that mutate...) it answers "unhandled" and the regular cobra path runs. `cmd/sysctrl/main.c` is the same
   client without the Go runtime (~1 ms, ~1.5 MB instead of ~3 ms, ~10 MB), which matters for key bindings and
   for the many long-lived `--watch` processes of a status bar. Protocol: `internal/daemon/ipc.go`.
+  After a request was sent a command is only run locally on an explicit "unhandled" answer, never because the
+  daemon was silent (it may have executed a mutation already).
 - **State**: `--watch` subscribes to the engine's store. The daemon owns all published state, clients never push
   values. Event sources (`Engine.AddSource`, e.g. the PipeWire monitor) and `Op.Invalidates` refresh watched ops;
   `Op.Poll` is only a fallback for sources without events. A process that changes state on its own (cobra path)

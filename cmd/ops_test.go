@@ -1,69 +1,65 @@
 package cmd
 
 import (
-	"strings"
+	"slices"
 	"testing"
 
 	"github.com/markusressel/system-control/internal/daemon"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
-// findFlag looks up a flag the way cobra resolves it for a command: local first, then inherited
-// persistent flags of the parents.
-func findFlag(cmd *cobra.Command, name string) *pflag.Flag {
-	for c := cmd; c != nil; c = c.Parent() {
-		if f := c.Flags().Lookup(name); f != nil {
-			return f
-		}
-		if f := c.PersistentFlags().Lookup(name); f != nil {
-			return f
-		}
+// Every op must be implemented by a cobra command, the daemon derives its command line
+// parsing from it.
+func TestOpsBindToCommands(t *testing.T) {
+	if err := daemon.Default.Bind(RootCmd); err != nil {
+		t.Fatal(err)
 	}
-	return nil
 }
 
-// The daemon parses raw command lines using the flag definitions of an op, while the cobra
-// command is what runs without a daemon. Both must describe the same command line.
-func TestOpsMatchCobraCommands(t *testing.T) {
-	for _, op := range daemon.Default.Ops() {
-		t.Run(op.Name, func(t *testing.T) {
-			words := strings.Split(op.Name, ".")
-			cmd, rest, err := RootCmd.Find(words)
-			if err != nil || len(rest) != 0 || cmd == RootCmd {
-				t.Fatalf("no cobra command for op path %v (err=%v, rest=%v)", words, err, rest)
-			}
-			if cmd.Name() != words[len(words)-1] {
-				t.Fatalf("op resolves to command %q", cmd.CommandPath())
-			}
+func TestDaemonUnderstandsRealCommandLines(t *testing.T) {
+	if err := daemon.Default.Bind(RootCmd); err != nil {
+		t.Fatal(err)
+	}
 
-			for _, def := range op.Flags {
-				f := findFlag(cmd, def.Name)
-				if f == nil {
-					t.Errorf("flag --%s missing on %s", def.Name, cmd.CommandPath())
-					continue
-				}
-				if f.Shorthand != def.Short {
-					t.Errorf("flag --%s: shorthand %q, op declares %q", def.Name, f.Shorthand, def.Short)
-				}
-				if (f.Value.Type() == "bool") != (def.Kind == daemon.FlagBool) {
-					t.Errorf("flag --%s: cobra type %s does not match op kind %d", def.Name, f.Value.Type(), def.Kind)
-				}
-				if (f.Value.Type() == "stringSlice") != (def.Kind == daemon.FlagList) {
-					t.Errorf("flag --%s: cobra type %s does not match op kind %d", def.Name, f.Value.Type(), def.Kind)
-				}
-				defValue := strings.Trim(f.DefValue, "[]")
-				if defValue != def.Default {
-					t.Errorf("flag --%s: default %q, op declares %q", def.Name, defValue, def.Default)
-				}
-			}
+	handled := map[string][]string{
+		"audio.volume":                    {"audio", "volume"},
+		"audio.volume.muted":              {"audio", "volume", "muted", "--watch"},
+		"audio.volume.inc":                {"audio", "volume", "inc", "--device", "X"},
+		"audio.volume.set":                {"audio", "volume", "set", "50"},
+		"audio.volume.toggle-mute":        {"audio", "volume", "toggle-mute"},
+		"audio.sink.active":               {"audio", "sink", "active", "-c", "description", "-w"},
+		"audio.sink.switch":               {"audio", "sink", "switch", "headphone"},
+		"audio.device.profile":            {"audio", "device", "profile", "-d", "X"},
+		"display.redshift.brightness":     {"display", "redshift", "brightness", "-d", "DP-1", "--format", "%.1f", "--watch"},
+		"display.redshift.brightness.inc": {"display", "redshift", "brightness", "inc", "-d", "DP-1"},
+		"display.redshift.brightness.dec": {"display", "redshift", "brightness", "dec", "--step", "0.2"},
+	}
+	for want, argv := range handled {
+		op, _, ok := daemon.Default.MatchArgv(argv)
+		if !ok || op.Name != want {
+			t.Errorf("%v: got op=%v ok=%v, want %s", argv, op, ok, want)
+		}
+	}
 
-			if op.Watch != nil {
-				f := findFlag(cmd, "watch")
-				if f == nil || f.Shorthand != "w" || f.Value.Type() != "bool" {
-					t.Errorf("op is watchable but %s has no --watch/-w flag", cmd.CommandPath())
-				}
-			}
-		})
+	// everything else is left to cobra, in particular lookalikes of a handled command
+	unhandled := [][]string{
+		{"display", "redshift", "brightness", "reset"},                // other sub command of an op
+		{"display", "redshift", "brightness", "-b", "0.5", "--watch"}, // a set can't be watched
+		{"display", "redshift", "gamma", "inc"},                       // not an op
+		{"audio", "volume", "set"},                                    // cobra.ExactArgs(1)
+		{"audio", "volume", "set", "1", "2"},                          // cobra.ExactArgs(1)
+		{"audio", "volume", "--configuration", "x.yaml"},              // root flag
+		{"audio", "volume", "--help"},
+		{"audio", "device", "profile", "hdmi", "--watch"}, // set can't be watched
+		{"audio", "sink", "next", "--watch"},
+		{"--configuration", "x.yaml", "audio", "volume"},
+	}
+	for _, argv := range unhandled {
+		if op, _, ok := daemon.Default.MatchArgv(argv); ok {
+			t.Errorf("%v must not be handled by the daemon, matched %s", argv, op.Name)
+		}
+	}
+
+	if !slices.ContainsFunc(daemon.Default.Ops(), func(op *daemon.Op) bool { return op.Name == "audio.volume.inc" }) {
+		t.Error("audio ops are not registered")
 	}
 }

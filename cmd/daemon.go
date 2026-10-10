@@ -24,6 +24,11 @@ of a regular invocation, and serves --watch subscriptions.
 The daemon is optional: with no daemon running (or for commands it does not handle),
 every command works on its own.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// flags and arguments of ops are taken from the commands that implement them
+		if err := daemon.Default.Bind(RootCmd); err != nil {
+			return err
+		}
+
 		eng := daemon.NewEngine(daemon.Default)
 		eng.AddSource(audio.EventSource)
 

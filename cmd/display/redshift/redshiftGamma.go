@@ -50,8 +50,9 @@ var gammaCmd = &cobra.Command{
 }
 
 func clampGammaToConfig(value float64) float64 {
-	minG := configuration.CurrentConfig.Redshift.Gamma.MinimumGamma
-	maxG := configuration.CurrentConfig.Redshift.Gamma.MaximumGamma
+	config := configuration.Get()
+	minG := config.Redshift.Gamma.MinimumGamma
+	maxG := config.Redshift.Gamma.MaximumGamma
 	newGammaValue := util.Clamp(value, minG, maxG)
 	newGammaValue = util.RoundTo2DP(newGammaValue)
 	return newGammaValue

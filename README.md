@@ -39,6 +39,45 @@ If you like, generate shell completions for your shell:
 system-control completion fish > ~/.config/fish/completions/system-control.fish
 ```
 
+# Daemon (optional)
+
+system-control can run a small background daemon. It makes frequent commands (volume keys, status bar widgets) fast
+and serves `--watch`, which prints a new line whenever the value changes:
+
+```shell
+> system-control audio volume --watch
+28
+30
+```
+
+Everything works without the daemon, it just takes longer. `make deploy` installs and starts it as a systemd
+user service:
+
+```shell
+> systemctl --user status system-control.service
+```
+
+`make deploy` also installs `sysctrl`, a tiny client for key bindings and status bars. It takes the same
+arguments as `system-control`, but starts in about 1 ms and uses very little memory, which adds up with many
+`--watch` widgets. If the daemon does not handle a command (or is not running) it runs `system-control` instead.
+
+```shell
+> sysctrl audio volume inc
+> sysctrl audio volume --watch
+```
+
+Commands the daemon handles today: `audio volume` (+ `inc`, `dec`, `set`, `mute`, `unmute`, `toggle-mute`,
+`muted`, `save`, `restore`), `audio sink` (`active`, `next`, `previous`, `switch`), `audio device profile`
+and `display redshift brightness` (+ `inc`, `dec`).
+
+Optional settings in the [config file](system-control.yaml):
+
+```yaml
+daemon:
+  pollIntervals:
+    display: 5s
+```
+
 # Usage
 
 system-control is a command-line-interface (CLI) tool. To use it simply open a terminal and type in one

@@ -283,19 +283,25 @@ func ResetRedshift(display util.DisplayInfo) (err error) {
 	return err
 }
 
-// lockRedshift takes the lock shared with all other redshift commands (see commandutil.LockedRunE).
-func lockRedshift() *flock.Flock {
+// acquireRedshiftLock takes the lock shared with all other redshift commands.
+func acquireRedshiftLock() (*flock.Flock, error) {
 	dir := daemon.RuntimeDir()
-	err := os.MkdirAll(dir, 0700)
-	if err != nil {
-		log.Fatalf("Could not create runtime directory: %v", err)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return nil, err
 	}
-	fileLock := flock.New(filepath.Join(dir, "cmd-display-redshift.lock"))
-	err = fileLock.Lock()
+	fileLock := flock.New(filepath.Join(dir, redshiftLockName+".lock"))
+	if err := fileLock.Lock(); err != nil {
+		return nil, err
+	}
+	return fileLock, nil
+}
+
+// lockRedshift is acquireRedshiftLock for commands that can't continue without the lock.
+func lockRedshift() *flock.Flock {
+	fileLock, err := acquireRedshiftLock()
 	if err != nil {
 		log.Fatalf("Could not acquire lock: %v", err)
 	}
-
 	return fileLock
 }
 

@@ -3,6 +3,7 @@ package daemon
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -21,7 +23,6 @@ import (
 //
 //	ARGV <n>\n          followed by n arguments, each encoded as "<len>\n<len bytes>"
 //	NOTIFY <prefix>...\n  state behind the given op name prefixes changed, re-query watchers
-//	PING\n
 //
 // The server answers with frames, one per line:
 //
@@ -29,14 +30,30 @@ import (
 //	E <text>\n   a line for stderr
 //	X <code>\n   the command finished with exit code <code> (not sent for watch requests)
 //	U\n          request not handled by the daemon, run the command locally
+//	W\n          the request is a watch: O frames follow until the client closes the connection
 //
-// A watch request keeps the connection open and streams O frames until the client closes it.
+// Once a request was sent, the command is only ever run locally if the daemon answers U. A
+// missing answer is an error, as the daemon might have executed the command already.
 // The format is kept trivial on purpose, the C client (cmd/sysctrl) implements it too.
+
+// ErrUnhandled can be returned by Op.Run, before it changed anything, when the daemon can't
+// serve this invocation right now (e.g. its environment lacks what the op needs). The client
+// then runs the command itself.
+var ErrUnhandled = errors.New("not handled by the daemon")
 
 const (
 	maxArgs   = 64
 	maxArgLen = 16 * 1024
 )
+
+// runningEngine is the engine of this process, if it is a daemon.
+var runningEngine atomic.Pointer[Engine]
+
+// Running reports whether this process is the daemon. Op code uses it to tell the two ways it
+// can be executed apart, e.g. to refresh configuration that only the daemon holds for long.
+func Running() bool {
+	return runningEngine.Load() != nil
+}
 
 type ipcServer struct {
 	engine   *Engine
@@ -96,9 +113,6 @@ func (s *ipcServer) handle(ctx context.Context, conn net.Conn) {
 	}
 
 	switch fields[0] {
-	case "PING":
-		writeFrames(conn, 'X', "0")
-
 	case "NOTIFY":
 		s.engine.Refresh(fields[1:]...)
 		writeFrames(conn, 'X', "0")
@@ -134,6 +148,10 @@ func (s *ipcServer) handleArgv(ctx context.Context, conn net.Conn, r *bufio.Read
 	}
 
 	lines, err := op.Execute(ctx, args, receivedAt)
+	if errors.Is(err, ErrUnhandled) {
+		writeFrames(conn, 'U', "")
+		return
+	}
 	if err != nil {
 		writeFrames(conn, 'E', err.Error())
 		writeFrames(conn, 'X', "1")
@@ -155,12 +173,18 @@ func (s *ipcServer) serveWatch(ctx context.Context, conn net.Conn, r *bufio.Read
 	defer cancel()
 
 	updates, release, err := s.engine.store.subscribe(ctx, op, args)
+	if errors.Is(err, ErrUnhandled) {
+		writeFrames(conn, 'U', "")
+		return
+	}
 	if err != nil {
 		writeFrames(conn, 'E', err.Error())
 		writeFrames(conn, 'X', "1")
 		return
 	}
 	defer release()
+
+	writeFrames(conn, 'W', "")
 
 	// The client sends nothing after its request, so a read only returns once it went away.
 	go func() {
@@ -204,8 +228,8 @@ func readArgs(r *bufio.Reader, n int) ([]string, error) {
 
 // writeFrames writes text as one frame per line.
 func writeFrames(w io.Writer, kind byte, text string) error {
-	if kind == 'U' {
-		_, err := w.Write([]byte("U\n"))
+	if kind == 'U' || kind == 'W' {
+		_, err := w.Write([]byte{kind, '\n'})
 		return err
 	}
 
@@ -224,6 +248,9 @@ func writeFrames(w io.Writer, kind byte, text string) error {
 // hands over to this binary, so the request is not sent twice.
 const EnvNoDaemon = "SYSTEM_CONTROL_NO_DAEMON"
 
+// answerTimeout is how long the daemon may take to answer a one-shot request.
+const answerTimeout = 5 * time.Second
+
 // TryRemote lets the daemon run a command line. handled is false if the daemon is not
 // reachable or does not handle the command, in which case nothing was written to stdout/stderr
 // and the caller must run the command itself.
@@ -237,6 +264,7 @@ func TryRemote(argv []string, stdout, stderr io.Writer) (handled bool, exitCode 
 		return false, 0
 	}
 	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(answerTimeout))
 
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "ARGV %d\n", len(argv))
@@ -248,21 +276,21 @@ func TryRemote(argv []string, stdout, stderr io.Writer) (handled bool, exitCode 
 	}
 
 	r := bufio.NewReader(conn)
-	gotFrame := false
 	for {
 		line, err := r.ReadString('\n')
 		if err != nil {
-			if !gotFrame {
-				return false, 0
-			}
-			return true, 1 // the daemon went away mid-command (or a watch was cut off)
+			// The request is out, the daemon may have executed it. Running it again could apply a
+			// mutation twice, so this is an error and not a reason to fall back.
+			fmt.Fprintf(stderr, "daemon did not answer: %v\n", err)
+			return true, 1
 		}
-		gotFrame = true
 
 		line = strings.TrimSuffix(line, "\n")
 		switch {
 		case line == "U":
 			return false, 0
+		case line == "W":
+			_ = conn.SetReadDeadline(time.Time{})
 		case strings.HasPrefix(line, "O "):
 			fmt.Fprintln(stdout, line[2:])
 		case strings.HasPrefix(line, "E "):
@@ -278,6 +306,11 @@ func TryRemote(argv []string, stdout, stderr io.Writer) (handled bool, exitCode 
 // It is best effort and silent if no daemon is running.
 func Notify(prefixes ...string) {
 	if len(prefixes) == 0 {
+		return
+	}
+	// inside the daemon there is nobody to talk to
+	if e := runningEngine.Load(); e != nil {
+		e.Refresh(prefixes...)
 		return
 	}
 	conn, err := net.DialTimeout("unix", SocketPath(), 100*time.Millisecond)

@@ -202,8 +202,23 @@ func (s *Service) Set(device string, stream string, percent int) ([]string, erro
 	return s.apply(targets, math.Max(float64(percent)/100.0, 0))
 }
 
+// pruneWrites drops records that are not trusted anymore. Must be called with s.mu held.
+func (s *Service) pruneWrites() {
+	for id, w := range s.lastVolume {
+		if time.Since(w.at) >= optimisticWindow {
+			delete(s.lastVolume, id)
+		}
+	}
+	for id, w := range s.lastMuted {
+		if time.Since(w.at) >= optimisticWindow {
+			delete(s.lastMuted, id)
+		}
+	}
+}
+
 // apply must be called with s.mu held.
 func (s *Service) apply(targets []pipewire.InterfaceNode, volume float64) ([]string, error) {
+	s.pruneWrites()
 	rounded := util.RoundToTwoDecimals(volume)
 
 	var lines []string

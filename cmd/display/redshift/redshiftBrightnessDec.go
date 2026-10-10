@@ -11,35 +11,7 @@ var redshiftBrightnessDecCmd = &cobra.Command{
 	Use:   "dec",
 	Short: "Decrease the currently applied redshift brightness.",
 	Long:  ``,
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		err := stepInputValidator(cmd, args)
-		if err != nil {
-			return err
-		}
-		return nil
-	},
-	RunE: commandutil.LockedRunE("cmd-display-redshift", commandutil.PrintRunE(func(cmd *cobra.Command, args []string) ([]string, error) {
-		displays, err := parseDisplayParam(display)
-		if err != nil {
-			return nil, err
-		}
-
-		var results []string
-		for _, display := range displays {
-			lastSetBrightness := getLastSetBrightness(display)
-
-			rawNew := lastSetBrightness - stepFloat
-			newBrightness := clampBrightnessToConfig(rawNew)
-			err = ApplyRedshift(display, -1, newBrightness, -1)
-			if err != nil {
-				return nil, err
-			}
-
-			results = append(results, fmt.Sprintf("%.2f", newBrightness))
-		}
-
-		return results, nil
-	})),
+	RunE:  commandutil.OpRunE("display.redshift.brightness.dec"),
 }
 
 func init() {
@@ -53,12 +25,12 @@ func init() {
 	brightnessCmd.AddCommand(redshiftBrightnessDecCmd)
 }
 
-func stepInputValidator(cmd *cobra.Command, args []string) error {
-	if stepFloat <= 0 {
-		return fmt.Errorf("step size must be a positive number (found: %f)", stepFloat)
+func validateStep(step float64) error {
+	if step <= 0 {
+		return fmt.Errorf("step size must be a positive number (found: %f)", step)
 	}
-	if stepFloat > 1.0 {
-		return fmt.Errorf("step size cannot exceed 1.0 (found: %f)", stepFloat)
+	if step > 1.0 {
+		return fmt.Errorf("step size cannot exceed 1.0 (found: %f)", step)
 	}
 	return nil
 }

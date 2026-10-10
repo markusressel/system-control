@@ -25,6 +25,7 @@ type entry struct {
 
 	running bool
 	again   bool
+	lastErr string
 
 	stopPoll context.CancelFunc
 }
@@ -164,9 +165,7 @@ func (e *entry) trigger() {
 
 	go func() {
 		for {
-			if err := e.refresh(context.Background()); err != nil {
-				log.Printf("watch %s: %v", e.op.Name, err)
-			}
+			e.logRefresh(e.refresh(context.Background()))
 
 			e.mu.Lock()
 			if !e.again {
@@ -178,6 +177,23 @@ func (e *entry) trigger() {
 			e.mu.Unlock()
 		}
 	}()
+}
+
+// logRefresh logs a failing watch once, not on every event.
+func (e *entry) logRefresh(err error) {
+	msg := ""
+	if err != nil {
+		msg = err.Error()
+	}
+
+	e.mu.Lock()
+	changed := msg != e.lastErr
+	e.lastErr = msg
+	e.mu.Unlock()
+
+	if changed && err != nil {
+		log.Printf("watch %s: %v", e.op.Name, err)
+	}
 }
 
 // refresh queries the current value and notifies subscribers if it changed.

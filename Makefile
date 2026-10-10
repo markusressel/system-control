@@ -1,4 +1,4 @@
-.PHONY: help test build run deploy clean
+.PHONY: help test build run deploy deploy-custom deploy-systemd clean
 
 GO_FLAGS   ?=
 NAME       := system-control
@@ -20,9 +20,9 @@ run: build
 	"./${OUTPUT_DIR}${NAME}"
 
 deploy-custom: build
-	mkdir -p "~/.custom/bin/"
-	cp "./${OUTPUT_DIR}${NAME}" "~/.custom/bin/${NAME}"
-	system-control completion fish > ~/.config/fish/completions/system-control.fish
+	install -Dm755 "./${OUTPUT_DIR}${NAME}" "${HOME}/.custom/bin/${NAME}"
+	install -Dm755 "./${OUTPUT_DIR}sysctrl" "${HOME}/.custom/bin/sysctrl"
+	"./${OUTPUT_DIR}${NAME}" completion fish > ~/.config/fish/completions/system-control.fish
 
 
 deploy: build

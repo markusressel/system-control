@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/mitchellh/go-homedir"
@@ -45,6 +46,29 @@ type RedshiftGammaConfig struct {
 }
 
 var CurrentConfig Configuration
+
+// configMu guards CurrentConfig and viper. A long running daemon reloads the file while
+// requests read the configuration.
+var configMu sync.RWMutex
+
+// Get returns a snapshot of the current configuration.
+func Get() Configuration {
+	configMu.RLock()
+	defer configMu.RUnlock()
+	return CurrentConfig
+}
+
+// Reload reads the configuration file again, so that a long running process notices edits.
+func Reload() error {
+	configMu.Lock()
+	defer configMu.Unlock()
+
+	if err := readInConfig(); err != nil {
+		return err
+	}
+	CurrentConfig = Configuration{}
+	return viper.Unmarshal(&CurrentConfig)
+}
 
 var currentUser, _ = user.Current()
 var BaseDir = path.Join(currentUser.HomeDir, ".config", "system-control")
@@ -111,6 +135,9 @@ func GetFilePath() string {
 }
 
 func LoadConfig() Configuration {
+	configMu.Lock()
+	defer configMu.Unlock()
+
 	// load default configuration values
 	CurrentConfig = Configuration{}
 	err := viper.Unmarshal(&CurrentConfig)

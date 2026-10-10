@@ -55,7 +55,7 @@ var colorTempCmd = &cobra.Command{
 }
 
 func clampColorTemperatureToConfig(colorTemperature int64) int64 {
-	config := configuration.CurrentConfig
+	config := configuration.Get()
 	minCT := config.Redshift.ColorTemperature.MinimumColorTemperature
 	maxCT := config.Redshift.ColorTemperature.MaximumColorTemperature
 	return util.Clamp(colorTemperature, minCT, maxCT)

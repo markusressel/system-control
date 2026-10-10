@@ -10,7 +10,11 @@
 //
 // Protocol (see internal/daemon/ipc.go):
 //   -> "ARGV <n>\n" followed by n times "<len>\n<bytes>"
-//   <- "O <line>\n" stdout, "E <line>\n" stderr, "X <code>\n" exit code, "U\n" not handled
+//   <- "O <line>\n" stdout, "E <line>\n" stderr, "X <code>\n" exit code,
+//      "U\n" not handled, "W\n" the request is a watch (streams until we disconnect)
+//
+// Once the request is sent, the command is only run locally on "U". Anything else could
+// apply a mutation twice.
 
 #include <errno.h>
 #include <signal.h>
@@ -24,8 +28,8 @@
 
 #define FALLBACK_BINARY "system-control"
 #define NO_DAEMON_ENV "SYSTEM_CONTROL_NO_DAEMON"
-// a stuck daemon must not hang a keybinding forever, watches are exempt
-#define ONESHOT_TIMEOUT_SEC 5
+// a stuck daemon must not hang a keybinding forever, watches are exempt once announced
+#define ANSWER_TIMEOUT_SEC 5
 
 static void run_fallback(char *argv[]) {
     // the daemon was asked already, don't let the binary ask again
@@ -59,14 +63,6 @@ static int send_request(int sock, int argc, char *argv[]) {
         n = snprintf(header, sizeof(header), "%zu\n", len);
         if (write_all(sock, header, (size_t) n) < 0) return -1;
         if (write_all(sock, argv[i], len) < 0) return -1;
-    }
-    return 0;
-}
-
-static int is_watch(int argc, char *argv[]) {
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--") == 0) break;
-        if (strcmp(argv[i], "--watch") == 0 || strcmp(argv[i], "-w") == 0) return 1;
     }
     return 0;
 }
@@ -106,10 +102,8 @@ int main(int argc, char *argv[]) {
         run_fallback(argv); // no daemon
     }
 
-    if (!is_watch(argc, argv)) {
-        struct timeval tv = {.tv_sec = ONESHOT_TIMEOUT_SEC, .tv_usec = 0};
-        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-    }
+    struct timeval timeout = {.tv_sec = ANSWER_TIMEOUT_SEC, .tv_usec = 0};
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
     if (send_request(sock, argc, argv) < 0) {
         run_fallback(argv);
@@ -122,13 +116,16 @@ int main(int argc, char *argv[]) {
 
     char *line = NULL;
     size_t cap = 0;
-    int got_frame = 0;
 
     while (getline(&line, &cap, in) > 0) {
-        got_frame = 1;
-
         if (line[0] == 'U') {
             run_fallback(argv); // not handled by the daemon
+        }
+
+        if (line[0] == 'W') {
+            struct timeval none = {.tv_sec = 0, .tv_usec = 0};
+            setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &none, sizeof(none));
+            continue;
         }
 
         if (line[0] == 'O' || line[0] == 'E') {
@@ -141,10 +138,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // The daemon vanished. Nothing was done if it never answered, so the command can still run.
-    // After that point the outcome is unknown and re-running a mutation could apply it twice.
-    if (!got_frame) {
-        run_fallback(argv);
-    }
+    // The request is out, the daemon may have executed it already.
+    fprintf(stderr, "sysctrl: daemon did not answer\n");
     return 1;
 }

@@ -10,9 +10,18 @@ import (
 )
 
 const (
-	redshiftLockName              = "cmd-display-redshift"
-	defaultBrightnessPollInterval = 5 * time.Second
+	redshiftLockName    = "cmd-display-redshift"
+	defaultPollInterval = 5 * time.Second
 )
+
+// displayPollInterval is how often watched display state is re-queried. Changes made through
+// this tool refresh the watchers right away, polling only catches the rest.
+func displayPollInterval() time.Duration {
+	if configured := configuration.Get().Daemon.PollIntervals["display"]; configured > 0 {
+		return configured
+	}
+	return defaultPollInterval
+}
 
 func init() {
 	daemon.Register(daemon.Op{
@@ -27,15 +36,8 @@ func init() {
 		},
 		Run: runBrightness,
 		// setting a value can't be watched
-		Watch: func(a daemon.Args) bool { return a.Flag("brightness") == "-1" },
-		// Changes made through this tool refresh the watchers right away, polling only
-		// catches the rest.
-		Poll: func() time.Duration {
-			if configured := configuration.Get().Daemon.PollIntervals["display"]; configured > 0 {
-				return configured
-			}
-			return defaultBrightnessPollInterval
-		},
+		Watch:       func(a daemon.Args) bool { return a.Flag("brightness") == "-1" },
+		Poll:        displayPollInterval,
 		Invalidates: []string{"display."},
 	})
 

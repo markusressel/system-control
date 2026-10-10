@@ -93,4 +93,5 @@ duration), `daemon.pollIntervals`, `hotspot`, `fan.policyFileGlob`.
 
 - X11 only, no Wayland backends.
 - `mouse battery` prints an empty line with exit 0 when no mouse exists (status bars depend on it).
-- Redshift gamma/colortemp/update are not daemon ops.
+- `display redshift update/reset`, `redshift` (root), `bluetooth` pairing/scan, `network`, `shutdown`/`restart`,
+  `video`, `config` are plain CLI commands on purpose (slow, rare or interactive).

@@ -14,6 +14,10 @@ daemon:
     # backlights are changed by hardware keys without any event (default 2s)
     # backlight: 2s
     # keyboard: 2s
+    # media: 2s
+    # battery: 10s
+    # mouse: 1m
+    # session: 2s
     # fan mode can only be polled
     fan: 5s
 

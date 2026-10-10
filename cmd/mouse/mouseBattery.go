@@ -1,10 +1,10 @@
 package mouse
 
 import (
-	"fmt"
 	"strings"
 	"unicode"
 
+	"github.com/markusressel/system-control/internal/commandutil"
 	"github.com/markusressel/system-control/internal/upower"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
@@ -20,28 +20,7 @@ var getMouseBatteryCmd = &cobra.Command{
 	Use:   "battery",
 	Short: "Get the current battery level",
 	Long:  ``,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		outputType, err := cmd.Flags().GetString(mouseBatteryTypeFlag)
-		if err != nil {
-			return err
-		}
-
-		var battery string
-		switch outputType {
-		case mouseBatteryTypePercentage:
-			battery, err = GetMouseBattery()
-		case mouseBatteryTypeNumber:
-			battery, err = GetMouseBatteryNumber()
-		default:
-			return fmt.Errorf("invalid value for --%s: %q (expected %q or %q)", mouseBatteryTypeFlag, outputType, mouseBatteryTypePercentage, mouseBatteryTypeNumber)
-		}
-
-		if err != nil {
-			return err
-		}
-		cmd.Println(battery)
-		return nil
-	},
+	RunE:  commandutil.OpRunE("mouse.battery"),
 }
 
 func GetMouseBattery() (string, error) {
@@ -97,6 +76,7 @@ func extractBatteryNumber(value string) string {
 }
 
 func init() {
+	getMouseBatteryCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
 	getMouseBatteryCmd.Flags().String(mouseBatteryTypeFlag, mouseBatteryTypePercentage, "output format: percentage or number")
 	Command.AddCommand(getMouseBatteryCmd)
 }

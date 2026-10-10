@@ -1,14 +1,15 @@
 package media
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/markusressel/system-control/internal/commandutil"
+	"github.com/spf13/cobra"
+)
 
 var previousCmd = &cobra.Command{
 	Use:   "previous",
 	Short: "Go to previous track",
 	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return printPlayerCtlOutput("previous", true)
-	},
+	RunE:  commandutil.OpRunE("media.previous"),
 }
 
 func init() {

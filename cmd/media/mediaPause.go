@@ -1,14 +1,15 @@
 package media
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/markusressel/system-control/internal/commandutil"
+	"github.com/spf13/cobra"
+)
 
 var pauseCmd = &cobra.Command{
 	Use:   "pause",
 	Short: "Pause media",
 	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return printPlayerCtlOutput("pause", true)
-	},
+	RunE:  commandutil.OpRunE("media.pause"),
 }
 
 func init() {

@@ -1,56 +1,17 @@
 package redshift
 
 import (
-	"fmt"
-
+	"github.com/markusressel/system-control/internal/commandutil"
 	"github.com/markusressel/system-control/internal/configuration"
-	"github.com/markusressel/system-control/internal/daemon"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
-)
-
-var (
-	gammaValue        float64
-	gammaFormatString string
 )
 
 var gammaCmd = &cobra.Command{
 	Use:   "gamma",
 	Short: "Show current display gamma",
 	Long:  ``,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		unlock, err := daemon.AcquireLock(redshiftLockName)
-		if err != nil {
-			return err
-		}
-		defer unlock()
-
-		displays, err := parseDisplayParam(display)
-		if err != nil {
-			return err
-		}
-
-		for _, display := range displays {
-			if gammaValue != -1 {
-				newGamma := clampGammaToConfig(gammaValue)
-				lastSetGamma := getLastSetGamma(display)
-				if newGamma != lastSetGamma {
-					err := ApplyRedshift(display, -1, -1, newGamma)
-					if err != nil {
-						return err
-					}
-				}
-			}
-
-			lastSetGamma := getLastSetGamma(display)
-			if gammaFormatString != "" {
-				fmt.Printf(gammaFormatString+"\n", lastSetGamma)
-			} else {
-				fmt.Println(lastSetGamma)
-			}
-		}
-		return nil
-	},
+	RunE:  commandutil.OpRunE("display.redshift.gamma"),
 }
 
 func clampGammaToConfig(value float64) float64 {
@@ -63,15 +24,15 @@ func clampGammaToConfig(value float64) float64 {
 }
 
 func init() {
-	gammaCmd.Flags().Float64VarP(
-		&gammaValue,
+	gammaCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+
+	gammaCmd.Flags().Float64P(
 		"gamma", "g",
 		-1,
 		"Gamma value to set (between 0.1 and 2.0)",
 	)
 
-	gammaCmd.Flags().StringVarP(
-		&gammaFormatString,
+	gammaCmd.Flags().StringP(
 		"format", "f",
 		"%.2f",
 		"Format string for the output value",

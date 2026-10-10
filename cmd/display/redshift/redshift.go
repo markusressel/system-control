@@ -26,8 +26,7 @@ var (
 	gamma            float64
 
 	brightnessValue float64
-	stepFloat             = 0.1
-	stepInt         int64 = 500
+	stepFloat       = 0.1
 )
 
 var Command = &cobra.Command{

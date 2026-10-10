@@ -1,63 +1,23 @@
 package redshift
 
 import (
-	"fmt"
-
+	"github.com/markusressel/system-control/internal/commandutil"
 	"github.com/spf13/cobra"
-
-	"github.com/markusressel/system-control/internal/daemon"
 )
 
 var redshiftGammaDecCmd = &cobra.Command{
 	Use:   "dec",
 	Short: "Decrease the currently applied redshift gamma.",
 	Long:  ``,
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		return gammaStepInputValidator(cmd, args)
-	},
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		unlock, err := daemon.AcquireLock(redshiftLockName)
-		if err != nil {
-			return err
-		}
-		defer unlock()
-
-		displays, err := parseDisplayParam(display)
-		if err != nil {
-			return err
-		}
-
-		for _, display := range displays {
-			lastSetGamma := getLastSetGamma(display)
-
-			rawNew := lastSetGamma - stepFloat
-			newGamma := clampGammaToConfig(rawNew)
-			err = ApplyRedshift(display, -1, -1, newGamma)
-			if err != nil {
-				return err
-			}
-
-			fmt.Println(newGamma)
-		}
-
-		return nil
-	},
+	RunE:  commandutil.OpRunE("display.redshift.gamma.dec"),
 }
 
 func init() {
-	redshiftGammaDecCmd.PersistentFlags().Float64VarP(
-		&stepFloat,
+	redshiftGammaDecCmd.PersistentFlags().Float64P(
 		"step", "s",
 		0.1,
 		"Step size to decrease the gamma by",
 	)
 
 	gammaCmd.AddCommand(redshiftGammaDecCmd)
-}
-
-func gammaStepInputValidator(cmd *cobra.Command, args []string) error {
-	if stepFloat <= 0 {
-		return fmt.Errorf("step size must be a positive number (found: %f)", stepFloat)
-	}
-	return nil
 }

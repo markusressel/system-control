@@ -135,6 +135,14 @@ type Op struct {
 	// nil means the op does not support --watch.
 	Watch func(a Args) bool
 
+	// OutputFlags names flags that only change how the output is printed (e.g. a format string).
+	// Watchers that differ only in these share one query, and Render applies them for each.
+	OutputFlags []string
+
+	// Render turns the lines of the shared query into the lines for one watcher, using the
+	// OutputFlags of its arguments. nil leaves the lines as they are.
+	Render func(a Args, lines []string) []string
+
 	// Poll returns an interval at which watched state is re-queried, for sources that emit no events.
 	// nil or <= 0 disables polling.
 	Poll func() time.Duration
@@ -149,6 +157,34 @@ type Op struct {
 	flags       []FlagDef
 	validate    func(pos []string) error
 	subcommands map[string]bool
+}
+
+// canonical returns the arguments with output flags reset to their defaults, so that watchers
+// differing only in these map to the same state.
+func (op *Op) canonical(a Args) Args {
+	if len(op.OutputFlags) == 0 {
+		return a
+	}
+	flags := make(map[string]string, len(a.Flags))
+	for k, v := range a.Flags {
+		flags[k] = v
+	}
+	defaults := op.defaultArgs().Flags
+	for _, name := range op.OutputFlags {
+		if _, ok := flags[name]; ok {
+			flags[name] = defaults[name]
+		}
+	}
+	a.Flags = flags
+	return a
+}
+
+// render applies the output flags of one watcher to the lines of the shared state.
+func (op *Op) render(a Args, lines []string) []string {
+	if op.Render == nil {
+		return lines
+	}
+	return op.Render(a, lines)
 }
 
 func (op *Op) path() []string {

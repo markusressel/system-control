@@ -217,7 +217,7 @@ func (s *ipcServer) serveWatch(ctx context.Context, conn net.Conn, r *bufio.Read
 		case <-ctx.Done():
 			return
 		case lines := <-updates:
-			for _, line := range lines {
+			for _, line := range op.render(args, lines) {
 				if err := writeFrames(conn, 'O', line); err != nil {
 					return
 				}

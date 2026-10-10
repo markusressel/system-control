@@ -11,14 +11,28 @@ import (
 
 const lockName = "media"
 
-// MPRIS players are not observed, so watched state is polled.
-func pollInterval(def time.Duration) func() time.Duration {
+// followedPollInterval is the safety net while player changes are followed: playerctl reports
+// the most recently updated player only, so a change of another one is caught by polling.
+const followedPollInterval = time.Minute
+
+// pollInterval is how often watched media state is re-queried. A status that is followed is
+// pushed, so only positions need to be polled.
+func pollInterval(def time.Duration, followed bool) func() time.Duration {
 	return func() time.Duration {
 		if configured := configuration.Get().Daemon.PollIntervals["media"]; configured > 0 {
 			return configured
 		}
+		if followed && internalmedia.Following() {
+			return followedPollInterval
+		}
 		return def
 	}
+}
+
+// EventSource refreshes watched media state whenever a player changes its status.
+// It is a daemon.Source.
+func EventSource(ctx context.Context, refresh func(prefixes ...string)) {
+	go internalmedia.Follow(ctx, func() { refresh("media") })
 }
 
 // playerctl returns an op implementation printing the output of a playerctl command.
@@ -41,14 +55,14 @@ func init() {
 			Name:  name,
 			Run:   playerctl("status"),
 			Watch: always,
-			Poll:  pollInterval(2 * time.Second),
+			Poll:  pollInterval(2*time.Second, true),
 		})
 	}
 	daemon.Register(daemon.Op{
 		Name:  "media.position",
 		Run:   playerctl("position"),
 		Watch: always,
-		Poll:  pollInterval(time.Second),
+		Poll:  pollInterval(time.Second, false),
 	})
 
 	// playing something changes the status and position right away

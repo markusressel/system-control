@@ -48,12 +48,14 @@ func newStore() *store {
 // to show up), the subscription stays valid and the error is returned as pending. The values
 // follow once a query succeeds. Only ErrUnhandled ends the subscription right away.
 func (s *store) subscribe(ctx context.Context, op *Op, a Args) (updates <-chan []string, cancel func(), pending error) {
-	key := a.key(op.Name)
+	// watchers that differ only in how they print share one query
+	shared := op.canonical(a)
+	key := shared.key(op.Name)
 
 	s.mu.Lock()
 	e, exists := s.entries[key]
 	if !exists {
-		e = &entry{key: key, op: op, args: a, subs: map[chan []string]struct{}{}}
+		e = &entry{key: key, op: op, args: shared, subs: map[chan []string]struct{}{}}
 		s.entries[key] = e
 	}
 	s.mu.Unlock()

@@ -17,7 +17,10 @@ const (
 
 func init() {
 	// gamma
-	register("display.redshift.gamma", withSetLock(isQuery("gamma", "-1")), true, runGamma)
+	register("display.redshift.gamma", withSetLock(isQuery("gamma", "-1")), true, runGamma, func(op *daemon.Op) {
+		op.OutputFlags = []string{"format"}
+		op.Render = renderFormat
+	})
 	register("display.redshift.gamma.inc", noLock, false, stepGamma(1))
 	register("display.redshift.gamma.dec", noLock, false, stepGamma(-1))
 	register("display.redshift.gamma.reset", constLock, false, resetEach(func(d util.DisplayInfo) error {
@@ -62,7 +65,7 @@ func withSetLock(query func(daemon.Args) bool) lockPolicy {
 
 // register adds a redshift op. A watchable op can only be watched while it just queries,
 // which is decided by the lock policy (a set takes the lock).
-func register(name string, lock lockPolicy, watchable bool, run func(context.Context, daemon.Args) ([]string, error)) {
+func register(name string, lock lockPolicy, watchable bool, run func(context.Context, daemon.Args) ([]string, error), opts ...func(*daemon.Op)) {
 	op := daemon.Op{
 		Name:        name,
 		Requires:    []string{"DISPLAY"},
@@ -73,6 +76,9 @@ func register(name string, lock lockPolicy, watchable bool, run func(context.Con
 	if watchable {
 		op.Watch = func(a daemon.Args) bool { return lock(a) == "" }
 		op.Poll = displayPollInterval
+	}
+	for _, opt := range opts {
+		opt(&op)
 	}
 	daemon.Register(op)
 }

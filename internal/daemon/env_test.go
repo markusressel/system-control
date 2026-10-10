@@ -1,9 +1,12 @@
 package daemon
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"net"
 	"os"
 	"strings"
 	"sync/atomic"
@@ -11,6 +14,7 @@ import (
 	"time"
 
 	"github.com/markusressel/system-control/internal/util"
+	"github.com/spf13/cobra"
 )
 
 func TestEnsureEnvironment(t *testing.T) {
@@ -147,5 +151,72 @@ func TestStatus_ReportsExecutions(t *testing.T) {
 		if !strings.Contains(joined, want) {
 			t.Errorf("status lacks %q:\n%s", want, joined)
 		}
+	}
+}
+
+// Watchers that differ only in an output flag share one query and print it their own way.
+func TestWatch_OutputFlagsShareOneQuery(t *testing.T) {
+	var calls atomic.Int64
+	r := NewRegistry()
+	r.Register(Op{
+		Name:        "test.fmt",
+		Watch:       func(Args) bool { return true },
+		OutputFlags: []string{"format"},
+		Run: func(ctx context.Context, a Args) ([]string, error) {
+			calls.Add(1)
+			return []string{"0.80"}, nil
+		},
+		Render: func(a Args, lines []string) []string {
+			return []string{lines[0] + " as " + a.Flag("format")}
+		},
+	})
+	group := &cobra.Command{Use: "test"}
+	sub := &cobra.Command{Use: "fmt", Run: func(*cobra.Command, []string) {}}
+	sub.Flags().BoolP("watch", "w", false, "")
+	sub.Flags().StringP("format", "f", "%.2f", "")
+	group.AddCommand(sub)
+	root := &cobra.Command{Use: "app"}
+	root.AddCommand(group)
+	if err := r.Bind(root); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv(EnvRuntimeDir, t.TempDir())
+	eng := NewEngine(r)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := eng.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	watch := func(argv ...string) *bufio.Reader {
+		conn, err := net.Dial("unix", SocketPath())
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { conn.Close() })
+		fmt.Fprintf(conn, "ARGV %d\n", len(argv))
+		for _, arg := range argv {
+			fmt.Fprintf(conn, "%d\n%s", len(arg), arg)
+		}
+		return bufio.NewReader(conn)
+	}
+
+	a := watch("test", "fmt", "-f", "%.1f", "--watch")
+	if got := readFrame(t, a); got != "W" {
+		t.Fatalf("first frame = %q", got)
+	}
+	if got := readFrame(t, a); got != "O 0.80 as %.1f" {
+		t.Errorf("first watcher got %q", got)
+	}
+
+	b := watch("test", "fmt", "--watch")
+	_ = readFrame(t, b) // W
+	if got := readFrame(t, b); got != "O 0.80 as %.2f" {
+		t.Errorf("second watcher got %q", got)
+	}
+
+	if n := len(eng.store.entries); n != 1 {
+		t.Errorf("%d queries for watchers that only differ in the format, want 1", n)
 	}
 }

@@ -55,7 +55,9 @@ Run the three CI checks before reporting a task done.
   silent daemon may already have executed a mutation.
 - **State:** the daemon owns published state, clients never push values. `--watch` subscribes to the engine store;
   refresh comes from event sources (`Engine.AddSource`, e.g. PipeWire monitor) and `Op.Invalidates`. `Op.Poll` is
-  only a fallback. A CLI process that changes state itself calls `daemon.Notify(prefix)`.
+  only a fallback (media: `playerctl --follow` pushes status, polling drops to a minute while it runs). A CLI process that changes state itself calls `daemon.Notify(prefix)`.
+- **Output flags:** a flag that only changes printing (e.g. `--format`) is listed in `Op.OutputFlags` and applied by
+  `Op.Render`, so watchers differing only in it share one query (`display.redshift.brightness`, `.gamma`).
 - **Mutations** hold `Op.Lock` (cross-process, shared with the CLI). Waiters beyond `daemon.MaxQueueWait` are dropped
   on purpose (scroll spam): a command waits for its lock at most `MaxQueueWait` in total. An op that queries and
   mutates by argument sets `Op.LockFor` instead of `Op.Lock`. Slow relative steps (inc/dec of redshift) are

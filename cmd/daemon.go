@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/markusressel/system-control/cmd/bluetooth"
+	"github.com/markusressel/system-control/cmd/media"
 	"github.com/markusressel/system-control/internal/audio"
 	"github.com/markusressel/system-control/internal/configuration"
 	"github.com/markusressel/system-control/internal/daemon"
@@ -40,6 +41,7 @@ every command works on its own.`,
 		eng := daemon.NewEngine(daemon.Default)
 		eng.AddSource(audio.EventSource)
 		eng.AddSource(bluetooth.EventSource)
+		eng.AddSource(media.EventSource)
 		eng.AddStatus(audio.Status)
 
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

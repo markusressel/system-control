@@ -3,6 +3,7 @@ package redshift
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/markusressel/system-control/internal/configuration"
@@ -35,6 +36,9 @@ func init() {
 			return redshiftLockName
 		},
 		Run: runBrightness,
+		// the format is applied per watcher
+		OutputFlags: []string{"format"},
+		Render:      renderFormat,
 		// setting a value can't be watched
 		Watch:       func(a daemon.Args) bool { return a.Flag("brightness") == "-1" },
 		Poll:        displayPollInterval,
@@ -141,4 +145,23 @@ func stepBrightness(direction float64) func(ctx context.Context, a daemon.Args) 
 // notifyDaemon tells a running daemon that persisted display state changed.
 func notifyDaemon() {
 	daemon.Notify("display.")
+}
+
+// renderFormat prints the numbers of a shared query with the --format of one watcher.
+// The query itself runs with the default format.
+func renderFormat(a daemon.Args, lines []string) []string {
+	format := a.Flag("format")
+	out := make([]string, len(lines))
+	for i, line := range lines {
+		value, err := strconv.ParseFloat(line, 64)
+		switch {
+		case err != nil:
+			out[i] = line
+		case format == "":
+			out[i] = fmt.Sprint(value)
+		default:
+			out[i] = fmt.Sprintf(format, value)
+		}
+	}
+	return out
 }

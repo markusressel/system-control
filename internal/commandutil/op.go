@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/markusressel/system-control/internal/daemon"
@@ -11,11 +12,28 @@ import (
 	"github.com/spf13/pflag"
 )
 
+var (
+	usedMu  sync.Mutex
+	usedOps []string
+)
+
+// UsedOps lists the op names commands refer to with OpRunE. A test compares them with the
+// registered ops, as a typo would otherwise only show up when the command runs.
+func UsedOps() []string {
+	usedMu.Lock()
+	defer usedMu.Unlock()
+	return append([]string(nil), usedOps...)
+}
+
 // OpRunE returns the RunE of a cobra command that implements the registered op `opName`.
 //
 // A running daemon gets the chance to handle the command line before cobra even starts (see
 // cmd.Execute), so this is the in-process implementation: it runs the very same op.
 func OpRunE(opName string) func(cmd *cobra.Command, args []string) error {
+	usedMu.Lock()
+	usedOps = append(usedOps, opName)
+	usedMu.Unlock()
+
 	return func(cmd *cobra.Command, args []string) error {
 		queuedAt := time.Now()
 

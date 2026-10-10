@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/markusressel/system-control/internal/commandutil"
 	"github.com/markusressel/system-control/internal/daemon"
 )
 
@@ -12,6 +13,19 @@ import (
 func TestOpsBindToCommands(t *testing.T) {
 	if err := daemon.Default.Bind(RootCmd); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// A command that points to an op nobody registered would fail only when it is run.
+func TestCommandsUseRegisteredOps(t *testing.T) {
+	used := commandutil.UsedOps()
+	if len(used) == 0 {
+		t.Fatal("no command uses an op")
+	}
+	for _, name := range used {
+		if _, ok := daemon.Default.Lookup(name); !ok {
+			t.Errorf("a command implements op %q, which is not registered", name)
+		}
 	}
 }
 

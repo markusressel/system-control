@@ -1,0 +1,215 @@
+package daemon
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"slices"
+	"strings"
+	"sync"
+	"time"
+)
+
+// entry is the observed state of one watched invocation. Its subscribers share a single
+// query; the entry lives exactly as long as it has subscribers.
+type entry struct {
+	key  string
+	op   *Op
+	args Args
+
+	// mu guards the fields below
+	mu      sync.Mutex
+	last    []string
+	hasLast bool
+	subs    map[chan []string]struct{}
+
+	running bool
+	again   bool
+
+	stopPoll context.CancelFunc
+}
+
+// store keeps all watched entries of an engine.
+type store struct {
+	mu      sync.Mutex
+	entries map[string]*entry
+}
+
+func newStore() *store {
+	return &store{entries: map[string]*entry{}}
+}
+
+// subscribe returns a channel that receives the current value immediately and then every change.
+// Slow consumers only ever see the latest value. cancel must be called to release the subscription.
+func (s *store) subscribe(ctx context.Context, op *Op, a Args) (updates <-chan []string, cancel func(), err error) {
+	key := a.key(op.Name)
+
+	s.mu.Lock()
+	e, exists := s.entries[key]
+	if !exists {
+		e = &entry{key: key, op: op, args: a, subs: map[chan []string]struct{}{}}
+		s.entries[key] = e
+	}
+	s.mu.Unlock()
+
+	ch := make(chan []string, 1)
+
+	// Take the first value synchronously, so the subscriber starts with a valid state or an error.
+	if err := e.refresh(ctx); err != nil && !e.hasValue() {
+		s.release(e, nil)
+		return nil, nil, err
+	}
+
+	e.mu.Lock()
+	e.subs[ch] = struct{}{}
+	ch <- slices.Clone(e.last)
+	e.mu.Unlock()
+
+	if !exists {
+		s.startPolling(e)
+	}
+
+	return ch, func() { s.release(e, ch) }, nil
+}
+
+func (s *store) release(e *entry, ch chan []string) {
+	e.mu.Lock()
+	if ch != nil {
+		delete(e.subs, ch)
+	}
+	empty := len(e.subs) == 0
+	e.mu.Unlock()
+
+	if !empty {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// re-check under the store lock, a new subscriber may have joined in between
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if len(e.subs) == 0 && s.entries[e.key] == e {
+		delete(s.entries, e.key)
+		if e.stopPoll != nil {
+			e.stopPoll()
+		}
+	}
+}
+
+func (s *store) startPolling(e *entry) {
+	if e.op.Poll == nil {
+		return
+	}
+	interval := e.op.Poll()
+	if interval <= 0 {
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	e.mu.Lock()
+	e.stopPoll = cancel
+	e.mu.Unlock()
+
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				e.trigger()
+			}
+		}
+	}()
+}
+
+// refreshMatching re-queries all entries whose op name starts with one of the prefixes.
+func (s *store) refreshMatching(prefixes ...string) {
+	s.mu.Lock()
+	var matching []*entry
+	for _, e := range s.entries {
+		for _, p := range prefixes {
+			if strings.HasPrefix(e.op.Name, p) {
+				matching = append(matching, e)
+				break
+			}
+		}
+	}
+	s.mu.Unlock()
+
+	for _, e := range matching {
+		e.trigger()
+	}
+}
+
+func (e *entry) hasValue() bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.hasLast
+}
+
+// trigger asynchronously re-queries the entry. Triggers arriving while a query runs are
+// coalesced into a single follow-up query.
+func (e *entry) trigger() {
+	e.mu.Lock()
+	if e.running {
+		e.again = true
+		e.mu.Unlock()
+		return
+	}
+	e.running = true
+	e.mu.Unlock()
+
+	go func() {
+		for {
+			if err := e.refresh(context.Background()); err != nil {
+				log.Printf("watch %s: %v", e.op.Name, err)
+			}
+
+			e.mu.Lock()
+			if !e.again {
+				e.running = false
+				e.mu.Unlock()
+				return
+			}
+			e.again = false
+			e.mu.Unlock()
+		}
+	}()
+}
+
+// refresh queries the current value and notifies subscribers if it changed.
+func (e *entry) refresh(ctx context.Context) (err error) {
+	// Run is arbitrary op code working on external state, it must not take the daemon down.
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic: %v", r)
+		}
+	}()
+
+	lines, err := e.op.Run(ctx, e.args)
+	if err != nil {
+		return err
+	}
+
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	if e.hasLast && slices.Equal(e.last, lines) {
+		return nil
+	}
+	e.last = lines
+	e.hasLast = true
+
+	for ch := range e.subs {
+		// latest value wins
+		select {
+		case <-ch:
+		default:
+		}
+		ch <- slices.Clone(lines)
+	}
+	return nil
+}

@@ -4,7 +4,10 @@ redshift:
     maximumBrightness: 1.0
   transitionDuration: 2s
 daemon:
+  # How often watched state is re-queried (--watch), in addition to change notifications.
   pollIntervals:
-    cpu: 2s
-    disk: 60s
-    battery: 30s
+    # changes made with system-control are pushed to the daemon immediately,
+    # polling only picks up changes made by other means
+    display: 5s
+    # audio is driven by PipeWire events, set an interval only as a safety net
+    # audio: 30s

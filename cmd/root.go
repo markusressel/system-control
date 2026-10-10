@@ -21,6 +21,7 @@ import (
 	"github.com/markusressel/system-control/cmd/touchpad"
 	"github.com/markusressel/system-control/cmd/video"
 	"github.com/markusressel/system-control/internal/configuration"
+	"github.com/markusressel/system-control/internal/daemon"
 	"github.com/spf13/cobra"
 
 	"github.com/mitchellh/go-homedir"
@@ -50,6 +51,14 @@ var RootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the RootCmd.
 func Execute() {
+	// Give a running daemon the chance to handle the command line before any
+	// configuration is read or a single cobra command is executed.
+	if len(os.Args) > 1 && os.Args[1] != "daemon" {
+		if handled, exitCode := daemon.TryRemote(os.Args[1:], os.Stdout, os.Stderr); handled {
+			os.Exit(exitCode)
+		}
+	}
+
 	cobra.OnInitialize(func() {
 		configuration.InitConfig(global.CfgFile)
 	})

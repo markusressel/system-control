@@ -1,10 +1,7 @@
 package sink
 
 import (
-	"errors"
-	"fmt"
-
-	"github.com/markusressel/system-control/internal/audio/pipewire"
+	"github.com/markusressel/system-control/internal/commandutil"
 	"github.com/spf13/cobra"
 )
 
@@ -18,43 +15,7 @@ You can specify the audio sink using its index, but also using other strings tha
 
 > system-control audio sink switch "NVIDIA"`,
 	Args: cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		searchString := args[0]
-		//sinkIdx := findSinkPulse(searchString)
-		//switchSinkPulse(sinkIdx)
-
-		state := pipewire.PwDump()
-
-		nodes := state.FindNodesByName(searchString)
-		audioSinkNodes := filterByMediaClass(nodes, pipewire.MediaClassAudioSink)
-
-		if len(audioSinkNodes) <= 0 {
-			return errors.New("no sink found")
-		}
-		if len(audioSinkNodes) > 1 {
-			nodeNames := make([]string, len(nodes))
-			for i, node := range nodes {
-				name, _ := node.GetName()
-				description, _ := node.GetDescription()
-				nodeNames[i] = fmt.Sprintf("%s (%s)", name, description)
-			}
-
-			return errors.New(fmt.Sprintf("ambiguous sink name, found: %v", nodeNames))
-		}
-		node := audioSinkNodes[0]
-		return state.SwitchSinkTo(node)
-	},
-}
-
-func filterByMediaClass(nodes []pipewire.InterfaceNode, mediaClass string) []pipewire.InterfaceNode {
-	result := make([]pipewire.InterfaceNode, 0)
-	for _, node := range nodes {
-		nodeMediaClass, _ := node.GetMediaClass()
-		if nodeMediaClass == mediaClass {
-			result = append(result, node)
-		}
-	}
-	return result
+	RunE: commandutil.OpRunE("audio.sink.switch"),
 }
 
 func init() {

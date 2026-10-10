@@ -36,8 +36,34 @@ go test ./internal/audio/pipewire/... -run TestParsePwDump -v
       `/etc/system-control/`
     - `internal/persistence/` — Key-value store backed by `~/.config/system-control/persistence/*.sav` files (integers,
       floats, or JSON structs); uses file locking (`gofrs/flock`) to prevent race conditions
+    - `internal/daemon/` — Optional background daemon: op registry, state store for `--watch`, unix socket server
+      and client (see "Daemon" below)
+    - `internal/commandutil/` — Glue between cobra commands and ops (`OpRunE`), locking helpers
     - `internal/util/` — Shared helpers: `ExecCommand`/`ExecCommandAndFork` wrappers, file I/O for sysfs paths,
       string/math utilities
+
+### Daemon
+
+`system-control daemon` (systemd user unit) makes frequent commands fast and serves `--watch`. It is optional:
+every command also works on its own, and that in-process path is the reference behavior.
+
+- **One implementation per operation.** A command that the daemon can serve is a `daemon.Op` (name = CLI path, e.g.
+  `audio.volume.inc`), registered from an `init()` (`internal/audio/ops.go`). The cobra command only
+  declares flags/help and runs `commandutil.OpRunE("<op name>")`. Do not implement daemon behavior twice.
+- **Flags are declared twice** (cobra and `Op.Flags`), because the daemon parses the raw command line itself.
+  `cmd/ops_test.go` fails if they drift apart.
+- **Request flow**: `cmd.Execute()` first calls `daemon.TryRemote(os.Args[1:])`. The daemon matches the command line
+  to an op and answers with output and exit code; for anything it does not fully understand (unknown flag, `--help`,
+  set-flags that mutate...) it answers "unhandled" and the regular cobra path runs. `cmd/sysctrl/main.c` is the same
+  client without the Go runtime (~1 ms, ~1.5 MB instead of ~3 ms, ~10 MB), which matters for key bindings and
+  for the many long-lived `--watch` processes of a status bar. Protocol: `internal/daemon/ipc.go`.
+- **State**: `--watch` subscribes to the engine's store. The daemon owns all published state, clients never push
+  values. Event sources (`Engine.AddSource`, e.g. the PipeWire monitor) and `Op.Invalidates` refresh watched ops;
+  `Op.Poll` is only a fallback for sources without events. A process that changes state on its own (cobra path)
+  calls `daemon.Notify(prefix)`.
+- **Mutations** hold `Op.Lock`, a cross-process lock shared by daemon and CLI. Commands waiting longer than
+  `daemon.MaxQueueWait` are dropped (scroll spam).
+- A second daemon for testing: set `SYSTEM_CONTROL_RUNTIME_DIR` (not `XDG_RUNTIME_DIR`, PipeWire needs that).
 
 ### Request lifecycle
 

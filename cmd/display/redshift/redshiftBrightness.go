@@ -17,34 +17,35 @@ var brightnessCmd = &cobra.Command{
 	Use:   "brightness",
 	Short: "Show current display brightness",
 	Long:  ``,
-	RunE: commandutil.StateCommandRunE("display.redshift.brightness", func(cmd *cobra.Command) bool {
-		return brightnessValue != -1
-	}, func(cmd *cobra.Command) (string, error) {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if brightnessValue == -1 {
+			return commandutil.OpRunE("display.redshift.brightness")(cmd, args)
+		}
+
 		redshiftLock = lockRedshift()
 		defer redshiftLock.Unlock()
 
 		displays, err := parseDisplayParam(display)
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		var lastSet float64
 		for _, d := range displays {
-			if brightnessValue != -1 {
-				newBrightness := clampBrightnessToConfig(brightnessValue)
-				lastSetBrightness := getLastSetBrightness(d)
-				if newBrightness != lastSetBrightness {
-					err := ApplyRedshift(d, -1, newBrightness, -1)
-					if err != nil {
-						return "", err
-					}
+			newBrightness := clampBrightnessToConfig(brightnessValue)
+			lastSetBrightness := getLastSetBrightness(d)
+			if newBrightness != lastSetBrightness {
+				err := ApplyRedshift(d, -1, newBrightness, -1)
+				if err != nil {
+					return err
 				}
 			}
 
 			lastSet = getLastSetBrightness(d)
 		}
-		return fmt.Sprintf(brightnessFormatString, lastSet), nil
-	}),
+		fmt.Printf(brightnessFormatString+"\n", lastSet)
+		return nil
+	},
 }
 
 func clampBrightnessToConfig(value float64) float64 {

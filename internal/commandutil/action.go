@@ -2,63 +2,39 @@ package commandutil
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"path/filepath"
 	"time"
 
-	"github.com/gofrs/flock"
+	"github.com/markusressel/system-control/internal/daemon"
 	"github.com/spf13/cobra"
 )
 
-// LockedRunE wraps a Cobra RunE function with a cross-process file lock.
+// LockedRunE wraps a Cobra RunE function with a cross-process lock.
 // This guarantees that rapid executions (e.g., from scrolling a widget)
 // will process sequentially instead of racing and reading stale hardware state.
+// Commands that waited too long for the lock are dropped, see daemon.MaxQueueWait.
+//
+// Only needed for commands that are not implemented as a daemon.Op, those get
+// their lock from Op.Lock.
 func LockedRunE(lockName string, run func(cmd *cobra.Command, args []string) error) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		queuedAt := time.Now()
-
-		tmpDir := filepath.Join(os.TempDir(), "system-control")
-		if err := os.MkdirAll(tmpDir, 0755); err != nil {
-			log.Fatalf("Could not create temp directory: %v", err)
-		}
-
-		fileLock := flock.New(filepath.Join(tmpDir, lockName+".lock"))
-		if err := fileLock.Lock(); err != nil {
-			log.Fatalf("Could not acquire lock %s: %v", lockName, err)
-		}
-		defer fileLock.Unlock()
-
-		if time.Since(queuedAt) > 200*time.Millisecond {
-			log.Printf("Dropping queued command %s: took too long to acquire lock", cmd.Name())
-			return nil
-		}
-
-		return run(cmd, args)
+		_, err := daemon.WithLock(lockName, queuedAt, func() error {
+			return run(cmd, args)
+		})
+		return err
 	}
 }
 
-// MutatorResult represents the outcome of a mutator command that should be output to stdout and pushed to the daemon
-type MutatorResult struct {
-	CommandId string
-	Flags     map[string]string
-	Value     string
-}
-
-// MutatorRunE wraps a command that mutates state. It automatically handles printing the resulting state
-// and pushing it to the daemon IPC if running.
-func MutatorRunE(run func(cmd *cobra.Command, args []string) ([]MutatorResult, error)) func(cmd *cobra.Command, args []string) error {
+// PrintRunE wraps a command that mutates state and returns the lines to print.
+func PrintRunE(run func(cmd *cobra.Command, args []string) ([]string, error)) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		results, err := run(cmd, args)
+		lines, err := run(cmd, args)
 		if err != nil {
 			return err
 		}
-
-		for _, res := range results {
-			fmt.Println(res.Value)
-			PushState(res.CommandId, res.Flags, res.Value)
+		for _, line := range lines {
+			fmt.Println(line)
 		}
-
 		return nil
 	}
 }

@@ -3,150 +3,63 @@ package daemon
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
-	"os/user"
-	"path/filepath"
-	"strings"
-	"sync"
+	"time"
 )
 
+// Source feeds change notifications into the engine, e.g. from an event stream.
+// refresh re-queries all watched ops whose name starts with one of the given prefixes.
+// Sources must return promptly; long running work belongs in a goroutine stopped by ctx.
+type Source func(ctx context.Context, refresh func(prefixes ...string))
+
+// Engine serves ops over the daemon socket.
 type Engine struct {
-	basePath    string
-	socketPath  string
-	modules     map[string]Module
-	updates     chan StateUpdate
-	active      map[string]bool // keys are tracked file paths
-	activeMutex sync.Mutex
+	registry *Registry
+	store    *store
+	sources  []Source
+	server   *ipcServer
 }
 
-func NewEngine() (*Engine, error) {
-	u, err := user.Current()
-	if err != nil {
-		return nil, err
+func NewEngine(registry *Registry) *Engine {
+	e := &Engine{
+		registry: registry,
+		store:    newStore(),
 	}
-
-	basePath := filepath.Join("/run/user", u.Uid, "system-control")
-
-	return &Engine{
-		basePath:   basePath,
-		socketPath: filepath.Join(basePath, "ipc.sock"),
-		modules:    make(map[string]Module),
-		updates:    make(chan StateUpdate, 100),
-		active:     make(map[string]bool),
-	}, nil
+	e.server = &ipcServer{engine: e}
+	return e
 }
 
-func (e *Engine) RegisterModule(m Module) {
-	e.modules[m.Name()] = m
+// AddSource registers an event source. Must be called before Start.
+func (e *Engine) AddSource(s Source) {
+	e.sources = append(e.sources, s)
 }
 
+// Refresh re-queries all watched ops with a name matching one of the prefixes.
+func (e *Engine) Refresh(prefixes ...string) {
+	e.store.refreshMatching(prefixes...)
+}
+
+// Start opens the socket and starts all sources. It returns once the daemon is ready to serve.
 func (e *Engine) Start(ctx context.Context) error {
-	if err := os.MkdirAll(e.basePath, 0755); err != nil {
+	path := SocketPath()
+	if err := os.MkdirAll(RuntimeDir(), 0700); err != nil {
 		return err
 	}
 
-	ipcServer := NewIpcServer(e.socketPath, e)
-	if err := ipcServer.Start(ctx); err != nil {
+	// A socket that still accepts connections belongs to a running daemon, anything else is stale.
+	if conn, err := net.DialTimeout("unix", path, 200*time.Millisecond); err == nil {
+		_ = conn.Close()
+		return fmt.Errorf("daemon already running on %s", path)
+	}
+	_ = os.Remove(path)
+
+	if err := e.server.start(ctx, path); err != nil {
 		return err
 	}
 
-	go e.processUpdates(ctx)
-
-	return nil
-}
-
-func (e *Engine) Subscribe(ctx context.Context, command string, flags map[string]string) (string, error) {
-	parts := strings.SplitN(command, ".", 2)
-	if len(parts) != 2 {
-		return "", fmt.Errorf("invalid command format: %s", command)
-	}
-	moduleName := parts[0]
-
-	m, ok := e.modules[moduleName]
-	if !ok {
-		return "", fmt.Errorf("module not found: %s", moduleName)
-	}
-
-	filePath := GenerateStatePath(command, flags)
-
-	e.activeMutex.Lock()
-	isActive := e.active[filePath]
-	if !isActive {
-		e.active[filePath] = true
-	}
-	e.activeMutex.Unlock()
-
-	if !isActive {
-		err := m.Track(ctx, parts[1], flags, e.updates)
-		if err != nil {
-			e.activeMutex.Lock()
-			delete(e.active, filePath)
-			e.activeMutex.Unlock()
-			return "", err
-		}
-	}
-
-	return filepath.Join(e.basePath, filePath), nil
-}
-
-func (e *Engine) Push(ctx context.Context, command string, flags map[string]string, value string) error {
-	filePath := GenerateStatePath(command, flags)
-	fmt.Printf("Engine.Push called! Path: %s, Value: %s\n", filePath, value)
-	select {
-	case e.updates <- StateUpdate{Path: filePath, Value: value}:
-	default:
+	for _, s := range e.sources {
+		s(ctx, e.Refresh)
 	}
 	return nil
-}
-
-func (e *Engine) processUpdates(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case update := <-e.updates:
-			fullPath := filepath.Join(e.basePath, update.Path)
-			_ = os.MkdirAll(filepath.Dir(fullPath), 0755)
-
-			// Write safely to a temp file then rename for atomic fsnotify events
-			tmpPath := fullPath + ".tmp"
-			if err := os.WriteFile(tmpPath, []byte(update.Value+"\n"), 0644); err == nil {
-				_ = os.Rename(tmpPath, fullPath)
-			}
-		}
-	}
-}
-
-func (e *Engine) Wakeup() {
-	for _, m := range e.modules {
-		m.Wakeup()
-	}
-}
-
-func (e *Engine) GetSocketPath() string {
-	return e.socketPath
-}
-
-func (e *Engine) Execute(ctx context.Context, args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("no arguments provided")
-	}
-
-	// We route Execution to the appropriate module.
-	moduleName := args[0]
-	m, ok := e.modules[moduleName]
-	if !ok {
-		return fmt.Errorf("module not found: %s", moduleName)
-	}
-
-	// If the module implements an Executor interface, call it!
-	type Executor interface {
-		Execute(ctx context.Context, args []string) error
-	}
-
-	if exec, ok := m.(Executor); ok {
-		return exec.Execute(ctx, args[1:])
-	}
-
-	return fmt.Errorf("module %s does not support execution", moduleName)
 }

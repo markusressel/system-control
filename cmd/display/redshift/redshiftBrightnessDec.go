@@ -18,13 +18,13 @@ var redshiftBrightnessDecCmd = &cobra.Command{
 		}
 		return nil
 	},
-	RunE: commandutil.LockedRunE("cmd-display-redshift", commandutil.MutatorRunE(func(cmd *cobra.Command, args []string) ([]commandutil.MutatorResult, error) {
+	RunE: commandutil.LockedRunE("cmd-display-redshift", commandutil.PrintRunE(func(cmd *cobra.Command, args []string) ([]string, error) {
 		displays, err := parseDisplayParam(display)
 		if err != nil {
 			return nil, err
 		}
 
-		var results []commandutil.MutatorResult
+		var results []string
 		for _, display := range displays {
 			lastSetBrightness := getLastSetBrightness(display)
 
@@ -35,11 +35,7 @@ var redshiftBrightnessDecCmd = &cobra.Command{
 				return nil, err
 			}
 
-			results = append(results, commandutil.MutatorResult{
-				CommandId: "display.redshift.brightness",
-				Flags:     map[string]string{"display": display.Name},
-				Value:     fmt.Sprintf("%.2f", newBrightness),
-			})
+			results = append(results, fmt.Sprintf("%.2f", newBrightness))
 		}
 
 		return results, nil

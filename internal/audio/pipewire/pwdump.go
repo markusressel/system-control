@@ -2,24 +2,19 @@ package pipewire
 
 import (
 	"encoding/json"
-	"log"
 	"strings"
 
 	"github.com/markusressel/system-control/internal/util"
 )
 
-func pwDumpDirect() GraphState {
+// pwDumpDirect queries the full graph by running pw-dump.
+func pwDumpDirect() (GraphState, error) {
 	result, err := util.ExecCommand("pw-dump")
 	if err != nil {
-		log.Fatal(err)
+		return GraphState{}, err
 	}
 
-	state, err := parsePwDumpToState(result)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return state
+	return parsePwDumpToState(result)
 }
 
 func parsePwDumpToState(pwDump string) (GraphState, error) {

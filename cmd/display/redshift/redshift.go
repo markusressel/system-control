@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 
 	"github.com/gofrs/flock"
+	"github.com/markusressel/system-control/internal/daemon"
 	"github.com/markusressel/system-control/internal/persistence"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
@@ -216,6 +218,7 @@ func ApplyRedshift(display util.DisplayInfo, colorTemperature int64, brightness 
 		return err
 	}
 
+	notifyDaemon()
 	return nil
 }
 
@@ -280,16 +283,14 @@ func ResetRedshift(display util.DisplayInfo) (err error) {
 	return err
 }
 
-var (
-	TEMP_PATH = os.TempDir() + "/system-control"
-)
-
+// lockRedshift takes the lock shared with all other redshift commands (see commandutil.LockedRunE).
 func lockRedshift() *flock.Flock {
-	err := os.MkdirAll(TEMP_PATH, 0755)
+	dir := daemon.RuntimeDir()
+	err := os.MkdirAll(dir, 0700)
 	if err != nil {
-		log.Fatalf("Could not create temp directory: %v", err)
+		log.Fatalf("Could not create runtime directory: %v", err)
 	}
-	fileLock := flock.New(TEMP_PATH + "/cmd-display-redshift.lock")
+	fileLock := flock.New(filepath.Join(dir, "cmd-display-redshift.lock"))
 	err = fileLock.Lock()
 	if err != nil {
 		log.Fatalf("Could not acquire lock: %v", err)

@@ -5,6 +5,7 @@ import (
 	"log"
 	"os/exec"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -16,7 +17,9 @@ var (
 	updateCallbacks []func()
 
 	isStateDirty bool
-	debounceChan chan struct{}
+	// metadataStale is set when a metadata update cannot be merged incrementally
+	metadataStale bool
+	debounceChan  chan struct{}
 )
 
 // RegisterUpdateCallback allows the daemon to subscribe to PipeWire graph changes
@@ -68,9 +71,19 @@ func PwDump() GraphState {
 		defer liveMu.RUnlock()
 		return *liveState
 	}
+	monitored := monitorStarted
 	liveMu.RUnlock()
 
-	return pwDumpDirect()
+	state, err := pwDumpDirect()
+	if err != nil {
+		if monitored {
+			// a long running daemon must survive PipeWire being unavailable
+			log.Printf("pw-dump failed: %v", err)
+			return GraphState{}
+		}
+		log.Fatal(err)
+	}
+	return state
 }
 
 func debounceLoop() {
@@ -91,8 +104,43 @@ func debounceLoop() {
 	}
 }
 
+// runMonitorLoop keeps a `pw-dump -m` process running. When it dies (e.g. PipeWire restarts)
+// the live state is dropped, so PwDump falls back to direct queries, and the monitor is restarted.
 func runMonitorLoop() {
+	backoff := time.Second
+	for {
+		started := time.Now()
+		monitorOnce()
+
+		liveMu.Lock()
+		liveObjects = make(map[int]GraphObject)
+		liveState = nil
+		isStateDirty = false
+		metadataStale = false
+		liveMu.Unlock()
+		notifyChanged()
+
+		if time.Since(started) > time.Minute {
+			backoff = time.Second
+		}
+		time.Sleep(backoff)
+		if backoff < 30*time.Second {
+			backoff *= 2
+		}
+	}
+}
+
+func notifyChanged() {
+	select {
+	case debounceChan <- struct{}{}:
+	default:
+	}
+}
+
+// monitorOnce runs a single `pw-dump -m` process until it ends or its output cannot be decoded.
+func monitorOnce() {
 	cmd := exec.Command("pw-dump", "-m")
+	cmd.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGTERM}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Printf("Failed to get stdout pipe for pw-dump -m: %v", err)
@@ -103,6 +151,10 @@ func runMonitorLoop() {
 		log.Printf("Failed to start pw-dump -m: %v", err)
 		return
 	}
+	defer func() {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	}()
 
 	decoder := json.NewDecoder(stdout)
 
@@ -110,7 +162,7 @@ func runMonitorLoop() {
 		var chunk []RawGraphObject
 		if err := decoder.Decode(&chunk); err != nil {
 			log.Printf("pw-dump -m decoder error: %v", err)
-			break
+			return
 		}
 
 		liveMu.Lock()
@@ -157,7 +209,13 @@ func runMonitorLoop() {
 
 			var mergedMetadata []map[string]interface{}
 			if obj.Metadata != nil {
-				mergedMetadata = obj.Metadata
+				if exists {
+					var stale bool
+					mergedMetadata, stale = mergeMetadata(existing.Metadata, obj.Metadata)
+					metadataStale = metadataStale || stale
+				} else {
+					mergedMetadata = obj.Metadata
+				}
 			} else if exists {
 				mergedMetadata = existing.Metadata
 			}
@@ -180,11 +238,41 @@ func runMonitorLoop() {
 		isStateDirty = true
 		liveMu.Unlock()
 
-		select {
-		case debounceChan <- struct{}{}:
-		default:
+		notifyChanged()
+	}
+}
+
+// mergeMetadata applies an incremental metadata update. pw-dump only reports the changed
+// entries, and reports removals as empty or null entries without the removed key. Such updates
+// can't be merged, stale is true then and the metadata has to be queried again.
+func mergeMetadata(existing []map[string]interface{}, update []map[string]interface{}) (merged []map[string]interface{}, stale bool) {
+	if len(update) == 0 {
+		return existing, true
+	}
+
+	type entryKey struct {
+		subject interface{}
+		key     interface{}
+	}
+	index := map[entryKey]int{}
+	for i, entry := range existing {
+		index[entryKey{entry["subject"], entry["key"]}] = i
+	}
+
+	merged = append(merged, existing...)
+	for _, entry := range update {
+		if entry["value"] == nil {
+			stale = true
+		}
+		k := entryKey{entry["subject"], entry["key"]}
+		if i, ok := index[k]; ok {
+			merged[i] = entry
+		} else {
+			index[k] = len(merged)
+			merged = append(merged, entry)
 		}
 	}
+	return merged, stale
 }
 
 func parseInfoMerge(objType string, rawInfo []byte, exists bool, existing GraphObjectInfo) GraphObjectInfo {
@@ -272,45 +360,48 @@ func rebuildLiveState() {
 	for _, object := range liveObjects {
 		switch object.CommonData.Type {
 		case TypeNode:
-			newState.Nodes = append(newState.Nodes, InterfaceNode{
-				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceNodeInfo),
-			})
+			if info, ok := object.Info.(InterfaceNodeInfo); ok {
+				newState.Nodes = append(newState.Nodes, InterfaceNode{CommonData: object.CommonData, Info: info})
+			}
 		case TypeFactory:
-			newState.Factories = append(newState.Factories, InterfaceFactory{
-				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceFactoryInfo),
-			})
+			if info, ok := object.Info.(InterfaceFactoryInfo); ok {
+				newState.Factories = append(newState.Factories, InterfaceFactory{CommonData: object.CommonData, Info: info})
+			}
 		case TypeModule:
-			newState.Modules = append(newState.Modules, InterfaceModule{
-				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceModuleInfo),
-			})
+			if info, ok := object.Info.(InterfaceModuleInfo); ok {
+				newState.Modules = append(newState.Modules, InterfaceModule{CommonData: object.CommonData, Info: info})
+			}
 		case TypeCore:
-			newState.Cores = append(newState.Cores, InterfaceCore{
-				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceCoreInfo),
-			})
+			if info, ok := object.Info.(InterfaceCoreInfo); ok {
+				newState.Cores = append(newState.Cores, InterfaceCore{CommonData: object.CommonData, Info: info})
+			}
 		case TypeClient:
-			newState.Clients = append(newState.Clients, InterfaceClient{
-				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceClientInfo),
-			})
+			if info, ok := object.Info.(InterfaceClientInfo); ok {
+				newState.Clients = append(newState.Clients, InterfaceClient{CommonData: object.CommonData, Info: info})
+			}
 		case TypeLink:
-			newState.Links = append(newState.Links, InterfaceLink{
-				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceLinkInfo),
-			})
+			if info, ok := object.Info.(InterfaceLinkInfo); ok {
+				newState.Links = append(newState.Links, InterfaceLink{CommonData: object.CommonData, Info: info})
+			}
 		case TypePort:
-			newState.Ports = append(newState.Ports, InterfacePort{
-				CommonData: object.CommonData,
-				Info:       object.Info.(InterfacePortInfo),
-			})
+			if info, ok := object.Info.(InterfacePortInfo); ok {
+				newState.Ports = append(newState.Ports, InterfacePort{CommonData: object.CommonData, Info: info})
+			}
 		case TypeDevice:
-			newState.Devices = append(newState.Devices, InterfaceDevice{
-				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceDeviceInfo),
-			})
+			if info, ok := object.Info.(InterfaceDeviceInfo); ok {
+				newState.Devices = append(newState.Devices, InterfaceDevice{CommonData: object.CommonData, Info: info})
+			}
+		case TypeMetadata:
+			// metadata (e.g. the default sink) lives in CommonData.Metadata, there is no Info
+			info, _ := object.Info.(InterfaceMetadataInfo)
+			newState.Metadatas = append(newState.Metadatas, InterfaceMetadata{CommonData: object.CommonData, Info: info})
+		}
+	}
+
+	if metadataStale {
+		if fresh, err := pwDumpDirect(); err == nil {
+			newState.Metadatas = fresh.Metadatas
+			metadataStale = false
 		}
 	}
 	liveState = newState

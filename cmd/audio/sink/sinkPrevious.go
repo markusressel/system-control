@@ -1,7 +1,7 @@
 package sink
 
 import (
-	"github.com/markusressel/system-control/internal/audio/pipewire"
+	"github.com/markusressel/system-control/internal/commandutil"
 	"github.com/spf13/cobra"
 )
 
@@ -12,10 +12,8 @@ var previousCmd = &cobra.Command{
 
 > system-control audio sink previous`,
 	Args: cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// TODO: add "skip" string glob parameter, so that the user can skip certain sinks when switching to the next one
-		return pipewire.RotateActiveSinkPipewire(true)
-	},
+	// TODO: add "skip" string glob parameter, so that the user can skip certain sinks when switching to the next one
+	RunE: commandutil.OpRunE("audio.sink.previous"),
 }
 
 func init() {

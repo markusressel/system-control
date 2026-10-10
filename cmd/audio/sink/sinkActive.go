@@ -1,9 +1,7 @@
 package sink
 
 import (
-	"fmt"
-
-	"github.com/markusressel/system-control/internal/audio/pipewire"
+	"github.com/markusressel/system-control/internal/commandutil"
 	"github.com/spf13/cobra"
 )
 
@@ -27,46 +25,7 @@ var activeCmd = &cobra.Command{
 > system-control audio sink active
 3`,
 	Args: cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		searchString := ""
-		if len(args) > 0 {
-			searchString = args[0]
-		}
-
-		state := pipewire.PwDump()
-
-		if len(searchString) > 0 {
-			fmt.Println(state.ContainsActiveSink(searchString))
-		} else {
-			node, err := state.GetDefaultSinkNode()
-			if err != nil {
-				return err
-			}
-
-			for _, col := range columns {
-				switch col {
-				case ColumnID:
-					fmt.Println(node.Id)
-				case ColumnName:
-					name, err := node.GetName()
-					if err != nil {
-						return err
-					}
-					fmt.Println(name)
-				case ColumnDescription:
-					desc, err := node.GetDescription()
-					if err != nil {
-						return err
-					}
-					fmt.Println(desc)
-				default:
-					return fmt.Errorf("unknown column: %s", col)
-				}
-			}
-		}
-
-		return nil
-	},
+	RunE: commandutil.OpRunE("audio.sink.active"),
 }
 
 func init() {
@@ -76,6 +35,7 @@ func init() {
 		defaultColumns,
 		"Columns to print (id,name,description)",
 	)
+	activeCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
 
 	SinkCmd.AddCommand(activeCmd)
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"os/exec"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -100,12 +101,20 @@ func debounceLoop() {
 	}
 }
 
+var monitorStarts atomic.Int64
+
+// MonitorRestarts is how often the `pw-dump -m` monitor had to be started again after it died.
+func MonitorRestarts() int64 {
+	return max(monitorStarts.Load()-1, 0)
+}
+
 // runMonitorLoop keeps a `pw-dump -m` process running. When it dies (e.g. PipeWire restarts)
 // the live state is dropped, so PwDump falls back to direct queries, and the monitor is restarted.
 func runMonitorLoop() {
 	backoff := time.Second
 	for {
 		started := time.Now()
+		monitorStarts.Add(1)
 		monitorOnce()
 
 		liveMu.Lock()

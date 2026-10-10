@@ -19,6 +19,7 @@ type Engine struct {
 	registry  *Registry
 	store     *store
 	sources   []Source
+	statuses  []func() []string
 	server    *ipcServer
 }
 
@@ -34,6 +35,12 @@ func NewEngine(registry *Registry) *Engine {
 // AddSource registers an event source. Must be called before Start.
 func (e *Engine) AddSource(s Source) {
 	e.sources = append(e.sources, s)
+}
+
+// AddStatus registers a function whose lines are appended to `daemon status`, e.g. the health
+// of an event source. Must be called before Start.
+func (e *Engine) AddStatus(f func() []string) {
+	e.statuses = append(e.statuses, f)
 }
 
 // Refresh re-queries all watched ops with a name matching one of the prefixes.
@@ -79,6 +86,24 @@ func (e *Engine) status() []string {
 	}
 	for _, w := range watched {
 		lines = append(lines, "  "+w)
+	}
+
+	var stats []string
+	for _, op := range e.registry.Ops() {
+		if op.stats == nil {
+			continue
+		}
+		if line := op.stats.line(op.Name); line != "" {
+			stats = append(stats, "  "+line)
+		}
+	}
+	if len(stats) > 0 {
+		lines = append(lines, "executions:")
+		lines = append(lines, stats...)
+	}
+
+	for _, f := range e.statuses {
+		lines = append(lines, f()...)
 	}
 	return lines
 }

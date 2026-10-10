@@ -119,6 +119,10 @@ type Op struct {
 	// Lock names a cross-process lock held while Run executes (mutating ops).
 	Lock string
 
+	// LockFor decides per invocation, for ops that both query and mutate depending on their
+	// arguments. It returns the lock to hold, or "" for none, and takes precedence over Lock.
+	LockFor func(a Args) string
+
 	// Requires lists environment variables the op needs (e.g. "DISPLAY" for X11 tools). A daemon
 	// that lacks one takes it from the user service manager, and if that has none either, the
 	// client runs the command itself.
@@ -137,6 +141,9 @@ type Op struct {
 
 	// Invalidates lists name prefixes of watchable ops whose state may change after Run.
 	Invalidates []string
+
+	// set by Register, nil for an op that is not registered
+	stats *opStats
 
 	// set by Registry.Bind
 	flags       []FlagDef
@@ -179,19 +186,32 @@ func (op *Op) defaultArgs() Args {
 // Execute runs the op once, honoring its lock. queuedAt is the time the user issued the command.
 // A command that was dropped for waiting too long for its lock returns no lines and no error.
 func (op *Op) Execute(ctx context.Context, a Args, queuedAt time.Time) ([]string, error) {
+	start := time.Now()
+	lines, dropped, err := op.execute(ctx, a, queuedAt)
+	if op.stats != nil {
+		op.stats.record(time.Since(start), dropped, err)
+	}
+	return lines, err
+}
+
+func (op *Op) execute(ctx context.Context, a Args, queuedAt time.Time) (lines []string, dropped bool, err error) {
 	if err := op.ensureEnvironment(); err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	if op.Lock == "" {
-		return op.Run(ctx, a)
+	lock := op.Lock
+	if op.LockFor != nil {
+		lock = op.LockFor(a)
 	}
-	var lines []string
-	_, err := WithLock(op.Lock, queuedAt, func() error {
+	if lock == "" {
+		lines, err = op.Run(ctx, a)
+		return lines, false, err
+	}
+	dropped, err = WithLock(lock, queuedAt, func() error {
 		var err error
 		lines, err = op.Run(ctx, a)
 		return err
 	})
-	return lines, err
+	return lines, dropped, err
 }
 
 type node struct {
@@ -222,6 +242,7 @@ func (r *Registry) Register(op Op) {
 		panic("daemon: duplicate op " + op.Name)
 	}
 	o := op
+	o.stats = &opStats{}
 	r.ops[o.Name] = &o
 
 	n := r.root

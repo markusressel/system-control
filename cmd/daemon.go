@@ -34,6 +34,7 @@ every command works on its own.`,
 		eng := daemon.NewEngine(daemon.Default)
 		eng.AddSource(audio.EventSource)
 		eng.AddSource(bluetooth.EventSource)
+		eng.AddStatus(audio.Status)
 
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()

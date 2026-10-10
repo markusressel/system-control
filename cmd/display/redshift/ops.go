@@ -18,7 +18,14 @@ func init() {
 	daemon.Register(daemon.Op{
 		Name:     "display.redshift.brightness",
 		Requires: []string{"DISPLAY"},
-		Run:      runBrightness,
+		// querying needs no lock, setting is serialized (and queue-dropped) like the steps
+		LockFor: func(a daemon.Args) string {
+			if a.Flag("brightness") == "-1" {
+				return ""
+			}
+			return redshiftLockName
+		},
+		Run: runBrightness,
 		// setting a value can't be watched
 		Watch: func(a daemon.Args) bool { return a.Flag("brightness") == "-1" },
 		// Changes made through this tool refresh the watchers right away, polling only
@@ -47,14 +54,6 @@ func init() {
 		Run:         stepBrightness(-1),
 		Invalidates: []string{"display."},
 	})
-}
-
-// reloadConfig makes a long running daemon pick up edits of the configuration file.
-// Must be called with the redshift lock held, the configuration is read by the clamping below.
-func reloadConfig() {
-	if daemon.Running() {
-		_ = configuration.Reload()
-	}
 }
 
 func runBrightness(ctx context.Context, a daemon.Args) ([]string, error) {
@@ -88,14 +87,8 @@ func queryBrightness(displayName string, format string) (string, error) {
 	return fmt.Sprintf(format, lastSet), nil
 }
 
+// setBrightness is run with the redshift lock held, see the op registration.
 func setBrightness(displayName string, value float64, format string) ([]string, error) {
-	unlock, err := daemon.AcquireLock(redshiftLockName)
-	if err != nil {
-		return nil, err
-	}
-	defer unlock()
-	reloadConfig()
-
 	displays, err := parseDisplayParam(displayName)
 	if err != nil {
 		return nil, err
@@ -125,7 +118,6 @@ func stepBrightness(direction float64) func(ctx context.Context, a daemon.Args) 
 		if err := validateStep(step); err != nil {
 			return nil, err
 		}
-		reloadConfig()
 
 		displays, err := parseDisplayParam(a.Flag("display"))
 		if err != nil {

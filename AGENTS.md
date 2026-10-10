@@ -57,9 +57,13 @@ Run the three CI checks before reporting a task done.
   refresh comes from event sources (`Engine.AddSource`, e.g. PipeWire monitor) and `Op.Invalidates`. `Op.Poll` is
   only a fallback. A CLI process that changes state itself calls `daemon.Notify(prefix)`.
 - **Mutations** hold `Op.Lock` (cross-process, shared with the CLI). Waiters beyond `daemon.MaxQueueWait` are dropped
-  on purpose (scroll spam): a command waits for its lock at most `MaxQueueWait` in total.
-- **Configuration is a snapshot** in the daemon: read with `configuration.Get()`, call `configuration.Reload()`
-  before using values users edit. SIGHUP reloads.
+  on purpose (scroll spam): a command waits for its lock at most `MaxQueueWait` in total. An op that queries and
+  mutates by argument sets `Op.LockFor` instead of `Op.Lock`.
+- **Observability:** `system-control daemon status` shows watchers, per-op calls/latency/drops/failures and the
+  PipeWire monitor restarts. Add new event sources' health with `Engine.AddStatus`.
+- **Configuration is a snapshot:** read it with `configuration.Get()` for every use, never keep it. `Get()` reloads
+  the file when its mtime changed (checked once per second), a broken file keeps the old values. SIGHUP forces it.
+  Poll intervals are asked for again after every tick.
 - **Two clients:** the Go client (`cmd.Execute` calls `daemon.TryRemote` first) and the C client
   `cmd/sysctrl/main.c`. Protocol lives in `internal/daemon/ipc.go`; change both clients together,
   `internal/daemon/sysctrl_test.go` covers the C one.

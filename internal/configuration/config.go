@@ -68,23 +68,83 @@ var CurrentConfig Configuration
 // requests read the configuration.
 var configMu sync.RWMutex
 
+// fileCheckInterval limits how often Get looks at the modification time of the config file.
+const fileCheckInterval = time.Second
+
+var (
+	// fileStamp identifies the version of the config file CurrentConfig was read from.
+	fileStamp   fileVersion
+	lastChecked time.Time
+)
+
+type fileVersion struct {
+	modTime time.Time
+	size    int64
+}
+
+func statConfigFile() (fileVersion, bool) {
+	file := viper.ConfigFileUsed()
+	if file == "" {
+		return fileVersion{}, false
+	}
+	info, err := os.Stat(file)
+	if err != nil {
+		return fileVersion{}, false
+	}
+	return fileVersion{info.ModTime(), info.Size()}, true
+}
+
 // Get returns a snapshot of the current configuration.
+//
+// A long running process (the daemon) notices edits of the config file: it is read again when
+// its modification time changed. A file that fails to parse (e.g. saved half-way) keeps the
+// previous configuration.
 func Get() Configuration {
+	reloadIfChanged()
+
 	configMu.RLock()
 	defer configMu.RUnlock()
 	return CurrentConfig
 }
 
-// Reload reads the configuration file again, so that a long running process notices edits.
-func Reload() error {
+func reloadIfChanged() {
 	configMu.Lock()
 	defer configMu.Unlock()
 
+	if time.Since(lastChecked) < fileCheckInterval {
+		return
+	}
+	lastChecked = time.Now()
+
+	stamp, ok := statConfigFile()
+	if !ok || stamp == fileStamp {
+		return
+	}
+	if err := reloadLocked(); err != nil {
+		log.Printf("Could not reload the configuration, keeping the previous one: %v", err)
+		// do not retry (and log) until the file changes again
+		fileStamp = stamp
+	}
+}
+
+// Reload reads the configuration file again, regardless of its modification time.
+func Reload() error {
+	configMu.Lock()
+	defer configMu.Unlock()
+	return reloadLocked()
+}
+
+func reloadLocked() error {
 	if err := readInConfig(); err != nil {
 		return err
 	}
-	CurrentConfig = Configuration{}
-	return viper.Unmarshal(&CurrentConfig)
+	next := Configuration{}
+	if err := viper.Unmarshal(&next); err != nil {
+		return err
+	}
+	CurrentConfig = next
+	fileStamp, _ = statConfigFile()
+	return nil
 }
 
 var currentUser, _ = user.Current()
@@ -158,6 +218,7 @@ func LoadConfig() Configuration {
 	// load default configuration values
 	CurrentConfig = Configuration{}
 	err := viper.Unmarshal(&CurrentConfig)
+	fileStamp, _ = statConfigFile()
 	if err != nil {
 		//ui.Fatal("unable to decode into struct, %v", err)
 	}

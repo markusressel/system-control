@@ -1,10 +1,14 @@
 package daemon
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
+	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/markusressel/system-control/internal/util"
 )
@@ -93,6 +97,55 @@ func TestArgsTypedAccessors(t *testing.T) {
 	} {
 		if get() == nil {
 			t.Errorf("%s must fail", name)
+		}
+	}
+}
+
+func TestExecute_LockFor(t *testing.T) {
+	t.Setenv(EnvRuntimeDir, t.TempDir())
+
+	unlock, err := AcquireLock("busy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unlock()
+
+	ran := 0
+	op := &Op{
+		Name: "test.mixed",
+		LockFor: func(a Args) string {
+			if a.Flag("set") == "" {
+				return ""
+			}
+			return "busy"
+		},
+		Run: func(ctx context.Context, a Args) ([]string, error) { ran++; return nil, nil },
+	}
+
+	// a query ignores the busy lock
+	if _, err := op.Execute(context.Background(), Args{Flags: map[string]string{}}, time.Now()); err != nil || ran != 1 {
+		t.Errorf("query: ran=%d err=%v", ran, err)
+	}
+	// a mutation is dropped, the lock stays busy
+	if _, err := op.Execute(context.Background(), Args{Flags: map[string]string{"set": "1"}}, time.Now()); err != nil || ran != 1 {
+		t.Errorf("mutation: ran=%d err=%v", ran, err)
+	}
+}
+
+func TestStatus_ReportsExecutions(t *testing.T) {
+	var counter atomic.Int64
+	eng := startTestEngine(t, &counter)
+	eng.AddStatus(func() []string { return []string{"extra: 1"} })
+
+	var out bytes.Buffer
+	if handled, code := TryRemote([]string{"test", "echo", "fail"}, &out, &out); !handled || code != 1 {
+		t.Fatalf("handled=%v code=%d", handled, code)
+	}
+
+	joined := strings.Join(eng.status(), "\n")
+	for _, want := range []string{"executions:", "test.echo: 1 calls", "1 failed", "boom", "extra: 1"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("status lacks %q:\n%s", want, joined)
 		}
 	}
 }

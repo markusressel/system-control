@@ -108,12 +108,13 @@ func (s *store) release(e *entry, ch chan []string) {
 	}
 }
 
+// pollRecheck is how often an entry without polling looks whether the configuration enabled it.
+const pollRecheck = 10 * time.Second
+
+// startPolling re-queries the entry periodically. The interval is asked for again after every
+// tick, so a reloaded configuration applies to running watchers too.
 func (s *store) startPolling(e *entry) {
 	if e.op.Poll == nil {
-		return
-	}
-	interval := e.op.Poll()
-	if interval <= 0 {
 		return
 	}
 
@@ -123,14 +124,22 @@ func (s *store) startPolling(e *entry) {
 	e.mu.Unlock()
 
 	go func() {
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
 		for {
+			interval := e.op.Poll()
+			wait := interval
+			if interval <= 0 {
+				wait = pollRecheck
+			}
+
+			timer := time.NewTimer(wait)
 			select {
 			case <-ctx.Done():
+				timer.Stop()
 				return
-			case <-ticker.C:
-				e.trigger()
+			case <-timer.C:
+				if interval > 0 {
+					e.trigger()
+				}
 			}
 		}
 	}()

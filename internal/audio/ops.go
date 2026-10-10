@@ -205,6 +205,11 @@ func init() {
 	})
 }
 
+// Status describes the health of the PipeWire monitor for `daemon status`.
+func Status() []string {
+	return []string{fmt.Sprintf("pipewire monitor restarts: %d", pipewire.MonitorRestarts())}
+}
+
 // EventSource refreshes watched audio state whenever the PipeWire graph changes.
 // It is a daemon.Source.
 func EventSource(ctx context.Context, refresh func(prefixes ...string)) {

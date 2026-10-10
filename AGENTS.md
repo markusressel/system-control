@@ -1,104 +1,91 @@
 # AGENTS.md
 
-This file provides guidance to AI Agents when working with code in this repository.
+system-control: Go CLI (cobra + viper) that wraps Linux system tools (nmcli, wpctl/pw-dump, redshift, xrandr, BlueZ
+over D-Bus, sysfs) behind one command tree. An optional systemd user daemon makes frequent commands fast and serves
+`--watch` for status bars (polybar).
 
 ## Commands
 
 ```bash
-make build       # Compile binary to bin/system-control
-make test        # Run all tests (verbose)
-make deploy      # Install to /usr/bin/ (requires sudo)
-make deploy-custom  # Install to ~/.custom/bin/
-make clean       # Remove build artifacts
+make build            # bin/system-control and the C client bin/sysctrl (needs gcc)
+make test             # all tests, verbose, cache cleared
+go test ./internal/audio/pipewire/... -run TestParsePwDump -v   # single test
+gofmt -l .            # must print nothing
+go vet ./...
+go test -race ./...   # what CI runs, with the two lines above
+make deploy           # sudo install to /usr/bin and enable the user unit (user action, do not run unasked)
 ```
 
-Run a single test:
+Run the three CI checks before reporting a task done.
 
-```bash
-go test ./internal/audio/pipewire/... -run TestParsePwDump -v
-```
+## Rules
 
-## Architecture
+- Never run real external tools or touch the user's real daemon in tests or experiments. Tests fake commands with
+  `util.SetRunner` and point sysfs variables (`battery.PowerSupplyBasePath`, `util.DisplayBacklightPath`, ...) to a
+  temp dir. Parsers are pure functions with table tests.
+- Use `util.ExecCommand` for one-shot tool calls (it enforces a timeout and can be faked). No `log.Fatal`/`os.Exit`
+  in code the daemon can reach: return errors.
+- No personal values in code (user names, interfaces, sysfs paths): use flags, environment or `configuration`. New
+  config keys also go into `system-control.yaml`.
+- Persistence files (`internal/persistence`) are replaced atomically, keys must be plain file names.
+- Untracked `testdir/` is junk: never commit it. Stage explicitly, e.g.
+  `git add -A -- . ':!testdir' ':!internal/persistence/key.sav'`.
+- Commit and push only when asked. Commit messages: prose, imperative first line, body explains why. End with
+  the `Co-Authored-By` line from the harness.
 
-**system-control** is a Go CLI tool (cobra + viper) that wraps Linux system utilities (`bluetoothctl`, `nmcli`, `wpctl`/
-`pw-dump`, `redshift`, etc.) into a unified interface.
+## Adding or changing a command
 
-### Key structural patterns
+1. Put the logic in `internal/<subsystem>/`. `cmd/` only declares flags, arguments, help and calls into it.
+2. If the daemon should serve it (frequent, status bar, key binding): register a `daemon.Op` from an `init()` in
+   `internal/<subsystem>/ops.go` (name = CLI path, e.g. `audio.volume.inc`) and make the cobra command
+   `RunE: commandutil.OpRunE("<op name>")`. One implementation only: never write daemon behavior separately.
+3. `Registry.Bind` (in `cmd/daemon.go`) derives flags, positional-arg validation and subcommands from the cobra
+   command, so no flag lists in the op. `cmd/ops_test.go` fails if an op has no matching command or a watchable op
+   lacks a bool `--watch`.
+4. Add table tests for parsing; use `internal/daemon/daemon_test.go` helpers for op behavior.
 
-- **`cmd/`** — Cobra command definitions, organized hierarchically by subsystem (e.g., `cmd/audio/volume/`,
-  `cmd/display/redshift/`). Each subdirectory corresponds to a command group.
-- **`internal/`** — Business logic, isolated from CLI layer:
-    - `internal/audio/pipewire/` — PipeWire integration: parses `pw-dump` JSON, manages sinks/devices/profiles
-    - `internal/bluetooth/` — BlueZ over D-Bus (one `GetManagedObjects` call per query, change signals for
-      `--watch`)
-    - `internal/wifi/` — Wraps `nmcli` (terse mode), parses output into typed structs
-    - `internal/battery/`, `internal/disk/` — sysfs batteries (incl. Logitech HID++), smartctl/nvme disk data
-    - `internal/configuration/` — Viper-based config; searches `~/.system-control.yaml`, `~/.config/system-control/`,
-      `/etc/system-control/`
-    - `internal/persistence/` — Key-value store backed by `~/.config/system-control/persistence/*.sav` files (integers,
-      floats, or JSON structs); files are replaced atomically, keys must be plain file names
-    - `internal/daemon/` — Optional background daemon: op registry, state store for `--watch`, unix socket server
-      and client (see "Daemon" below)
-    - `internal/commandutil/` — Glue between cobra commands and ops (`OpRunE`), locking helpers
-    - `internal/util/` — Shared helpers: `ExecCommand` (bounded by a timeout, swappable with `util.SetRunner` in
-      tests), file I/O for sysfs paths, string/math utilities, X11 tool wrappers (xrandr, xinput, wmctrl)
+## Daemon semantics (easy to get wrong)
 
-### Testing
+- **Fallback:** the daemon answers "unhandled" for anything it does not fully understand (unknown flag, `--help`,
+  root flags such as `--configuration`). The regular cobra path then runs and is the reference behavior. An op that
+  cannot run right now (e.g. no `DISPLAY`) returns `daemon.ErrUnhandled` before changing anything.
+  `daemon.Running()` tells daemon and CLI context apart.
+- **Never re-run after silence:** once a request was sent, run locally only on an explicit "unhandled" answer. A
+  silent daemon may already have executed a mutation.
+- **State:** the daemon owns published state, clients never push values. `--watch` subscribes to the engine store;
+  refresh comes from event sources (`Engine.AddSource`, e.g. PipeWire monitor) and `Op.Invalidates`. `Op.Poll` is
+  only a fallback. A CLI process that changes state itself calls `daemon.Notify(prefix)`.
+- **Mutations** hold `Op.Lock` (cross-process, shared with the CLI). Waiters beyond `daemon.MaxQueueWait` are dropped
+  on purpose (scroll spam).
+- **Configuration is a snapshot** in the daemon: read with `configuration.Get()`, call `configuration.Reload()`
+  before using values users edit. SIGHUP reloads.
+- **Two clients:** the Go client (`cmd.Execute` calls `daemon.TryRemote` first) and the C client
+  `cmd/sysctrl/main.c`. Protocol lives in `internal/daemon/ipc.go`; change both clients together,
+  `internal/daemon/sysctrl_test.go` covers the C one.
+- **Test daemon:** set `SYSTEM_CONTROL_RUNTIME_DIR` (not `XDG_RUNTIME_DIR`, PipeWire needs it) and use own binaries.
+  Never `pkill -f`; find the test daemon by its environment so the user's real one is not disturbed.
 
-External tools are never run in tests: replace `util.SetRunner` with a fake, and point the sysfs path variables
-(`battery.PowerSupplyBasePath`, `util.DisplayBacklightPath`, ...) to a temp directory. Parsers are pure functions
-with table tests. `cmd/match_test.go` compares the daemon's command line parsing with cobra's.
+## Layout pointers
 
-### Daemon
+Only what is not obvious from the tree:
 
-`system-control daemon` (systemd user unit) makes frequent commands fast and serves `--watch`. It is optional:
-every command also works on its own, and that in-process path is the reference behavior.
+- `internal/daemon/` — op registry, engine/state store, unix socket server and client, locks.
+- `internal/commandutil/` — `OpRunE`, glue between cobra and ops.
+- `internal/audio/pipewire/` — parses `pw-dump` JSON; fixtures in `test/pipewire/`.
+- `internal/bluetooth/` — BlueZ D-Bus only (one `GetManagedObjects` per query, signals for `--watch`).
+- `internal/wifi/` — nmcli in terse mode, typed structs.
+- `internal/battery/`, `internal/disk/` — sysfs batteries (incl. Logitech HID++), smartctl/nvme.
+- `internal/util/` — `ExecCommand`, sysfs file I/O, X11 tool wrappers (xrandr, xinput, wmctrl). X11 is assumed.
+- `cmd/match_test.go` — compares daemon command line parsing with cobra's; keep it green when touching flags.
 
-- **One implementation per operation.** A command that the daemon can serve is a `daemon.Op` (name = CLI path, e.g.
-  `audio.volume.inc`), registered from an `init()` (`internal/audio/ops.go`). The cobra command declares
-  flags, arguments and help and runs `commandutil.OpRunE("<op name>")`. Do not implement daemon behavior twice.
-- **Cobra is the only declaration of the CLI surface.** `Registry.Bind` (called by `cmd/daemon.go`) derives flags,
-  argument validation and sub commands of an op from its cobra command, so the daemon parses raw command lines like
-  cobra. Adding an op needs only the `daemon.Register` call; `cmd/ops_test.go` checks that every op binds and that
-  lookalike command lines are left to cobra.
-- **Ops that can't run in the daemon right now** return `daemon.ErrUnhandled` before changing anything (e.g. no
-  `DISPLAY`), the client then runs the command itself. `daemon.Running()` tells the two execution contexts apart.
-- **Configuration in the daemon is a snapshot**: read it with `configuration.Get()`, and call
-  `configuration.Reload()` before using values that users edit (see the redshift ops).
-- **Request flow**: `cmd.Execute()` first calls `daemon.TryRemote(os.Args[1:])`. The daemon matches the command line
-  to an op and answers with output and exit code; for anything it does not fully understand (unknown flag, `--help`,
-  set-flags that mutate...) it answers "unhandled" and the regular cobra path runs. `cmd/sysctrl/main.c` is the same
-  client without the Go runtime (~1 ms, ~1.5 MB instead of ~3 ms, ~10 MB), which matters for key bindings and
-  for the many long-lived `--watch` processes of a status bar. Protocol: `internal/daemon/ipc.go`.
-  After a request was sent a command is only run locally on an explicit "unhandled" answer, never because the
-  daemon was silent (it may have executed a mutation already).
-- **State**: `--watch` subscribes to the engine's store. The daemon owns all published state, clients never push
-  values. Event sources (`Engine.AddSource`, e.g. the PipeWire monitor) and `Op.Invalidates` refresh watched ops;
-  `Op.Poll` is only a fallback for sources without events. A process that changes state on its own (cobra path)
-  calls `daemon.Notify(prefix)`.
-- **Mutations** hold `Op.Lock`, a cross-process lock shared by daemon and CLI. Commands waiting longer than
-  `daemon.MaxQueueWait` are dropped (scroll spam).
-- A second daemon for testing: set `SYSTEM_CONTROL_RUNTIME_DIR` (not `XDG_RUNTIME_DIR`, PipeWire needs that).
+## Configuration
 
-### Request lifecycle
+YAML, searched in `~/.system-control.yaml`, `~/.config/system-control/`, `/etc/system-control/` (example:
+`system-control.yaml`). Sections, all optional: `redshift` (brightness/color temperature/gamma ranges, transition
+duration), `daemon.pollIntervals`, `hotspot`, `fan.policyFileGlob`.
 
-```
-main() → cmd.Execute()
-  → cobra.OnInitialize: configuration.InitConfig() sets viper defaults
-  → RootCmd.PersistentPreRunE: DetectAndReadConfigFile() → LoadConfig() → Validate()
-  → Subcommand handler
-      → internal package (bluetoothctl/nmcli/wpctl/sysfs)
-      → persistence.Save/Read for stateful operations
-      → stdout output
-```
+## Known gaps (do not "fix" unasked)
 
-### Configuration
-
-YAML config (example in `system-control.yaml`). The `internal/configuration.CurrentConfig` struct is populated at
-startup and used by all commands. Redshift is the primary configurable subsystem (brightness range, color temp range,
-transition duration).
-
-### External tool dependencies
-
-Commands shell out to: `bluetoothctl`, `nmcli`, `pw-dump`, `pw-cli`, `wpctl`, `pw-metadata`, `redshift`. The sysfs paths
-`/sys/class/backlight/` and `/sys/class/power_supply/` are accessed directly for backlight and battery.
+- X11 only, no Wayland backends.
+- `mouse battery` prints an empty line with exit 0 when no mouse exists (status bars depend on it).
+- Redshift gamma/colortemp/update are not daemon ops.

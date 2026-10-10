@@ -51,7 +51,7 @@ func (s *opStats) line(name string) string {
 	line := fmt.Sprintf("%s: %d calls", name, s.calls)
 	if s.calls > 0 {
 		line += fmt.Sprintf(", avg %s, max %s",
-			(s.total / time.Duration(s.calls)).Round(time.Millisecond), s.slowest.Round(time.Millisecond))
+			shortDuration(s.total/time.Duration(s.calls)), shortDuration(s.slowest))
 	}
 	if s.dropped > 0 {
 		line += fmt.Sprintf(", %d dropped", s.dropped)
@@ -64,4 +64,12 @@ func (s *opStats) line(name string) string {
 			s.failed, time.Since(s.lastErrAt).Round(time.Second), s.lastErr)
 	}
 	return line
+}
+
+// shortDuration keeps sub-millisecond latencies visible instead of rounding them to 0s.
+func shortDuration(d time.Duration) time.Duration {
+	if d < time.Millisecond {
+		return d.Round(time.Microsecond)
+	}
+	return d.Round(100 * time.Microsecond)
 }

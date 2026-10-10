@@ -227,7 +227,11 @@ func (e *entry) refresh(ctx context.Context) (err error) {
 	if err := e.op.ensureEnvironment(); err != nil {
 		return err
 	}
+	start := time.Now()
 	lines, err := e.op.Run(ctx, e.args)
+	if e.op.stats != nil {
+		e.op.stats.record(time.Since(start), false, err)
+	}
 	if err != nil {
 		return err
 	}

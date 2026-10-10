@@ -368,3 +368,30 @@ func TestStatus_NoDaemon(t *testing.T) {
 		t.Error("expected an error without a running daemon")
 	}
 }
+
+// A holder that never lets go must cost a queued command MaxQueueWait, not LockTimeout.
+func TestExecute_DropsWhenLockStaysBusy(t *testing.T) {
+	t.Setenv(EnvRuntimeDir, t.TempDir())
+
+	unlock, err := AcquireLock("test-lock")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unlock()
+
+	ran := false
+	op := &Op{
+		Name: "test.locked",
+		Lock: "test-lock",
+		Run:  func(ctx context.Context, a Args) ([]string, error) { ran = true; return nil, nil },
+	}
+
+	start := time.Now()
+	lines, err := op.Execute(context.Background(), Args{}, start)
+	if err != nil || ran || lines != nil {
+		t.Errorf("command must be dropped: ran=%v lines=%v err=%v", ran, lines, err)
+	}
+	if took := time.Since(start); took > 5*MaxQueueWait {
+		t.Errorf("waited %v for a busy lock, want about %v", took, MaxQueueWait)
+	}
+}

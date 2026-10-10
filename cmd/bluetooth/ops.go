@@ -16,14 +16,17 @@ func init() {
 	})
 }
 
-// runConnected answers "yes" or "no" for the device matching a.Pos[0].
+// runConnected answers "yes" or "no" for the device matching the first argument.
 func runConnected(ctx context.Context, a daemon.Args) ([]string, error) {
+	name, err := a.Arg(0)
+	if err != nil {
+		return nil, err
+	}
 	devices, err := bluetooth.GetBluetoothDevices()
 	if err != nil {
 		return nil, err
 	}
-
-	matchingDevices := findBluetoothDeviceFuzzy(a.Pos[0], devices)
+	matchingDevices := findBluetoothDeviceFuzzy(name, devices)
 	if len(matchingDevices) > 1 {
 		return nil, multipleDevicesError(matchingDevices)
 	}

@@ -3,10 +3,6 @@ package redshift
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/markusressel/system-control/internal/configuration"
@@ -20,8 +16,9 @@ const (
 
 func init() {
 	daemon.Register(daemon.Op{
-		Name: "display.redshift.brightness",
-		Run:  runBrightness,
+		Name:     "display.redshift.brightness",
+		Requires: []string{"DISPLAY"},
+		Run:      runBrightness,
 		// setting a value can't be watched
 		Watch: func(a daemon.Args) bool { return a.Flag("brightness") == "-1" },
 		// Changes made through this tool refresh the watchers right away, polling only
@@ -38,6 +35,7 @@ func init() {
 	daemon.Register(daemon.Op{
 		Name:        "display.redshift.brightness.inc",
 		Lock:        redshiftLockName,
+		Requires:    []string{"DISPLAY"},
 		Run:         stepBrightness(1),
 		Invalidates: []string{"display."},
 	})
@@ -45,40 +43,10 @@ func init() {
 	daemon.Register(daemon.Op{
 		Name:        "display.redshift.brightness.dec",
 		Lock:        redshiftLockName,
+		Requires:    []string{"DISPLAY"},
 		Run:         stepBrightness(-1),
 		Invalidates: []string{"display."},
 	})
-}
-
-// prepare must be called by every op before it touches the displays.
-//
-// The daemon is started by the user service manager, possibly before the session imported
-// DISPLAY into it. The daemon then picks it up from the manager, and if there is none the
-// client has to do the work, it has DISPLAY.
-func prepare() error {
-	if !daemon.Running() || os.Getenv("DISPLAY") != "" {
-		return nil
-	}
-
-	importSessionEnvironment()
-	if os.Getenv("DISPLAY") == "" {
-		return daemon.ErrUnhandled
-	}
-	return nil
-}
-
-// importSessionEnvironment copies the X11 variables of the user service manager into this process.
-func importSessionEnvironment() {
-	out, err := exec.Command("systemctl", "--user", "show-environment").Output()
-	if err != nil {
-		return
-	}
-	for _, line := range strings.Split(string(out), "\n") {
-		name, value, ok := strings.Cut(line, "=")
-		if ok && (name == "DISPLAY" || name == "XAUTHORITY") {
-			_ = os.Setenv(name, value)
-		}
-	}
 }
 
 // reloadConfig makes a long running daemon pick up edits of the configuration file.
@@ -90,13 +58,9 @@ func reloadConfig() {
 }
 
 func runBrightness(ctx context.Context, a daemon.Args) ([]string, error) {
-	if err := prepare(); err != nil {
-		return nil, err
-	}
-
-	value, err := strconv.ParseFloat(a.Flag("brightness"), 64)
+	value, err := a.Float("brightness")
 	if err != nil {
-		return nil, fmt.Errorf("invalid brightness: %w", err)
+		return nil, err
 	}
 
 	if value == -1 {
@@ -154,13 +118,9 @@ func setBrightness(displayName string, value float64, format string) ([]string, 
 // The op holds the redshift lock.
 func stepBrightness(direction float64) func(ctx context.Context, a daemon.Args) ([]string, error) {
 	return func(ctx context.Context, a daemon.Args) ([]string, error) {
-		if err := prepare(); err != nil {
-			return nil, err
-		}
-
-		step, err := strconv.ParseFloat(a.Flag("step"), 64)
+		step, err := a.Float("step")
 		if err != nil {
-			return nil, fmt.Errorf("invalid step: %w", err)
+			return nil, err
 		}
 		if err := validateStep(step); err != nil {
 			return nil, err

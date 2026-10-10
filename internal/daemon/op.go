@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -44,6 +45,42 @@ func (a Args) Flag(name string) string {
 	return a.Flags[name]
 }
 
+// Arg returns the i-th positional argument, or an error if it is missing. Cobra validates the
+// count of a command line, but an op must not rely on it to avoid an index panic.
+func (a Args) Arg(i int) (string, error) {
+	if i < 0 || i >= len(a.Pos) {
+		return "", fmt.Errorf("missing argument %d", i+1)
+	}
+	return a.Pos[i], nil
+}
+
+// Int returns the value of a flag as integer.
+func (a Args) Int(name string) (int, error) {
+	v, err := strconv.Atoi(a.Flags[name])
+	if err != nil {
+		return 0, fmt.Errorf("invalid --%s %q: not an integer", name, a.Flags[name])
+	}
+	return v, nil
+}
+
+// Float returns the value of a flag as number.
+func (a Args) Float(name string) (float64, error) {
+	v, err := strconv.ParseFloat(a.Flags[name], 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid --%s %q: not a number", name, a.Flags[name])
+	}
+	return v, nil
+}
+
+// Duration returns the value of a flag as duration.
+func (a Args) Duration(name string) (time.Duration, error) {
+	v, err := time.ParseDuration(a.Flags[name])
+	if err != nil {
+		return 0, fmt.Errorf("invalid --%s %q: not a duration", name, a.Flags[name])
+	}
+	return v, nil
+}
+
 // List returns the values of a FlagList flag.
 func (a Args) List(name string) []string {
 	v := a.Flags[name]
@@ -81,6 +118,11 @@ type Op struct {
 
 	// Lock names a cross-process lock held while Run executes (mutating ops).
 	Lock string
+
+	// Requires lists environment variables the op needs (e.g. "DISPLAY" for X11 tools). A daemon
+	// that lacks one takes it from the user service manager, and if that has none either, the
+	// client runs the command itself.
+	Requires []string
 
 	// Run executes the op and returns the lines to print.
 	Run func(ctx context.Context, a Args) ([]string, error)
@@ -137,6 +179,9 @@ func (op *Op) defaultArgs() Args {
 // Execute runs the op once, honoring its lock. queuedAt is the time the user issued the command.
 // A command that was dropped for waiting too long for its lock returns no lines and no error.
 func (op *Op) Execute(ctx context.Context, a Args, queuedAt time.Time) ([]string, error) {
+	if err := op.ensureEnvironment(); err != nil {
+		return nil, err
+	}
 	if op.Lock == "" {
 		return op.Run(ctx, a)
 	}

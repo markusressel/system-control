@@ -48,7 +48,8 @@ Run the three CI checks before reporting a task done.
 
 - **Fallback:** the daemon answers "unhandled" for anything it does not fully understand (unknown flag, `--help`,
   root flags such as `--configuration`). The regular cobra path then runs and is the reference behavior. An op that
-  cannot run right now (e.g. no `DISPLAY`) returns `daemon.ErrUnhandled` before changing anything.
+  cannot run right now returns `daemon.ErrUnhandled` before changing anything; ops that need environment
+  (X11 tools: `DISPLAY`) declare `Op.Requires`, the engine imports it from the user manager or falls back.
   `daemon.Running()` tells daemon and CLI context apart.
 - **Never re-run after silence:** once a request was sent, run locally only on an explicit "unhandled" answer. A
   silent daemon may already have executed a mutation.
@@ -56,7 +57,7 @@ Run the three CI checks before reporting a task done.
   refresh comes from event sources (`Engine.AddSource`, e.g. PipeWire monitor) and `Op.Invalidates`. `Op.Poll` is
   only a fallback. A CLI process that changes state itself calls `daemon.Notify(prefix)`.
 - **Mutations** hold `Op.Lock` (cross-process, shared with the CLI). Waiters beyond `daemon.MaxQueueWait` are dropped
-  on purpose (scroll spam).
+  on purpose (scroll spam): a command waits for its lock at most `MaxQueueWait` in total.
 - **Configuration is a snapshot** in the daemon: read with `configuration.Get()`, call `configuration.Reload()`
   before using values users edit. SIGHUP reloads.
 - **Two clients:** the Go client (`cmd.Execute` calls `daemon.TryRemote` first) and the C client

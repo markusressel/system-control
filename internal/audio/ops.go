@@ -62,9 +62,13 @@ func init() {
 		Name: "audio.volume.set",
 		Lock: volumeLock,
 		Run: func(ctx context.Context, a daemon.Args) ([]string, error) {
-			percent, err := strconv.Atoi(a.Pos[0])
+			arg, err := a.Arg(0)
 			if err != nil {
 				return nil, err
+			}
+			percent, err := strconv.Atoi(arg)
+			if err != nil {
+				return nil, fmt.Errorf("invalid volume %q: not an integer", arg)
 			}
 			return service.Set(a.Flag("device"), a.Flag("stream"), percent)
 		},
@@ -121,7 +125,11 @@ func init() {
 	daemon.Register(daemon.Op{
 		Name: "audio.sink.switch",
 		Run: func(ctx context.Context, a daemon.Args) ([]string, error) {
-			return nil, SwitchSink(a.Pos[0])
+			name, err := a.Arg(0)
+			if err != nil {
+				return nil, err
+			}
+			return nil, SwitchSink(name)
 		},
 		Invalidates: []string{"audio."},
 	})

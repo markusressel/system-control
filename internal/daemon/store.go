@@ -215,6 +215,9 @@ func (e *entry) refresh(ctx context.Context) (err error) {
 		}
 	}()
 
+	if err := e.op.ensureEnvironment(); err != nil {
+		return err
+	}
 	lines, err := e.op.Run(ctx, e.args)
 	if err != nil {
 		return err

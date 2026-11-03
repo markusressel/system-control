@@ -534,7 +534,7 @@ hotspot:
 
 **Requirements:**
 
-* `i3lock`
+* `i3lock`, or the locker set in `session.lock.command`
 * `pgrep` / `pkill`
 
 `session lock` runs in the current process by default. Use `--detached` when you want
@@ -542,6 +542,16 @@ the command to return immediately while lock handling continues in a background 
 
 The session of the user that invoked `sudo` (or the current user) on `$DISPLAY` (or `:0`) is controlled.
 Use `--user` and `--display` to select another one.
+
+The locker is configurable. It must stay in the foreground until the session is unlocked:
+
+```yaml
+session:
+  lock:
+    command: ["xsecurelock"]
+    environment:
+      - "XSECURELOCK_PAM_SERVICE=xsecurelock"
+```
 
 ```shell
 > system-control session lock

@@ -12,7 +12,7 @@ var unlockCmd = &cobra.Command{
 	Long:  ``,
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		terminateErr := terminateProcessesByName("i3lock")
+		terminateErr := terminateProcessesByName(currentLockProcessName())
 		restoreErr := restoreSessionDPMSTimeout()
 
 		if terminateErr != nil && restoreErr != nil {

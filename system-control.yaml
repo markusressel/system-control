@@ -29,3 +29,12 @@ hotspot:
 fan:
   # sysfs file(s) holding the fan mode, defaults to the ASUS WMI throttle_thermal_policy
   # policyFileGlob: /sys/devices/platform/asus-nb-wmi/hwmon/*/device/throttle_thermal_policy
+session:
+  lock:
+    # the screen locker, must stay in the foreground until the session is unlocked, defaults to i3lock
+    # command: ["xsecurelock"]
+    # KEY=value entries for the locker
+    # environment:
+    #   - "XSECURELOCK_PAM_SERVICE=xsecurelock"
+    # name of the running locker process, defaults to the base name of the command
+    # processName: xsecurelock

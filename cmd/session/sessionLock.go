@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/markusressel/system-control/internal/configuration"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
@@ -77,7 +78,7 @@ func startDetachedLockProcess() error {
 }
 
 func sessionLockScript() (err error) {
-	locked, err := isProcessRunning("i3lock")
+	locked, err := isProcessRunning(currentLockProcessName())
 	if err != nil {
 		return err
 	}
@@ -221,11 +222,6 @@ func forceSessionDPMS(mode string) error {
 // runSessionLock runs the screen locker until the session is unlocked. It must not be
 // bound by a timeout: killing the locker would unlock the session.
 func runSessionLock() error {
-	return runInSessionContext(
-		context.Background(), util.ExecCommandContext,
-		"i3lock",
-		"--nofork",
-		"--show-failed-attempts",
-		"-c130003",
-	)
+	command, args := lockCommandLine(configuration.Get().Session.Lock)
+	return runInSessionContext(context.Background(), util.ExecCommandContext, command, args...)
 }

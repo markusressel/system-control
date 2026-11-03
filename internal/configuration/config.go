@@ -19,6 +19,22 @@ type Configuration struct {
 	Redshift RedshiftConfig `mapstructure:"redshift" yaml:"redshift"`
 	Hotspot  HotspotConfig  `mapstructure:"hotspot" yaml:"hotspot"`
 	Fan      FanConfig      `mapstructure:"fan" yaml:"fan"`
+	Session  SessionConfig  `mapstructure:"session" yaml:"session"`
+}
+
+// SessionConfig contains the settings of the desktop session commands.
+type SessionConfig struct {
+	Lock SessionLockConfig `mapstructure:"lock" yaml:"lock"`
+}
+
+// SessionLockConfig describes the screen locker. Empty values use i3lock.
+type SessionLockConfig struct {
+	// Command is the locker and its arguments. It must stay in the foreground until the session is unlocked.
+	Command []string `mapstructure:"command" yaml:"command"`
+	// Environment holds KEY=value entries for the locker. A list, because viper lowercases map keys.
+	Environment []string `mapstructure:"environment" yaml:"environment"`
+	// ProcessName identifies a running locker. Defaults to the base name of the command.
+	ProcessName string `mapstructure:"processName" yaml:"processName"`
 }
 
 // FanConfig describes where the fan policy of the laptop is controlled.

@@ -24,7 +24,7 @@ func init() {
 }
 
 func runLocked(ctx context.Context, a daemon.Args) ([]string, error) {
-	running, err := isProcessRunning("i3lock")
+	running, err := isProcessRunning(currentLockProcessName())
 	if err != nil {
 		return nil, err
 	}

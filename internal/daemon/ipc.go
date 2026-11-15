@@ -216,8 +216,14 @@ func (s *ipcServer) serveWatch(ctx context.Context, conn net.Conn, r *bufio.Read
 		select {
 		case <-ctx.Done():
 			return
-		case lines := <-updates:
-			for _, line := range op.render(args, lines) {
+		case u := <-updates:
+			if u.err != nil {
+				if err := writeFrames(conn, 'E', u.err.Error()); err != nil {
+					return
+				}
+				continue
+			}
+			for _, line := range op.render(args, u.lines) {
 				if err := writeFrames(conn, 'O', line); err != nil {
 					return
 				}

@@ -50,6 +50,9 @@ and serves `--watch`, which prints a new line whenever the value changes:
 30
 ```
 
+When the value can't be read (e.g. a watched device was unplugged), the error goes to stderr and the watch goes on:
+the value follows once it is back.
+
 Everything works without the daemon, it just takes longer. `make deploy` installs and starts it as a systemd
 user service:
 

@@ -11,6 +11,13 @@ import (
 	"time"
 )
 
+// update is what a watcher receives: the current value, or why there is none (e.g. the
+// watched device went away). After an error the next value is always sent, even an unchanged one.
+type update struct {
+	lines []string
+	err   error
+}
+
 // entry is the observed state of one watched invocation. Its subscribers share a single
 // query; the entry lives exactly as long as it has subscribers.
 type entry struct {
@@ -22,7 +29,7 @@ type entry struct {
 	mu      sync.Mutex
 	last    []string
 	hasLast bool
-	subs    map[chan []string]struct{}
+	subs    map[chan update]struct{}
 
 	running bool
 	again   bool
@@ -47,7 +54,10 @@ func newStore() *store {
 // If the first query fails (the state may just not be there yet, e.g. a device that is about
 // to show up), the subscription stays valid and the error is returned as pending. The values
 // follow once a query succeeds. Only ErrUnhandled ends the subscription right away.
-func (s *store) subscribe(ctx context.Context, op *Op, a Args) (updates <-chan []string, cancel func(), pending error) {
+//
+// An error after a value was there (e.g. the watched device went away) is sent to the
+// subscribers as an update, so they don't keep showing the last value.
+func (s *store) subscribe(ctx context.Context, op *Op, a Args) (updates <-chan update, cancel func(), pending error) {
 	// watchers that differ only in how they print share one query
 	shared := op.canonical(a)
 	key := shared.key(op.Name)
@@ -55,12 +65,12 @@ func (s *store) subscribe(ctx context.Context, op *Op, a Args) (updates <-chan [
 	s.mu.Lock()
 	e, exists := s.entries[key]
 	if !exists {
-		e = &entry{key: key, op: op, args: shared, subs: map[chan []string]struct{}{}}
+		e = &entry{key: key, op: op, args: shared, subs: map[chan update]struct{}{}}
 		s.entries[key] = e
 	}
 	s.mu.Unlock()
 
-	ch := make(chan []string, 1)
+	ch := make(chan update, 1)
 
 	err := e.refresh(ctx)
 	if errors.Is(err, ErrUnhandled) && !e.hasValue() {
@@ -74,7 +84,7 @@ func (s *store) subscribe(ctx context.Context, op *Op, a Args) (updates <-chan [
 	e.mu.Lock()
 	e.subs[ch] = struct{}{}
 	if e.hasLast {
-		ch <- slices.Clone(e.last)
+		ch <- update{lines: slices.Clone(e.last)}
 	}
 	e.mu.Unlock()
 
@@ -85,7 +95,7 @@ func (s *store) subscribe(ctx context.Context, op *Op, a Args) (updates <-chan [
 	return ch, func() { s.release(e, ch) }, pending
 }
 
-func (s *store) release(e *entry, ch chan []string) {
+func (s *store) release(e *entry, ch chan update) {
 	e.mu.Lock()
 	if ch != nil {
 		delete(e.subs, ch)
@@ -234,26 +244,37 @@ func (e *entry) refresh(ctx context.Context) (err error) {
 	if e.op.stats != nil {
 		e.op.stats.record(time.Since(start), false, err)
 	}
-	if err != nil {
-		return err
-	}
 
 	e.mu.Lock()
 	defer e.mu.Unlock()
+
+	if err != nil {
+		// the value is gone: tell the subscribers once, the next value is sent in any case
+		if e.hasLast {
+			e.last = nil
+			e.hasLast = false
+			e.publish(update{err: err})
+		}
+		return err
+	}
 
 	if e.hasLast && slices.Equal(e.last, lines) {
 		return nil
 	}
 	e.last = lines
 	e.hasLast = true
+	e.publish(update{lines: lines})
+	return nil
+}
 
+// publish sends an update to all subscribers. e.mu must be held.
+func (e *entry) publish(u update) {
 	for ch := range e.subs {
-		// latest value wins
+		// latest update wins
 		select {
 		case <-ch:
 		default:
 		}
-		ch <- slices.Clone(lines)
+		ch <- update{lines: slices.Clone(u.lines), err: u.err}
 	}
-	return nil
 }

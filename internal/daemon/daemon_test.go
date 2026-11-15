@@ -315,7 +315,7 @@ func TestExecute_DropsStaleQueuedCommands(t *testing.T) {
 	}
 }
 
-// A watch of state that is not available yet reports that and keeps watching.
+// A watch of state that is not available (yet, or any more) reports that and keeps watching.
 func TestWatch_SurvivesInitialError(t *testing.T) {
 	var counter atomic.Int64
 	eng := startTestEngine(t, &counter)
@@ -340,6 +340,20 @@ func TestWatch_SurvivesInitialError(t *testing.T) {
 	eng.Refresh("test.")
 	if got := readFrame(t, r); got != "O 3" {
 		t.Fatalf("frame after the state appeared = %q", got)
+	}
+
+	// state that goes away again is reported, not kept at its last value
+	counter.Store(0)
+	eng.Refresh("test.")
+	if got := readFrame(t, r); got != "E not there yet" {
+		t.Fatalf("frame after the state went away = %q", got)
+	}
+
+	// and when it is back, its value is sent even if it did not change
+	counter.Store(3)
+	eng.Refresh("test.")
+	if got := readFrame(t, r); got != "O 3" {
+		t.Fatalf("frame after the state came back = %q", got)
 	}
 }
 

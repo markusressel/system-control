@@ -1,11 +1,11 @@
 module github.com/markusressel/system-control
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/elliotchance/orderedmap/v2 v2.7.0
 	github.com/godbus/dbus/v5 v5.2.4
-	github.com/gofrs/flock v0.13.1
+	github.com/gofrs/flock v0.13.2
 	github.com/google/uuid v1.6.0
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/mitchellh/go-homedir v1.1.0
@@ -37,7 +37,7 @@ require (
 	github.com/tinygo-org/pio v0.3.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/exp v0.0.0-20260727155853-b88d891fe743 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
 	tinygo.org/x/espradio v0.5.0 // indirect
 )

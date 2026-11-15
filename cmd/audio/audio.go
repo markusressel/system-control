@@ -3,6 +3,7 @@ package audio
 import (
 	"github.com/markusressel/system-control/cmd/audio/device"
 	"github.com/markusressel/system-control/cmd/audio/sink"
+	"github.com/markusressel/system-control/cmd/audio/source"
 	"github.com/markusressel/system-control/cmd/audio/volume"
 	"github.com/spf13/cobra"
 )
@@ -17,5 +18,6 @@ var Command = &cobra.Command{
 func init() {
 	Command.AddCommand(device.DeviceCmd)
 	Command.AddCommand(sink.SinkCmd)
+	Command.AddCommand(source.SourceCmd)
 	Command.AddCommand(volume.VolumeCmd)
 }

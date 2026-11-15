@@ -232,13 +232,19 @@ Sink #64
 > system-control audio sink active "NVIDIA"
 0
 
-// switch active sink to a sink which contains the given text
+// switch active sink to a sink which contains the given text: the running streams move along and keep following
+// the default, f.e. back to Bluetooth headphones that reconnect
 > system-control audio sink switch "Built-in"
 > system-control audio sink switch "X-Fi"
 > system-control audio sink switch "NVIDIA"
 
 > system-control audio sink next
 > system-control audio sink previous
+
+// the same for the default source (input, f.e. a microphone); switching moves the recording streams along
+> system-control audio source active -c name
+alsa_input.pci-0000_11_00.4.analog-stereo
+> system-control audio source switch "Headset"
 ```
 
 ## Battery

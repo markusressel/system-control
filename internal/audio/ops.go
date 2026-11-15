@@ -28,7 +28,7 @@ func init() {
 	daemon.Register(daemon.Op{
 		Name: "audio.volume",
 		Run: func(ctx context.Context, a daemon.Args) ([]string, error) {
-			v, err := service.Volume(a.Flag("device"))
+			v, err := service.Volume(a.Flag("device"), a.Flag("stream"))
 			return []string{v}, err
 		},
 		Watch: always,
@@ -147,29 +147,33 @@ func init() {
 			if err != nil {
 				return nil, err
 			}
+			return nodeColumns(node, a.List("columns"))
+		},
+		Watch: always,
+		Poll:  pollInterval("audio"),
+	})
 
-			var lines []string
-			for _, col := range a.List("columns") {
-				switch col {
-				case "id":
-					lines = append(lines, fmt.Sprint(node.Id))
-				case "name":
-					name, err := node.GetName()
-					if err != nil {
-						return nil, err
-					}
-					lines = append(lines, name)
-				case "description":
-					desc, err := node.GetDescription()
-					if err != nil {
-						return nil, err
-					}
-					lines = append(lines, desc)
-				default:
-					return nil, fmt.Errorf("unknown column: %s", col)
-				}
+	daemon.Register(daemon.Op{
+		Name: "audio.source.switch",
+		Run: func(ctx context.Context, a daemon.Args) ([]string, error) {
+			name, err := a.Arg(0)
+			if err != nil {
+				return nil, err
 			}
-			return lines, nil
+			return nil, SwitchSource(name)
+		},
+		Invalidates: []string{"audio."},
+	})
+
+	daemon.Register(daemon.Op{
+		Name: "audio.source.active",
+		Run: func(ctx context.Context, a daemon.Args) ([]string, error) {
+			state := pipewire.PwDump()
+			node, err := state.GetDefaultSourceNode()
+			if err != nil {
+				return nil, err
+			}
+			return nodeColumns(node, a.List("columns"))
 		},
 		Watch: always,
 		Poll:  pollInterval("audio"),
@@ -203,6 +207,32 @@ func init() {
 		Poll:        pollInterval("audio"),
 		Invalidates: []string{"audio."},
 	})
+}
+
+// nodeColumns returns the requested columns (id, name, description) of a node, one per line.
+func nodeColumns(node pipewire.InterfaceNode, columns []string) ([]string, error) {
+	var lines []string
+	for _, col := range columns {
+		switch col {
+		case "id":
+			lines = append(lines, fmt.Sprint(node.Id))
+		case "name":
+			name, err := node.GetName()
+			if err != nil {
+				return nil, err
+			}
+			lines = append(lines, name)
+		case "description":
+			desc, err := node.GetDescription()
+			if err != nil {
+				return nil, err
+			}
+			lines = append(lines, desc)
+		default:
+			return nil, fmt.Errorf("unknown column: %s", col)
+		}
+	}
+	return lines, nil
 }
 
 // Status describes the health of the PipeWire monitor for `daemon status`.

@@ -6,9 +6,11 @@ import (
 )
 
 var switchCmd = &cobra.Command{
-	Use:   "switch",
+	Use:   "switch <name>",
 	Short: "Switch the default sink",
-	Long: `Switches the default audio sink and moves all existing audio streams to the given one.
+	Long: `Switches the default audio sink. All existing audio streams move along and keep following the default
+(also when a device that went away, f.e. Bluetooth headphones, comes back): streams that an earlier switch or
+pavucontrol put on a certain sink are released from it.
 You can specify the audio sink using its index, but also using other strings that occur in its description:
 
 > system-control audio sink switch "headphone"

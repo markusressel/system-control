@@ -72,16 +72,29 @@ func volumeNodeId(state pipewire.GraphState, device string) int {
 	return 0
 }
 
-// currentVolume returns the volume of a device, preferring our own recent write over the graph.
-// Must be called with s.mu held.
-func (s *Service) currentVolume(state pipewire.GraphState, device string) (float64, error) {
-	volume, err := state.GetVolumeByName(device)
-	if err != nil {
-		return 0, err
+// currentVolume returns the volume of a stream (the first one that matches, like the other commands) or a device,
+// preferring our own recent write over the graph. Must be called with s.mu held.
+func (s *Service) currentVolume(state pipewire.GraphState, device string, stream string) (float64, error) {
+	var volume float64
+	var id int
+	if stream != "" {
+		streams := state.FindStreamNodes(stream)
+		if len(streams) == 0 {
+			return 0, errors.New("stream not found")
+		}
+		volume = streams[0].GetVolume()[0]
+		id = streams[0].Id
+	} else {
+		var err error
+		volume, err = state.GetVolumeByName(device)
+		if err != nil {
+			return 0, err
+		}
+		id = volumeNodeId(state, device)
 	}
 	volume = util.RoundToTwoDecimals(volume)
 
-	if id := volumeNodeId(state, device); id != 0 {
+	if id != 0 {
 		if w, ok := s.lastVolume[id]; ok && time.Since(w.at) < optimisticWindow {
 			return w.value, nil
 		}
@@ -118,12 +131,12 @@ func muteLine(muted bool) string {
 	return "no"
 }
 
-// Volume returns the volume of the given device (default sink if empty) in percent.
-func (s *Service) Volume(device string) (string, error) {
+// Volume returns the volume of the given stream or device (default sink if both are empty) in percent.
+func (s *Service) Volume(device string, stream string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	volume, err := s.currentVolume(s.be.Graph(), device)
+	volume, err := s.currentVolume(s.be.Graph(), device, stream)
 	if err != nil {
 		return "", err
 	}
@@ -167,7 +180,7 @@ func (s *Service) Step(device string, stream string, increase bool) ([]string, e
 
 	state := s.be.Graph()
 
-	volume, err := s.currentVolume(state, device)
+	volume, err := s.currentVolume(state, device, stream)
 	if err != nil {
 		return nil, err
 	}
@@ -346,25 +359,43 @@ func (s *Service) Restore(device string, stream string) ([]string, error) {
 // SwitchSink makes the single sink matching the search string the default sink.
 func SwitchSink(search string) error {
 	state := pipewire.PwDump()
+	sink, err := findSingleNode(state, search, pipewire.MediaClassAudioSink, "sink")
+	if err != nil {
+		return err
+	}
+	return state.SwitchSinkTo(sink)
+}
 
-	var sinks []pipewire.InterfaceNode
+// SwitchSource makes the single source matching the search string the default source.
+func SwitchSource(search string) error {
+	state := pipewire.PwDump()
+	source, err := findSingleNode(state, search, pipewire.MediaClassAudioSource, "source")
+	if err != nil {
+		return err
+	}
+	return state.SwitchSourceTo(source)
+}
+
+// findSingleNode returns the one node of the media class whose name or description contains the search string.
+func findSingleNode(state pipewire.GraphState, search string, mediaClass string, kind string) (pipewire.InterfaceNode, error) {
+	var found []pipewire.InterfaceNode
 	for _, node := range state.FindNodesByName(search) {
-		if mediaClass, _ := node.GetMediaClass(); mediaClass == pipewire.MediaClassAudioSink {
-			sinks = append(sinks, node)
+		if class, _ := node.GetMediaClass(); class == mediaClass {
+			found = append(found, node)
 		}
 	}
 
-	if len(sinks) == 0 {
-		return errors.New("no sink found")
+	if len(found) == 0 {
+		return pipewire.InterfaceNode{}, fmt.Errorf("no %s found", kind)
 	}
-	if len(sinks) > 1 {
-		names := make([]string, len(sinks))
-		for i, node := range sinks {
+	if len(found) > 1 {
+		names := make([]string, len(found))
+		for i, node := range found {
 			name, _ := node.GetName()
 			description, _ := node.GetDescription()
 			names[i] = fmt.Sprintf("%s (%s)", name, description)
 		}
-		return fmt.Errorf("ambiguous sink name, found: %v", names)
+		return pipewire.InterfaceNode{}, fmt.Errorf("ambiguous %s name, found: %v", kind, names)
 	}
-	return state.SwitchSinkTo(sinks[0])
+	return found[0], nil
 }

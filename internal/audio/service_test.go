@@ -160,13 +160,13 @@ func TestVolumeAndMuted_ReflectOwnRecentWrites(t *testing.T) {
 	var calls []setCall
 	s := newFakeService(&graph, &calls)
 
-	if v, _ := s.Volume(""); v != "50" {
+	if v, _ := s.Volume("", ""); v != "50" {
 		t.Fatalf("volume before = %s", v)
 	}
 	if _, err := s.Step("", "", true); err != nil {
 		t.Fatal(err)
 	}
-	if v, _ := s.Volume(""); v != "55" {
+	if v, _ := s.Volume("", ""); v != "55" {
 		t.Errorf("volume right after a step = %s, want 55", v)
 	}
 
@@ -180,7 +180,7 @@ func TestVolumeAndMuted_ReflectOwnRecentWrites(t *testing.T) {
 	// once the window passed the graph is the source of truth again
 	s.lastVolume[7] = written[float64]{0.55, time.Now().Add(-2 * optimisticWindow)}
 	s.lastMuted[7] = written[bool]{true, time.Now().Add(-2 * optimisticWindow)}
-	if v, _ := s.Volume(""); v != "50" {
+	if v, _ := s.Volume("", ""); v != "50" {
 		t.Errorf("volume after the window = %s, want 50", v)
 	}
 	if m, _ := s.Muted("", ""); m != "no" {
@@ -204,5 +204,40 @@ func TestMute_ToggleTwiceWhileGraphIsStale(t *testing.T) {
 	}
 	if first[0] != "yes" || second[0] != "no" {
 		t.Errorf("toggle results = %v, %v; want yes, no", first, second)
+	}
+}
+
+// The volume of a stream is the one of the stream, not of the default sink.
+func TestVolume_OfAStream(t *testing.T) {
+	stream := fakeNode(9, "spotify", 0.30, false)
+	stream.Info.Props["media.class"] = "Stream/Output/Audio"
+	graph := fakeGraph("sinkA", fakeNode(7, "sinkA", 0.50, false), stream)
+	var calls []setCall
+	s := newFakeService(&graph, &calls)
+
+	if v, err := s.Volume("", "spotify"); err != nil || v != "30" {
+		t.Errorf("volume of the stream = %s (%v), want 30", v, err)
+	}
+	if _, err := s.Volume("", "nothing"); err == nil {
+		t.Error("the volume of a stream that does not exist must be an error")
+	}
+}
+
+// Switching looks only at nodes of the wanted kind, so a headset whose output and input share a name is not ambiguous.
+func TestFindSingleNode_OnlyOfTheMediaClass(t *testing.T) {
+	output := fakeNode(1, "bluez_output.AA", 0.5, false)
+	output.Info.Props["media.class"] = pipewire.MediaClassAudioSink
+	input := fakeNode(2, "bluez_input.AA", 0.5, false)
+	input.Info.Props["media.class"] = pipewire.MediaClassAudioSource
+	input.Info.Props["node.description"] = "Headset"
+	output.Info.Props["node.description"] = "Headset"
+	state := pipewire.GraphState{Nodes: []pipewire.InterfaceNode{output, input}}
+
+	source, err := findSingleNode(state, "Headset", pipewire.MediaClassAudioSource, "source")
+	if err != nil || source.Id != 2 {
+		t.Errorf("source = %d (%v), want 2", source.Id, err)
+	}
+	if _, err := findSingleNode(state, "Nothing", pipewire.MediaClassAudioSource, "source"); err == nil {
+		t.Error("a source that does not exist must be an error")
 	}
 }

@@ -35,29 +35,29 @@ func RotateActiveSinkPipewire(reverse bool) error {
 	return state.SwitchSinkTo(nextSink)
 }
 
-func moveStreamToNode(streamId int, nodeId int, objectId int) error {
-	_, err := util.ExecCommand(
-		"pw-metadata",
-		strconv.Itoa(streamId),
-		"target.node", strconv.Itoa(nodeId),
-	)
-	if err != nil {
-		return err
+// unpinStream removes the target a stream was moved to (by an earlier switch, or pavucontrol), so it
+// follows the default device: WirePlumber moves it when the default changes, also when a device
+// that went away (e.g. Bluetooth headphones) comes back. A pinned stream would stay where it is.
+func unpinStream(streamId int) error {
+	for _, key := range []string{"target.node", "target.object"} {
+		if _, err := util.ExecCommand("pw-metadata", "-d", strconv.Itoa(streamId), key); err != nil {
+			return err
+		}
 	}
-
-	_, err = util.ExecCommand(
-		"pw-metadata",
-		strconv.Itoa(streamId),
-		"target.object", strconv.Itoa(objectId),
-	)
-	return err
+	return nil
 }
 
 // Switches the default sink to the target sink
 // You need to get a sink name with "pw-cli ls Node"
 // and look for the "node.name" property for a valid value.
 func setDefaultSink(sinkName string) (err error) {
-	_, err = util.ExecCommand("pw-metadata", "0", "default.configured.audio.sink", `{ "name": "`+sinkName+`" }`)
+	return setDefaultNode("sink", sinkName)
+}
+
+// setDefaultNode makes the node with the given "node.name" the configured default "audio.<kind>" ("sink" or
+// "source").
+func setDefaultNode(kind string, nodeName string) error {
+	_, err := util.ExecCommand("pw-metadata", "0", "default.configured.audio."+kind, `{ "name": "`+nodeName+`" }`)
 	return err
 }
 

@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	MediaClassAudioSink = "Audio/Sink"
+	MediaClassAudioSink   = "Audio/Sink"
+	MediaClassAudioSource = "Audio/Source"
 )
 
 type GraphState struct {
@@ -157,15 +158,22 @@ func metadataNodeName(value interface{}) string {
 	return name
 }
 
-// defaultSinkCandidates returns the names that may identify the default "audio.sink", best first:
-//
-//   - default.configured.audio.sink is what was explicitly set. It is empty or names a device
-//     that is currently not present (a headset that is switched off) more often than one would think.
-//   - default.audio.sink is the sink that is actually used, WirePlumber falls back to another one
-//     while the configured sink is missing.
+// defaultSinkCandidates returns the names that may identify the default "audio.sink", best first (see
+// defaultNodeCandidates).
 func (state *GraphState) defaultSinkCandidates() []string {
+	return state.defaultNodeCandidates("sink")
+}
+
+// defaultNodeCandidates returns the names that may identify the default "audio.<kind>" ("sink" or "source"), best
+// first:
+//
+//   - default.configured.audio.<kind> is what was explicitly set. It is empty or names a device
+//     that is currently not present (a headset that is switched off) more often than one would think.
+//   - default.audio.<kind> is the node that is actually used, WirePlumber falls back to another one
+//     while the configured one is missing.
+func (state *GraphState) defaultNodeCandidates(kind string) []string {
 	var names []string
-	for _, key := range []string{"default.configured.audio.sink", "default.audio.sink"} {
+	for _, key := range []string{"default.configured.audio." + kind, "default.audio." + kind} {
 		for _, item := range state.Metadatas {
 			if item.Props["metadata.name"] != "default" {
 				continue
@@ -205,22 +213,6 @@ func (state *GraphState) GetDefaultSinkNodeName() (string, error) {
 		return "", err
 	}
 	return node.GetName()
-}
-
-func (state *GraphState) GetDefaultSource() (string, error) {
-	defaultSinkName, err := state.GetDefaultSinkNodeName()
-	if err != nil {
-		return "", err
-	}
-
-	node := state.FindNodesByName(defaultSinkName)
-	if len(node) <= 0 {
-		return "", errors.New("default sink not found")
-	}
-	if len(node) > 1 {
-		return "", errors.New("multiple default sinks found")
-	}
-	return node[0].GetName()
 }
 
 func (state *GraphState) GetNodeById(id int) (InterfaceNode, error) {
@@ -381,6 +373,17 @@ func (state *GraphState) GetStreamNodes() []InterfaceNode {
 	return result
 }
 
+// GetInputStreamNodes returns the streams that record audio (f.e. the microphone of a call).
+func (state *GraphState) GetInputStreamNodes() []InterfaceNode {
+	var result []InterfaceNode
+	for _, node := range state.Nodes {
+		if mediaClass, _ := node.Info.Props["media.class"].(string); mediaClass == "Stream/Input/Audio" {
+			result = append(result, node)
+		}
+	}
+	return result
+}
+
 func (state *GraphState) FindStreamNodes(name string) []InterfaceNode {
 	result := make([]InterfaceNode, 0)
 	streamNodes := state.GetStreamNodes()
@@ -398,30 +401,36 @@ func (state *GraphState) FindStreamNodes(name string) []InterfaceNode {
 	return result
 }
 
-// SwitchSinkTo switches the default sink to the given node and moves
-// all existing streams on the currently active sink to the new default sink
+// SwitchSourceTo makes the given node the default source. The recording streams follow it: they are
+// unpinned from where an earlier switch put them, and WirePlumber moves them to the new default.
+func (state *GraphState) SwitchSourceTo(node InterfaceNode) error {
+	nodeName, err := node.GetName()
+	if err != nil {
+		return err
+	}
+	if err := setDefaultNode("source", nodeName); err != nil {
+		return err
+	}
+	for _, stream := range state.GetInputStreamNodes() {
+		if err := unpinStream(stream.Id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SwitchSinkTo makes the given node the default sink. The playback streams follow it: they are
+// unpinned from where an earlier switch put them, and WirePlumber moves them to the new default.
 func (state *GraphState) SwitchSinkTo(node InterfaceNode) error {
 	nodeName, err := node.GetName()
 	if err != nil {
 		return err
 	}
-
-	streams := state.GetStreamNodes()
-
-	// figure out id of target stream
-	objectSerial, err := node.GetObjectSerial()
-	if err != nil {
+	if err := setDefaultSink(nodeName); err != nil {
 		return err
 	}
-
-	err = setDefaultSink(nodeName)
-	if err != nil {
-		return err
-	}
-
-	for _, stream := range streams {
-		err = moveStreamToNode(stream.Id, node.Id, objectSerial)
-		if err != nil {
+	for _, stream := range state.GetStreamNodes() {
+		if err := unpinStream(stream.Id); err != nil {
 			return err
 		}
 	}
@@ -451,13 +460,14 @@ func (state *GraphState) GetVolumeByName(name string) (float64, error) {
 		node = nodes[0]
 	}
 
-	// Check if the node is linked to a hardware device
-	if deviceIDRaw, ok := node.Info.Props["device.id"]; ok {
-		// device.id is usually a float64 from JSON
-		deviceID := int(deviceIDRaw.(float64))
-		device, err := state.GetDeviceById(deviceID)
+	// Check if the node is linked to a route of a hardware device
+	deviceIDRaw, hasDevice := node.Info.Props["device.id"]
+	profileDeviceRaw, hasProfileDevice := node.Info.Props["card.profile.device"]
+	if hasDevice && hasProfileDevice {
+		// the ids are float64 from JSON
+		device, err := state.GetDeviceById(int(deviceIDRaw.(float64)))
 		if err == nil {
-			vols, err := device.GetVolume()
+			vols, err := device.GetRouteVolume(int(profileDeviceRaw.(float64)))
 			if err == nil && len(vols) > 0 {
 				return vols[0], nil
 			}
@@ -471,9 +481,18 @@ func (state *GraphState) GetVolumeByName(name string) (float64, error) {
 
 // GetDefaultSinkNode returns the node that is currently used as the default "audio.sink".
 func (state *GraphState) GetDefaultSinkNode() (InterfaceNode, error) {
-	names := state.defaultSinkCandidates()
+	return state.getDefaultNode("sink")
+}
+
+// GetDefaultSourceNode returns the node that is currently used as the default "audio.source".
+func (state *GraphState) GetDefaultSourceNode() (InterfaceNode, error) {
+	return state.getDefaultNode("source")
+}
+
+func (state *GraphState) getDefaultNode(kind string) (InterfaceNode, error) {
+	names := state.defaultNodeCandidates(kind)
 	if len(names) == 0 {
-		return InterfaceNode{}, errors.New("default sink not found")
+		return InterfaceNode{}, fmt.Errorf("default %s not found", kind)
 	}
 
 	for _, name := range names {

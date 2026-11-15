@@ -58,30 +58,27 @@ func (n InterfaceNode) GetVolume() []float64 {
 	return result
 }
 
-func (d InterfaceDevice) GetVolume() ([]float64, error) {
-	routes := d.Info.Params.GetOutputRoutes()
-	if len(routes) == 0 {
-		return nil, errors.New("no output routes found")
-	}
-
-	// Usually, we want the route that is "active" or "save: true"
-	// For most devices, there is only one primary output route.
-	for _, route := range routes {
-		// Look into route.Props for "channelVolumes"
-		// Note: You might need to adjust this depending on how
-		// your DeviceRoute struct is defined.
-		if v, ok := route.Props["channelVolumes"].([]interface{}); ok {
-			result := make([]float64, len(v))
-			for i, val := range v {
-				// PipeWire stores linear volume; pavucontrol uses cubic.
-				// We use Cbrt to convert back to the [0..1] UI scale.
-				result[i] = math.Cbrt(val.(float64))
-			}
-			return result, nil
+// GetRouteVolume returns the volume of the route of the device that belongs to the node with the given
+// "card.profile.device", in [0..1] per channel. A device has a route per direction (f.e. the line out and the
+// microphone of a sound card), so the first output route is not the volume of an input node.
+func (d InterfaceDevice) GetRouteVolume(profileDevice int) ([]float64, error) {
+	for _, route := range d.Info.Params.Route {
+		if route.Device != profileDevice {
+			continue
 		}
+		v, ok := route.Props["channelVolumes"].([]interface{})
+		if !ok {
+			return nil, errors.New("volume props not found in route")
+		}
+		result := make([]float64, len(v))
+		for i, val := range v {
+			// PipeWire stores linear volume; pavucontrol uses cubic.
+			// We use Cbrt to convert back to the [0..1] UI scale.
+			result[i] = math.Cbrt(val.(float64))
+		}
+		return result, nil
 	}
-
-	return nil, errors.New("volume props not found in routes")
+	return nil, errors.New("no route found for the profile device")
 }
 
 func (n InterfaceNode) GetObjectSerial() (int, error) {

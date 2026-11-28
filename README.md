@@ -192,6 +192,9 @@ spotify
 > system-control media position
 ```
 
+Without `--player`, `play` and `togglePlayPause` resume only the player that was playing last (as seen by the daemon),
+not every paused one. The other commands apply to all players.
+
 Filter/select a player with `-p` / `--player` (supports simple regex matching):
 
 ```shell

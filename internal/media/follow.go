@@ -10,10 +10,13 @@ import (
 	"time"
 )
 
-// followCommand returns the command printing a line whenever the status of a player changes.
+// followFormat is the format of a line of the follow command, see parseFollowLine.
+const followFormat = "{{playerInstance}}\t{{status}}"
+
+// followCommand returns the command printing a line whenever the status of any player changes.
 // A variable for tests.
 var followCommand = func(ctx context.Context) *exec.Cmd {
-	return exec.CommandContext(ctx, "playerctl", "--follow", "status")
+	return exec.CommandContext(ctx, "playerctl", "--all-players", "--follow", "--format", followFormat, "status")
 }
 
 // restart delays of a follow command that ended, variables for tests
@@ -31,7 +34,7 @@ func Following() bool {
 }
 
 // Follow calls onChange whenever the status of a player changes (or one appears or goes
-// away), until ctx is done. A follow command that ends is started again with a backoff.
+// away), until ctx is done. It records the status for LastPlayed. A follow command that ends is started again with a backoff.
 func Follow(ctx context.Context, onChange func()) {
 	delay := followRestartDelay
 	loggedStartFailure := false
@@ -79,6 +82,9 @@ func followOnce(ctx context.Context, onChange func()) error {
 	following.Store(true)
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
+		if player, status, ok := parseFollowLine(scanner.Text()); ok {
+			recordStatus(player, status)
+		}
 		onChange()
 	}
 	return scanner.Err()

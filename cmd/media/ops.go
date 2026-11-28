@@ -11,8 +11,8 @@ import (
 
 const lockName = "media"
 
-// followedPollInterval is the safety net while player changes are followed: playerctl reports
-// the most recently updated player only, so a change of another one is caught by polling.
+// followedPollInterval is the safety net while player changes are followed, in case playerctl
+// misses a change.
 const followedPollInterval = time.Minute
 
 // pollInterval is how often watched media state is re-queried. A status that is followed is
@@ -67,17 +67,30 @@ func init() {
 
 	// playing something changes the status and position right away
 	for name, command := range map[string]string{
-		"media.play":            "play",
-		"media.pause":           "pause",
-		"media.stop":            "stop",
-		"media.next":            "next",
-		"media.previous":        "previous",
-		"media.togglePlayPause": "play-pause",
+		"media.pause":    "pause",
+		"media.stop":     "stop",
+		"media.next":     "next",
+		"media.previous": "previous",
 	} {
 		daemon.Register(daemon.Op{
 			Name:        name,
 			Lock:        lockName,
 			Run:         playerctl(command),
+			Invalidates: []string{"media"},
+		})
+	}
+
+	// without --player both resume a single player, see internalmedia.Play
+	for name, run := range map[string]func(string) error{
+		"media.play":            internalmedia.Play,
+		"media.togglePlayPause": internalmedia.TogglePlayPause,
+	} {
+		daemon.Register(daemon.Op{
+			Name: name,
+			Lock: lockName,
+			Run: func(ctx context.Context, a daemon.Args) ([]string, error) {
+				return nil, run(a.Flag("player"))
+			},
 			Invalidates: []string{"media"},
 		})
 	}

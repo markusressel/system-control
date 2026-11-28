@@ -83,3 +83,19 @@ func TestFollow_SurvivesAMissingTool(t *testing.T) {
 		t.Error("Following() = true without a tool")
 	}
 }
+
+func TestFollow_RecordsWhichPlayerPlayedLast(t *testing.T) {
+	resetHistory()
+	t.Cleanup(resetHistory)
+	fakeFollow(t, `printf 'firefox\tPlaying\nbeeper\tPaused\n'; sleep 30`)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var changes atomic.Int64
+	go Follow(ctx, func() { changes.Add(1) })
+
+	waitFor(t, "two changes", func() bool { return changes.Load() >= 2 })
+	if got := LastPlayed([]string{"beeper", "firefox"}); got != "firefox" {
+		t.Errorf("LastPlayed = %q, want firefox", got)
+	}
+}

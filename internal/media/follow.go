@@ -66,7 +66,10 @@ func Follow(ctx context.Context, onChange func()) {
 
 func followOnce(ctx context.Context, onChange func()) error {
 	cmd := followCommand(ctx)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGTERM}
+	// its own process group: canceling kills children too, which would otherwise keep stdout
+	// open and the scanner blocked
+	cmd.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGTERM, Setpgid: true}
+	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err

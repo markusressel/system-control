@@ -28,7 +28,7 @@ func waitFor(t *testing.T, what string, cond func() bool) {
 }
 
 func TestFollow_CallsBackForEveryLine(t *testing.T) {
-	fakeFollow(t, "echo Playing; echo Paused; sleep 30")
+	fakeFollow(t, "echo Playing; echo Paused; sleep 30; true") // sleep as a child, like dash runs it
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var changes atomic.Int64
@@ -87,7 +87,7 @@ func TestFollow_SurvivesAMissingTool(t *testing.T) {
 func TestFollow_RecordsWhichPlayerPlayedLast(t *testing.T) {
 	resetHistory()
 	t.Cleanup(resetHistory)
-	fakeFollow(t, `printf 'firefox\tPlaying\nbeeper\tPaused\n'; sleep 30`)
+	fakeFollow(t, `printf 'firefox\tPlaying\nbeeper\tPaused\n'; sleep 30; true`)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

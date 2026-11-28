@@ -1,11 +1,9 @@
 package bluetooth
 
 import (
-	"sort"
 	"strconv"
 
 	"github.com/markusressel/system-control/internal/bluetooth"
-	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -17,28 +15,8 @@ var bluetoothDevicesCmd = &cobra.Command{
 	Short: "List all known Bluetooth Devices",
 	Long:  ``,
 	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		devices, err := bluetooth.GetBluetoothDevices()
-		if err != nil {
-			return err
-		}
-
-		// sort by name
-		sort.Sort(devices)
-
-		filteredDevices := util.FilterFunc(devices, func(device bluetooth.BluetoothDevice) bool {
-			if filterConnected && !device.Connected {
-				return false
-			}
-			if filterPaired && !device.Paired {
-				return false
-			}
-			return true
-		})
-
-		printBluetoothDevices(filteredDevices)
-
-		return nil
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return bluetooth.PrintDevices(filterConnected, filterPaired)
 	},
 }
 

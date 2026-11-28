@@ -1,6 +1,9 @@
 package session
 
-import "github.com/spf13/cobra"
+import (
+	internalsession "github.com/markusressel/system-control/internal/session"
+	"github.com/spf13/cobra"
+)
 
 var (
 	sessionUser    string
@@ -17,4 +20,9 @@ var Command = &cobra.Command{
 func init() {
 	Command.PersistentFlags().StringVar(&sessionUser, "user", "", "User that owns the session (default: $SUDO_USER, else current user)")
 	Command.PersistentFlags().StringVar(&sessionDisplay, "display", "", "X display of the session (default: $DISPLAY, else :0)")
+}
+
+// currentSession returns the session selected by the --user and --display flags.
+func currentSession() internalsession.Session {
+	return internalsession.Session{User: sessionUser, Display: sessionDisplay}
 }

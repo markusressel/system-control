@@ -1,6 +1,7 @@
 package battery
 
 import (
+	batteryutil "github.com/markusressel/system-control/internal/battery"
 	"github.com/spf13/cobra"
 )
 
@@ -16,8 +17,8 @@ var Command = &cobra.Command{
 func init() {
 	Command.PersistentFlags().StringVarP(
 		&Name,
-		"name", "n",
-		"BAT0",
+		batteryutil.NameFlag, "n",
+		batteryutil.DefaultName,
 		"Battery Name",
 	)
 }

@@ -4,13 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/markusressel/system-control/internal/bluetooth"
 	"github.com/markusressel/system-control/internal/configuration"
 	"github.com/markusressel/system-control/internal/daemon"
 )
 
 func init() {
-	daemon.RegisterSource(eventSource, bluetooth.WatchStatus)
+	daemon.RegisterSource(eventSource, WatchStatus)
 
 	daemon.Register(daemon.Op{
 		Name:  "bluetooth.connected",
@@ -26,7 +25,7 @@ func runConnected(ctx context.Context, a daemon.Args) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	devices, err := bluetooth.GetBluetoothDevices()
+	devices, err := GetBluetoothDevices()
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +51,7 @@ func pollInterval() time.Duration {
 	if configured := configuredPollInterval(); configured > 0 {
 		return configured
 	}
-	if bluetooth.Watching() {
+	if Watching() {
 		return 0
 	}
 	return unwatchedPollInterval
@@ -60,5 +59,5 @@ func pollInterval() time.Duration {
 
 // eventSource refreshes watched bluetooth state whenever BlueZ reports a change.
 func eventSource(ctx context.Context, refresh func(prefixes ...string)) {
-	go bluetooth.WatchChanges(ctx, func() { refresh("bluetooth.") })
+	go WatchChanges(ctx, func() { refresh("bluetooth.") })
 }

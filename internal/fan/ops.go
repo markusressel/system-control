@@ -22,20 +22,20 @@ func init() {
 }
 
 func runMode(ctx context.Context, a daemon.Args) ([]string, error) {
-	mode, err := readFanMode()
+	mode, err := ReadMode()
 	if err != nil {
 		return nil, err
 	}
 
-	switch modeType := a.Flag(fanModeTypeFlag); modeType {
-	case fanModeTypeNumber:
+	switch modeType := a.Flag(TypeFlag); modeType {
+	case TypeNumber:
 		return []string{fmt.Sprint(mode)}, nil
-	case fanModeTypeText:
-		if modeName, ok := fanModeNames[mode]; ok {
+	case TypeText:
+		if modeName, ok := modeNames[mode]; ok {
 			return []string{modeName}, nil
 		}
 		return []string{fmt.Sprintf("Unknown (%d)", mode)}, nil
 	default:
-		return nil, fmt.Errorf("invalid value for --%s: %q (expected %q or %q)", fanModeTypeFlag, modeType, fanModeTypeText, fanModeTypeNumber)
+		return nil, fmt.Errorf("invalid value for --%s: %q (expected %q or %q)", TypeFlag, modeType, TypeText, TypeNumber)
 	}
 }

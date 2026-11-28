@@ -23,13 +23,13 @@ func runBattery(ctx context.Context, a daemon.Args) ([]string, error) {
 	var battery string
 	var err error
 
-	switch outputType := a.Flag(mouseBatteryTypeFlag); outputType {
-	case mouseBatteryTypePercentage:
+	switch outputType := a.Flag(BatteryTypeFlag); outputType {
+	case BatteryTypePercentage:
 		battery, err = GetMouseBattery()
-	case mouseBatteryTypeNumber:
+	case BatteryTypeNumber:
 		battery, err = GetMouseBatteryNumber()
 	default:
-		return nil, fmt.Errorf("invalid value for --%s: %q (expected %q or %q)", mouseBatteryTypeFlag, outputType, mouseBatteryTypePercentage, mouseBatteryTypeNumber)
+		return nil, fmt.Errorf("invalid value for --%s: %q (expected %q or %q)", BatteryTypeFlag, outputType, BatteryTypePercentage, BatteryTypeNumber)
 	}
 	if err != nil {
 		return nil, err

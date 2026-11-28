@@ -6,10 +6,14 @@ import (
 
 	"github.com/markusressel/system-control/internal/configuration"
 	"github.com/markusressel/system-control/internal/daemon"
-	internalmedia "github.com/markusressel/system-control/internal/media"
 )
 
-const lockName = "media"
+const (
+	// PlayerFlag is the name of the flag of the `media` commands that selects the player by name or regex.
+	PlayerFlag = "player"
+
+	lockName = "media"
+)
 
 // followedPollInterval is the safety net while player changes are followed, in case playerctl
 // misses a change.
@@ -22,7 +26,7 @@ func pollInterval(def time.Duration, followed bool) func() time.Duration {
 		if configured := configuration.Get().Daemon.PollIntervals["media"]; configured > 0 {
 			return configured
 		}
-		if followed && internalmedia.Following() {
+		if followed && Following() {
 			return followedPollInterval
 		}
 		return def
@@ -31,13 +35,13 @@ func pollInterval(def time.Duration, followed bool) func() time.Duration {
 
 // eventSource refreshes watched media state whenever a player changes its status.
 func eventSource(ctx context.Context, refresh func(prefixes ...string)) {
-	go internalmedia.Follow(ctx, func() { refresh("media") })
+	go Follow(ctx, func() { refresh("media") })
 }
 
 // playerctl returns an op implementation printing the output of a playerctl command.
 func playerctl(command string) func(context.Context, daemon.Args) ([]string, error) {
 	return func(ctx context.Context, a daemon.Args) ([]string, error) {
-		output, err := internalmedia.Query(command, a.Flag("player"))
+		output, err := Query(command, a.Flag(PlayerFlag))
 		if err != nil || output == "" {
 			return nil, err
 		}
@@ -46,7 +50,7 @@ func playerctl(command string) func(context.Context, daemon.Args) ([]string, err
 }
 
 func init() {
-	daemon.RegisterSource(eventSource, internalmedia.FollowStatus)
+	daemon.RegisterSource(eventSource, FollowStatus)
 
 	// `media` without a sub command shows the status
 	for _, name := range []string{"media", "media.status"} {
@@ -79,16 +83,16 @@ func init() {
 		})
 	}
 
-	// without --player both resume a single player, see internalmedia.Play
+	// without --player both resume a single player, see Play
 	for name, run := range map[string]func(string) error{
-		"media.play":            internalmedia.Play,
-		"media.togglePlayPause": internalmedia.TogglePlayPause,
+		"media.play":            Play,
+		"media.togglePlayPause": TogglePlayPause,
 	} {
 		daemon.Register(daemon.Op{
 			Name: name,
 			Lock: lockName,
 			Run: func(ctx context.Context, a daemon.Args) ([]string, error) {
-				return nil, run(a.Flag("player"))
+				return nil, run(a.Flag(PlayerFlag))
 			},
 			Invalidates: []string{"media"},
 		})
@@ -97,11 +101,11 @@ func init() {
 	daemon.Register(daemon.Op{
 		Name: "media.players",
 		Run: func(ctx context.Context, a daemon.Args) ([]string, error) {
-			players, err := internalmedia.ListPlayers()
+			players, err := ListPlayers()
 			if err != nil {
 				return nil, err
 			}
-			return internalmedia.MatchPlayers(players, a.Flag("player"))
+			return MatchPlayers(players, a.Flag(PlayerFlag))
 		},
 	})
 }

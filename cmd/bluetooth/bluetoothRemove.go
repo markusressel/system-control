@@ -11,16 +11,7 @@ var bluetoothRemoveCmd = &cobra.Command{
 	Long:  ``,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		devices, err := bluetooth.GetBluetoothDevices()
-		if err != nil {
-			return err
-		}
-
-		device, err := resolveDevice(args[0], devices)
-		if err != nil {
-			return err
-		}
-		return bluetooth.RemoveBluetoothDevice(device)
+		return bluetooth.RemoveByName(args[0])
 	},
 }
 

@@ -11,20 +11,11 @@ var bluetoothDisconnectCmd = &cobra.Command{
 	Long:  ``,
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 || args[0] == "" {
-			return bluetooth.DisconnectAllBluetoothDevices()
+		name := ""
+		if len(args) > 0 {
+			name = args[0]
 		}
-
-		devices, err := bluetooth.GetBluetoothDevices()
-		if err != nil {
-			return err
-		}
-
-		device, err := resolveDevice(args[0], devices)
-		if err != nil {
-			return err
-		}
-		return bluetooth.DisconnectBluetoothDevice(device)
+		return bluetooth.DisconnectByName(name)
 	},
 }
 

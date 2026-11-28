@@ -2,7 +2,6 @@ package touchpad
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/markusressel/system-control/internal/daemon"
 	"github.com/markusressel/system-control/internal/util"
@@ -29,19 +28,9 @@ func init() {
 		if err != nil {
 			return err
 		}
-		enabled, err := strconv.ParseBool(arg)
-		if err != nil {
-			return err
-		}
-		return util.SetTouchpadEnabled(enabled)
+		return SetArg(arg)
 	})
-	register("touchpad.toggle", func(daemon.Args) error {
-		enabled, err := util.IsTouchpadEnabled()
-		if err != nil {
-			return err
-		}
-		return util.SetTouchpadEnabled(!enabled)
-	})
+	register("touchpad.toggle", func(daemon.Args) error { return Toggle() })
 	register("touchpad.toggleVerticalScrollDirection", func(daemon.Args) error {
 		return util.ToggleTouchpadScrollVerticalDirection()
 	})

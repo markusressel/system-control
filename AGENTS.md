@@ -88,6 +88,8 @@ Only what is not obvious from the tree:
 - `internal/bluetooth/` — BlueZ D-Bus only (one `GetManagedObjects` per query, signals for `--watch`).
 - `internal/wifi/` — nmcli in terse mode, typed structs.
 - `internal/battery/`, `internal/disk/` — sysfs batteries (incl. Logitech HID++), smartctl/nvme.
+- `internal/redshift/` — redshift values per display; brightness, gamma and color temperature steps share `channel`.
+- `internal/{fan,mouse,session,touchpad,media}/` — the other subsystems, each with its `ops.go`.
 - `internal/util/` — `ExecCommand`, sysfs file I/O, X11 tool wrappers (xrandr, xinput, wmctrl). X11 is assumed.
 - `cmd/match_test.go` — compares daemon command line parsing with cobra's; keep it green when touching flags.
 

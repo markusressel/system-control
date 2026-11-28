@@ -1,7 +1,9 @@
 package cpu
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -75,27 +77,24 @@ type CpuInfo struct {
 }
 
 func GetCpuInfo() ([]CpuInfo, error) {
-	result, err := util.ExecCommand(
-		"cat",
-		"/proc/cpuinfo",
-	)
+	content, err := os.ReadFile("/proc/cpuinfo")
 	if err != nil {
 		return nil, err
 	}
+	return ParseCpuInfo(string(content)), nil
+}
 
-	// split on empty lines
-	entries := strings.Split(result, "\n\n")
-
+// ParseCpuInfo parses the content of /proc/cpuinfo, which contains one block per logical CPU.
+func ParseCpuInfo(content string) []CpuInfo {
 	cpuInfoList := make([]CpuInfo, 0)
-	for _, entry := range entries {
+	for _, entry := range strings.Split(strings.TrimSpace(content), "\n\n") {
 		cpuInfo, err := parseCpuInfoEntry(entry)
 		if err != nil {
 			continue
 		}
 		cpuInfoList = append(cpuInfoList, cpuInfo)
 	}
-
-	return cpuInfoList, nil
+	return cpuInfoList
 }
 
 func parseCpuInfoEntry(entry string) (CpuInfo, error) {
@@ -111,7 +110,11 @@ func parseCpuInfoEntry(entry string) (CpuInfo, error) {
 		}
 	}
 
-	index, _ := strconv.Atoi(cpuInfoMap["processor"])
+	processor, found := cpuInfoMap["processor"]
+	if !found {
+		return CpuInfo{}, errors.New("not a processor entry")
+	}
+	index, _ := strconv.Atoi(processor)
 	cpuInfo := CpuInfo{
 		Index:     index,
 		VendorId:  cpuInfoMap["vendor_id"],

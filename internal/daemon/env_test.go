@@ -1,0 +1,265 @@
+package daemon
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"net"
+	"os"
+	"strings"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/markusressel/system-control/internal/util"
+	"github.com/spf13/cobra"
+)
+
+func TestEnsureEnvironment(t *testing.T) {
+	op := &Op{Name: "test.x11", Requires: []string{"DISPLAY"}}
+
+	fakeManager := func(out string) {
+		restore := util.SetRunner(func(ctx context.Context, command string, args ...string) (string, error) {
+			return out, nil
+		})
+		t.Cleanup(restore)
+	}
+
+	// as a daemon
+	runningEngine.Store(&Engine{})
+	t.Cleanup(func() { runningEngine.Store(nil) })
+
+	t.Run("imports from the service manager", func(t *testing.T) {
+		t.Setenv("DISPLAY", "")
+		t.Setenv("XAUTHORITY", "")
+		fakeManager("PATH=/usr/bin\nDISPLAY=:7\nXAUTHORITY=/run/xauth\nOTHER=x")
+		if err := op.ensureEnvironment(); err != nil {
+			t.Fatal(err)
+		}
+		if got := os.Getenv("DISPLAY"); got != ":7" {
+			t.Errorf("DISPLAY = %q", got)
+		}
+		if got := os.Getenv("XAUTHORITY"); got != "/run/xauth" {
+			t.Errorf("XAUTHORITY = %q", got)
+		}
+		if got := os.Getenv("OTHER"); got != "" {
+			t.Errorf("unrelated variable imported: %q", got)
+		}
+	})
+
+	t.Run("unhandled without DISPLAY anywhere", func(t *testing.T) {
+		t.Setenv("DISPLAY", "")
+		fakeManager("PATH=/usr/bin")
+		if err := op.ensureEnvironment(); !errors.Is(err, ErrUnhandled) {
+			t.Errorf("err = %v, want ErrUnhandled", err)
+		}
+	})
+
+	t.Run("keeps an existing value", func(t *testing.T) {
+		t.Setenv("DISPLAY", ":1")
+		fakeManager("DISPLAY=:9")
+		if err := op.ensureEnvironment(); err != nil || os.Getenv("DISPLAY") != ":1" {
+			t.Errorf("err = %v, DISPLAY = %q", err, os.Getenv("DISPLAY"))
+		}
+	})
+
+	t.Run("CLI is never touched", func(t *testing.T) {
+		runningEngine.Store(nil)
+		t.Setenv("DISPLAY", "")
+		if err := op.ensureEnvironment(); err != nil {
+			t.Errorf("err = %v", err)
+		}
+	})
+}
+
+func TestArgsTypedAccessors(t *testing.T) {
+	a := Args{Flags: map[string]string{"n": "5", "f": "0.25", "d": "2s", "bad": "x"}, Pos: []string{"p"}}
+
+	if v, err := a.Int("n"); err != nil || v != 5 {
+		t.Errorf("Int = %v, %v", v, err)
+	}
+	if v, err := a.Float("f"); err != nil || v != 0.25 {
+		t.Errorf("Float = %v, %v", v, err)
+	}
+	if v, err := a.Duration("d"); err != nil || v.String() != "2s" {
+		t.Errorf("Duration = %v, %v", v, err)
+	}
+	if v, err := a.Arg(0); err != nil || v != "p" {
+		t.Errorf("Arg(0) = %v, %v", v, err)
+	}
+
+	if _, err := a.Arg(1); err == nil {
+		t.Error("Arg(1) must fail")
+	}
+	for name, get := range map[string]func() error{
+		"bad int":      func() error { _, err := a.Int("bad"); return err },
+		"bad float":    func() error { _, err := a.Float("bad"); return err },
+		"bad duration": func() error { _, err := a.Duration("bad"); return err },
+		"unknown flag": func() error { _, err := a.Int("nope"); return err },
+	} {
+		if get() == nil {
+			t.Errorf("%s must fail", name)
+		}
+	}
+}
+
+func TestExecute_LockFor(t *testing.T) {
+	t.Setenv(EnvRuntimeDir, t.TempDir())
+
+	unlock, err := AcquireLock("busy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unlock()
+
+	ran := 0
+	op := &Op{
+		Name: "test.mixed",
+		LockFor: func(a Args) string {
+			if a.Flag("set") == "" {
+				return ""
+			}
+			return "busy"
+		},
+		Run: func(ctx context.Context, a Args) ([]string, error) { ran++; return nil, nil },
+	}
+
+	// a query ignores the busy lock
+	if _, err := op.Execute(context.Background(), Args{Flags: map[string]string{}}, time.Now()); err != nil || ran != 1 {
+		t.Errorf("query: ran=%d err=%v", ran, err)
+	}
+	// a mutation is dropped, the lock stays busy
+	if _, err := op.Execute(context.Background(), Args{Flags: map[string]string{"set": "1"}}, time.Now()); err != nil || ran != 1 {
+		t.Errorf("mutation: ran=%d err=%v", ran, err)
+	}
+}
+
+func TestStatus_ReportsExecutions(t *testing.T) {
+	var counter atomic.Int64
+	eng := startTestEngine(t, &counter)
+	eng.AddStatus(func() []string { return []string{"extra: 1"} })
+
+	var out bytes.Buffer
+	if handled, code := TryRemote([]string{"test", "echo", "fail"}, &out, &out); !handled || code != 1 {
+		t.Fatalf("handled=%v code=%d", handled, code)
+	}
+
+	joined := RenderStatus(eng.statusInfo(), RenderOptions{})
+	for _, want := range []string{"Executions", "test.echo", "last error", "boom", "extra: 1"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("status lacks %q:\n%s", want, joined)
+		}
+	}
+}
+
+// Watchers that differ only in an output flag share one query and print it their own way.
+func TestWatch_OutputFlagsShareOneQuery(t *testing.T) {
+	var calls atomic.Int64
+	r := NewRegistry()
+	r.Register(Op{
+		Name:        "test.fmt",
+		Watch:       func(Args) bool { return true },
+		OutputFlags: []string{"format"},
+		Run: func(ctx context.Context, a Args) ([]string, error) {
+			calls.Add(1)
+			return []string{"0.80"}, nil
+		},
+		Render: func(a Args, lines []string) []string {
+			return []string{lines[0] + " as " + a.Flag("format")}
+		},
+	})
+	group := &cobra.Command{Use: "test"}
+	sub := &cobra.Command{Use: "fmt", Run: func(*cobra.Command, []string) {}}
+	sub.Flags().BoolP("watch", "w", false, "")
+	sub.Flags().StringP("format", "f", "%.2f", "")
+	group.AddCommand(sub)
+	root := &cobra.Command{Use: "app"}
+	root.AddCommand(group)
+	if err := r.Bind(root); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv(EnvRuntimeDir, t.TempDir())
+	eng := NewEngine(r)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := eng.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	watch := func(argv ...string) *bufio.Reader {
+		conn, err := net.Dial("unix", SocketPath())
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { conn.Close() })
+		fmt.Fprintf(conn, "ARGV %d\n", len(argv))
+		for _, arg := range argv {
+			fmt.Fprintf(conn, "%d\n%s", len(arg), arg)
+		}
+		return bufio.NewReader(conn)
+	}
+
+	a := watch("test", "fmt", "-f", "%.1f", "--watch")
+	if got := readFrame(t, a); got != "W" {
+		t.Fatalf("first frame = %q", got)
+	}
+	if got := readFrame(t, a); got != "O 0.80 as %.1f" {
+		t.Errorf("first watcher got %q", got)
+	}
+
+	b := watch("test", "fmt", "--watch")
+	_ = readFrame(t, b) // W
+	if got := readFrame(t, b); got != "O 0.80 as %.2f" {
+		t.Errorf("second watcher got %q", got)
+	}
+
+	if n := len(eng.store.entries); n != 1 {
+		t.Errorf("%d queries for watchers that only differ in the format, want 1", n)
+	}
+}
+
+// A command run with sudo notifies the daemon of the user who ran sudo.
+func TestNotifySocketPath_UnderSudo(t *testing.T) {
+	t.Setenv(EnvRuntimeDir, "")
+	t.Setenv("XDG_RUNTIME_DIR", "/run/user/0")
+	t.Setenv("SUDO_UID", "1000")
+	previous := getuid
+	t.Cleanup(func() { getuid = previous })
+
+	getuid = func() int { return 0 }
+	if got := notifySocketPath(); got != "/run/user/1000/system-control/ipc.sock" {
+		t.Errorf("under sudo: %s", got)
+	}
+
+	getuid = func() int { return 1000 }
+	if got, want := notifySocketPath(), SocketPath(); got != want {
+		t.Errorf("without sudo: %s, want %s", got, want)
+	}
+}
+
+// Sources registered with the registry are started by the engine, their status shows up.
+func TestRegisterSource(t *testing.T) {
+	t.Setenv(EnvRuntimeDir, t.TempDir())
+	r := NewRegistry()
+	started := make(chan struct{})
+	r.RegisterSource(func(ctx context.Context, refresh func(prefixes ...string)) { close(started) },
+		func() []string { return []string{"source: active"} })
+
+	eng := NewEngine(r)
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	if err := eng.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("source not started")
+	}
+	if status := RenderStatus(eng.statusInfo(), RenderOptions{}); !strings.Contains(status, "source: active") {
+		t.Errorf("status lacks the source:\n%s", status)
+	}
+}

@@ -9,8 +9,10 @@ var loadDriverCmd = &cobra.Command{
 	Use:   "load",
 	Short: "Load the video driver, allowing access to video devices",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		util.ExecCommand("modprobe", "uvcvideo")
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		_, err := util.ExecCommand("modprobe", "uvcvideo")
+		return err
 	},
 }
 

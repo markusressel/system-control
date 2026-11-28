@@ -1,17 +1,19 @@
 package pipewire
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"slices"
 	"strings"
 
 	"github.com/markusressel/system-control/internal/util"
 )
 
 const (
-	MediaClassAudioSink = "Audio/Sink"
+	MediaClassAudioSink   = "Audio/Sink"
+	MediaClassAudioSource = "Audio/Source"
 )
 
 type GraphState struct {
@@ -28,11 +30,17 @@ type GraphState struct {
 	SecurityContexts []InterfaceSecurityContext
 }
 
+// infoOf returns the typed info of an object, or the zero value if it has none (or another type).
+func infoOf[T any](object GraphObject) T {
+	info, _ := object.Info.(T)
+	return info
+}
+
 func (state *GraphState) UnmarshalJSON(data []byte) error {
 
 	var objectDataList []GraphObject
-	if err := json.NewDecoder(strings.NewReader(string(data))).Decode(&objectDataList); err != nil {
-		log.Fatalf("decode: %s", err)
+	if err := json.NewDecoder(bytes.NewReader(data)).Decode(&objectDataList); err != nil {
+		return fmt.Errorf("decode pipewire graph: %w", err)
 	}
 
 	for _, object := range objectDataList {
@@ -40,72 +48,63 @@ func (state *GraphState) UnmarshalJSON(data []byte) error {
 		case TypeNode:
 			state.Nodes = append(state.Nodes, InterfaceNode{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceNodeInfo),
+				Info:       infoOf[InterfaceNodeInfo](object),
 			})
 		case TypeFactory:
 			state.Factories = append(state.Factories, InterfaceFactory{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceFactoryInfo),
+				Info:       infoOf[InterfaceFactoryInfo](object),
 			})
 		case TypeModule:
 			state.Modules = append(state.Modules, InterfaceModule{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceModuleInfo),
+				Info:       infoOf[InterfaceModuleInfo](object),
 			})
 		case TypeCore:
 			state.Cores = append(state.Cores, InterfaceCore{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceCoreInfo),
+				Info:       infoOf[InterfaceCoreInfo](object),
 			})
 		case TypeClient:
 			state.Clients = append(state.Clients, InterfaceClient{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceClientInfo),
+				Info:       infoOf[InterfaceClientInfo](object),
 			})
 		case TypeLink:
 			state.Links = append(state.Links, InterfaceLink{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceLinkInfo),
+				Info:       infoOf[InterfaceLinkInfo](object),
 			})
 		case TypePort:
 			state.Ports = append(state.Ports, InterfacePort{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfacePortInfo),
+				Info:       infoOf[InterfacePortInfo](object),
 			})
 		case TypeDevice:
 			state.Devices = append(state.Devices, InterfaceDevice{
 				CommonData: object.CommonData,
-				Info:       object.Info.(InterfaceDeviceInfo),
+				Info:       infoOf[InterfaceDeviceInfo](object),
 			})
 		case TypeProfiler:
-			var info InterfaceProfilerInfo = nil
-			if object.Info != nil {
-				info = object.Info.(InterfaceProfilerInfo)
-			}
+			info := infoOf[InterfaceProfilerInfo](object)
 			state.Profilers = append(state.Profilers, InterfaceProfiler{
 				CommonData: object.CommonData,
 				Info:       info,
 			})
 		case TypeMetadata:
-			var info InterfaceMetadataInfo = nil
-			if object.Info != nil {
-				info = object.Info.(InterfaceMetadataInfo)
-			}
+			info := infoOf[InterfaceMetadataInfo](object)
 			state.Metadatas = append(state.Metadatas, InterfaceMetadata{
 				CommonData: object.CommonData,
 				Info:       info,
 			})
 		case TypeSecurityContext:
-			var info InterfaceSecurityContextInfo = nil
-			if object.Info != nil {
-				info = object.Info.(InterfaceSecurityContextInfo)
-			}
+			info := infoOf[InterfaceSecurityContextInfo](object)
 			state.SecurityContexts = append(state.SecurityContexts, InterfaceSecurityContext{
 				CommonData: object.CommonData,
 				Info:       info,
 			})
 		default:
-			fmt.Println("Unknown type: ", object.Type)
+			// unknown object types are not needed
 		}
 	}
 
@@ -129,8 +128,7 @@ func (state *GraphState) IsMuted(sinkId int) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	muted := node.GetMuted()
-	return muted, err
+	return node.GetMuted()
 }
 
 // SetMuted sets the given volume to the given sink using pipewire
@@ -143,38 +141,71 @@ func (state *GraphState) SetMuted(deviceId int, muted bool) error {
 	return device.SetMuted(muted)
 }
 
-// GetDefaultSinkNodeName returns the "node.name" value of the InterfaceNode that is
-// currently used as the default "audio.sink".
-func (state *GraphState) GetDefaultSinkNodeName() (string, error) {
-	for _, item := range state.Metadatas {
-		if item.Props["metadata.name"] != "default" {
-			continue
+// metadataNodeName reads the node name out of a "default.*" metadata entry, which
+// holds either a JSON string or an already decoded object like {"name": "..."}.
+func metadataNodeName(value interface{}) string {
+	var data map[string]interface{}
+	switch v := value.(type) {
+	case string:
+		if err := json.Unmarshal([]byte(v), &data); err != nil {
+			return ""
 		}
+	case map[string]interface{}:
+		data = v
+	}
+	name, _ := data["name"].(string)
+	return name
+}
 
-		for _, entry := range item.Metadata {
-			if entry["key"] == "default.audio.sink" {
-				return entry["value"].(map[string]interface{})["name"].(string), nil
+// defaultNodeCandidates returns the names that may identify the default "audio.<kind>" ("sink" or "source"), best
+// first:
+//
+//   - default.configured.audio.<kind> is what was explicitly set. It is empty or names a device
+//     that is currently not present (a headset that is switched off) more often than one would think.
+//   - default.audio.<kind> is the node that is actually used, WirePlumber falls back to another one
+//     while the configured one is missing.
+func (state *GraphState) defaultNodeCandidates(kind string) []string {
+	var names []string
+	for _, key := range []string{"default.configured.audio." + kind, "default.audio." + kind} {
+		for _, item := range state.Metadatas {
+			if item.Props["metadata.name"] != "default" {
+				continue
+			}
+			for _, entry := range item.Metadata {
+				if entry["key"] != key {
+					continue
+				}
+				if name := metadataNodeName(entry["value"]); name != "" && !slices.Contains(names, name) {
+					names = append(names, name)
+				}
 			}
 		}
 	}
-
-	return "", errors.New("default sink not found")
+	return names
 }
 
-func (state *GraphState) GetDefaultSource() (string, error) {
-	defaultSinkName, err := state.GetDefaultSinkNodeName()
+// findNodeByExactName returns the node with exactly the given "node.name".
+// If there is none, a single node containing the name is accepted.
+func (state *GraphState) findNodeByExactName(name string) (InterfaceNode, bool) {
+	for _, node := range state.Nodes {
+		if nodeName, _ := node.Info.Props["node.name"].(string); nodeName == name {
+			return node, true
+		}
+	}
+	if nodes := state.FindNodesByName(name); len(nodes) == 1 {
+		return nodes[0], true
+	}
+	return InterfaceNode{}, false
+}
+
+// GetDefaultSinkNodeName returns the "node.name" value of the InterfaceNode that is
+// currently used as the default "audio.sink".
+func (state *GraphState) GetDefaultSinkNodeName() (string, error) {
+	node, err := state.GetDefaultSinkNode()
 	if err != nil {
 		return "", err
 	}
-
-	node := state.FindNodesByName(defaultSinkName)
-	if len(node) <= 0 {
-		return "", errors.New("default sink not found")
-	}
-	if len(node) > 1 {
-		return "", errors.New("multiple default sinks found")
-	}
-	return node[0].GetName()
+	return node.GetName()
 }
 
 func (state *GraphState) GetNodeById(id int) (InterfaceNode, error) {
@@ -256,7 +287,7 @@ func (state *GraphState) FindNodesByName(name string) []InterfaceNode {
 	result := make([]InterfaceNode, 0)
 	for _, node := range state.Nodes {
 		nodeInfoProperties := node.Info.Props
-		nodeName := nodeInfoProperties["node.name"].(string)
+		nodeName, _ := nodeInfoProperties["node.name"].(string)
 		nodeDescription, ok := nodeInfoProperties["node.description"].(string)
 		if !ok {
 			nodeDescription = ""
@@ -335,12 +366,23 @@ func (state *GraphState) GetStreamNodes() []InterfaceNode {
 	return result
 }
 
+// GetInputStreamNodes returns the streams that record audio (f.e. the microphone of a call).
+func (state *GraphState) GetInputStreamNodes() []InterfaceNode {
+	var result []InterfaceNode
+	for _, node := range state.Nodes {
+		if mediaClass, _ := node.Info.Props["media.class"].(string); mediaClass == "Stream/Input/Audio" {
+			result = append(result, node)
+		}
+	}
+	return result
+}
+
 func (state *GraphState) FindStreamNodes(name string) []InterfaceNode {
 	result := make([]InterfaceNode, 0)
 	streamNodes := state.GetStreamNodes()
 	for _, node := range streamNodes {
 		nodeInfoProperties := node.Info.Props
-		nodeName := nodeInfoProperties["node.name"].(string)
+		nodeName, _ := nodeInfoProperties["node.name"].(string)
 		nodeDescription, ok := nodeInfoProperties["node.description"].(string)
 		if !ok {
 			nodeDescription = ""
@@ -352,30 +394,36 @@ func (state *GraphState) FindStreamNodes(name string) []InterfaceNode {
 	return result
 }
 
-// SwitchSinkTo switches the default sink to the given node and moves
-// all existing streams on the currently active sink to the new default sink
+// SwitchSourceTo makes the given node the default source. The recording streams follow it: they are
+// unpinned from where an earlier switch put them, and WirePlumber moves them to the new default.
+func (state *GraphState) SwitchSourceTo(node InterfaceNode) error {
+	nodeName, err := node.GetName()
+	if err != nil {
+		return err
+	}
+	if err := setDefaultNode("source", nodeName); err != nil {
+		return err
+	}
+	for _, stream := range state.GetInputStreamNodes() {
+		if err := unpinStream(stream.Id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SwitchSinkTo makes the given node the default sink. The playback streams follow it: they are
+// unpinned from where an earlier switch put them, and WirePlumber moves them to the new default.
 func (state *GraphState) SwitchSinkTo(node InterfaceNode) error {
 	nodeName, err := node.GetName()
 	if err != nil {
 		return err
 	}
-
-	streams := state.GetStreamNodes()
-
-	// figure out id of target stream
-	objectSerial, err := node.GetObjectSerial()
-	if err != nil {
+	if err := setDefaultSink(nodeName); err != nil {
 		return err
 	}
-
-	err = setDefaultSink(nodeName)
-	if err != nil {
-		return err
-	}
-
-	for _, stream := range streams {
-		err = moveStreamToNode(stream.Id, node.Id, objectSerial)
-		if err != nil {
+	for _, stream := range state.GetStreamNodes() {
+		if err := unpinStream(stream.Id); err != nil {
 			return err
 		}
 	}
@@ -404,14 +452,20 @@ func (state *GraphState) GetVolumeByName(name string) (float64, error) {
 		}
 		node = nodes[0]
 	}
+	return state.GetNodeVolume(node)
+}
 
-	// Check if the node is linked to a hardware device
-	if deviceIDRaw, ok := node.Info.Props["device.id"]; ok {
-		// device.id is usually a float64 from JSON
-		deviceID := int(deviceIDRaw.(float64))
-		device, err := state.GetDeviceById(deviceID)
+// GetNodeVolume returns the volume of the node: the volume of the route of its hardware device if it has one,
+// otherwise its own (left channel).
+func (state *GraphState) GetNodeVolume(node InterfaceNode) (float64, error) {
+	// Check if the node is linked to a route of a hardware device
+	deviceIDRaw, hasDevice := node.Info.Props["device.id"]
+	profileDeviceRaw, hasProfileDevice := node.Info.Props["card.profile.device"]
+	if hasDevice && hasProfileDevice {
+		// the ids are float64 from JSON
+		device, err := state.GetDeviceById(int(deviceIDRaw.(float64)))
 		if err == nil {
-			vols, err := device.GetVolume()
+			vols, err := device.GetRouteVolume(int(profileDeviceRaw.(float64)))
 			if err == nil && len(vols) > 0 {
 				return vols[0], nil
 			}
@@ -423,20 +477,28 @@ func (state *GraphState) GetVolumeByName(name string) (float64, error) {
 	return channelVolumes[0], nil
 }
 
-// GetDefaultSinkNode returns the index of the active device
+// GetDefaultSinkNode returns the node that is currently used as the default "audio.sink".
 func (state *GraphState) GetDefaultSinkNode() (InterfaceNode, error) {
-	currentDefaultSinkName, err := util.ExecCommand("pactl", "get-default-sink")
-	if err != nil {
-		return InterfaceNode{}, err
+	return state.getDefaultNode("sink")
+}
+
+// GetDefaultSourceNode returns the node that is currently used as the default "audio.source".
+func (state *GraphState) GetDefaultSourceNode() (InterfaceNode, error) {
+	return state.getDefaultNode("source")
+}
+
+func (state *GraphState) getDefaultNode(kind string) (InterfaceNode, error) {
+	names := state.defaultNodeCandidates(kind)
+	if len(names) == 0 {
+		return InterfaceNode{}, fmt.Errorf("default %s not found", kind)
 	}
-	nodes := state.FindNodesByName(currentDefaultSinkName)
-	if len(nodes) <= 0 {
-		return InterfaceNode{}, errors.New("node not found")
+
+	for _, name := range names {
+		if node, ok := state.findNodeByExactName(name); ok {
+			return node, nil
+		}
 	}
-	if len(nodes) > 1 {
-		return InterfaceNode{}, errors.New("ambiguous node name")
-	}
-	return nodes[0], nil
+	return InterfaceNode{}, fmt.Errorf("node not found: %s", strings.Join(names, ", "))
 }
 
 // ContainsActiveSink returns

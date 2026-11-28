@@ -9,6 +9,7 @@ var connectCmd = &cobra.Command{
 	Use:   "connect",
 	Short: "Connect to a known WiFi network",
 	Long:  ``,
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		networkName := args[0]
 		return wifi.Connect(networkName)

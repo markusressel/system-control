@@ -13,8 +13,15 @@ var clientsCmd = &cobra.Command{
 	Use:   "clients",
 	Short: "List currently connected Hotspot Client Devices",
 	Long:  ``,
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		isHotspotUp, err := wifi.IsHotspotUp(hotspotSSID)
+		iface, ssid, err := hotspotSettings()
+		if err != nil {
+			return err
+		}
+		hotspotName := createHotspotConfigName(ssid)
+
+		isHotspotUp, err := wifi.IsHotspotUp(hotspotName)
 		if err != nil {
 			return err
 		}
@@ -23,7 +30,7 @@ var clientsCmd = &cobra.Command{
 			return nil
 		}
 
-		hotspotDevices, err := wifi.GetConnectedHotspotDevices(wifiInterface, hotspotSSID)
+		hotspotDevices, err := wifi.GetConnectedHotspotDevices(iface, hotspotName)
 		if err != nil {
 			return err
 		}
@@ -32,19 +39,12 @@ var clientsCmd = &cobra.Command{
 			printHotspotDevice(device)
 		}
 
-		return err
+		return nil
 	},
 }
 
 func init() {
 	Command.AddCommand(clientsCmd)
-
-	clientsCmd.PersistentFlags().StringVarP(
-		&hotspotSSID,
-		"ssid", "s",
-		"",
-		"SSID of the hotspot",
-	)
 }
 
 func printHotspotDevice(device wifi.HotspotLease) {

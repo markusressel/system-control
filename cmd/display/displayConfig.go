@@ -1,63 +1,36 @@
 package display
 
 import (
-	"github.com/markusressel/system-control/internal/util"
-	"github.com/spf13/pflag"
+	"fmt"
 
+	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
 
-var displays []string
-var modes []string
-var positions []string
-var rate []int
-var primary []bool
-var off []bool
-var auto []bool
+// The per display options are matched to --display by position.
+var (
+	displays  []string
+	modes     []string
+	positions []string
+	rate      []int
+	primary   []bool
+	off       []bool
+	auto      []bool
+)
 
 var displayConfigCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Set the desired display configuration",
-	Long:  ``,
+	Long: `Set the configuration of one or more displays.
+
+All per display options are matched to --display by position, e.g.
+  display config -d DisplayPort-1 -d DisplayPort-2 -m 3840x2160 -m 2560x1440`,
+	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		displays, err := util.GetDisplays()
+		displayConfigs, err := createDisplayConfigurationsFromArgs(displays, modes, positions, rate, primary, off, auto)
 		if err != nil {
 			return err
 		}
-
-		//{% if hostvars[inventory_hostname].device_type == "desktop" %}
-		//balias display-left-4k              "xrandr --output DisplayPort-1 --mode 3840x2160 --output DisplayPort-2 --primary --pos 3840x0"
-		//balias display-left-2k              "xrandr --output DisplayPort-1 --mode 2560x1440 --output DisplayPort-2 --primary --pos 2560x0"
-		//
-		//{% elif ansible_hostname == "Alien" %}
-		//balias display-external-hdmi-only   "xrandr --output LVDS1 --off  --output HDMI1 --auto --output DP1 --off  --output VGA1 --off"
-		//balias display-external-dp-only     "xrandr --output LVDS1 --off  --output HDMI1 --off  --output DP1 --auto --output VGA1 --off"
-		//balias display-external-vga-only    "xrandr --output LVDS1 --off  --output HDMI1 --off  --output DP1 --off  --output VGA1 --auto"
-		//balias display-internal-only        "xrandr --output LVDS1 --auto --output HDMI1 --off  --output DP1 --off  --output VGA1 --off"
-		//balias display-clone-hdmi           "xrandr --output LVDS1 --auto --output HDMI1 --auto --output DP1 --off  --output VGA1 --off"
-		//balias display-clone-dp             "xrandr --output LVDS1 --auto --output HDMI1 --off  --output DP1 --auto --output VGA1 --off"
-		//balias display-clone-vga            "xrandr --output LVDS1 --auto --output HDMI1 --off --output DP1 --off  --output VGA1 --auto"
-		//
-		//{% elif ansible_hostname == "M16" %}
-		//
-		//balias display-external-hdmi-only   "xrandr --output eDP1 --off  --output HDMI1 --auto --output DP1 --off"
-		//balias display-external-dp-only     "xrandr --output eDP1 --off  --output HDMI1 --off  --output DP1 --auto"
-		//balias display-internal-only        "xrandr --output eDP1 --auto --output HDMI1 --off  --output DP1 --off"
-		//balias display-clone-hdmi           "xrandr --output eDP1 --auto --output HDMI1 --auto --output DP1 --off"
-		//balias display-clone-dp             "xrandr --output eDP1 --auto --output HDMI1 --off  --output DP1 --auto"
-
-		orderedFlagValues := []*pflag.Flag{}
-
-		cmd.Flags().Visit(func(flag *pflag.Flag) {
-			orderedFlagValues = append(orderedFlagValues, flag)
-		})
-
-		displayNames := []string{}
-		for _, displayInfo := range displays {
-			displayNames = append(displayNames, displayInfo.Name)
-		}
-
-		displayConfigs := createDisplayConfigurationsFromArgs(displayNames, modes, positions, rate, primary, off, orderedFlagValues)
 		return util.SetDisplayConfigs(displayConfigs)
 	},
 }
@@ -69,10 +42,23 @@ func createDisplayConfigurationsFromArgs(
 	rateArgs []int,
 	primaryArgs []bool,
 	offArgs []bool,
-	args []*pflag.Flag,
-) []util.DisplayConfig {
-	displayConfigs := make([]util.DisplayConfig, 0)
+	autoArgs []bool,
+) ([]util.DisplayConfig, error) {
+	options := map[string]int{
+		"mode":     len(modeArgs),
+		"position": len(positionArgs),
+		"rate":     len(rateArgs),
+		"primary":  len(primaryArgs),
+		"off":      len(offArgs),
+		"auto":     len(autoArgs),
+	}
+	for name, count := range options {
+		if count > len(displayNameArgs) {
+			return nil, fmt.Errorf("got %d --%s values for %d displays", count, name, len(displayNameArgs))
+		}
+	}
 
+	displayConfigs := make([]util.DisplayConfig, 0, len(displayNameArgs))
 	for i, displayName := range displayNameArgs {
 		displayConfig := util.NewDisplayConfig(displayName)
 		if i < len(modeArgs) {
@@ -90,17 +76,20 @@ func createDisplayConfigurationsFromArgs(
 		if i < len(offArgs) {
 			displayConfig.Off = offArgs[i]
 		}
+		if i < len(autoArgs) {
+			displayConfig.Auto = autoArgs[i]
+		}
 		displayConfigs = append(displayConfigs, displayConfig)
 	}
 
-	return displayConfigs
+	return displayConfigs, nil
 }
 
 func init() {
 	Command.AddCommand(displayConfigCmd)
 
 	displayConfigCmd.Flags().StringSliceVarP(&displays, "display", "d", []string{}, "The display to configure")
-	displayConfigCmd.MarkFlagRequired("display")
+	_ = displayConfigCmd.MarkFlagRequired("display")
 
 	displayConfigCmd.Flags().StringSliceVarP(&modes, "mode", "m", []string{}, "The display mode to set")
 	displayConfigCmd.Flags().StringSliceVarP(&positions, "position", "p", []string{}, "The display position to set")

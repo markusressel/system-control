@@ -1,8 +1,11 @@
 package util
 
 import (
+	"slices"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 )
 
 const (
@@ -14,8 +17,44 @@ type DisplayInfo struct {
 	Name string
 }
 
+var displayCache struct {
+	mu        sync.Mutex
+	ttl       time.Duration
+	fetchedAt time.Time
+	displays  []DisplayInfo
+}
+
+// EnableDisplayCache makes GetDisplays reuse its result for the given duration, so that
+// frequent queries of a long running process (the daemon) do not run xrandr each time.
+// A duration <= 0 disables the cache again.
+func EnableDisplayCache(ttl time.Duration) {
+	displayCache.mu.Lock()
+	defer displayCache.mu.Unlock()
+	displayCache.ttl = ttl
+	displayCache.displays = nil
+}
+
 // GetDisplays returns a list of all connected displays
 func GetDisplays() (displays []DisplayInfo, err error) {
+	displayCache.mu.Lock()
+	defer displayCache.mu.Unlock()
+
+	if displayCache.ttl > 0 && displayCache.displays != nil && time.Since(displayCache.fetchedAt) < displayCache.ttl {
+		return slices.Clone(displayCache.displays), nil
+	}
+
+	displays, err = queryDisplays()
+	if err == nil && displayCache.ttl > 0 {
+		displayCache.displays = slices.Clone(displays)
+		if displayCache.displays == nil {
+			displayCache.displays = []DisplayInfo{}
+		}
+		displayCache.fetchedAt = time.Now()
+	}
+	return displays, err
+}
+
+func queryDisplays() (displays []DisplayInfo, err error) {
 	result, err := ExecCommand(
 		xrandrExecutable,
 		"--listmonitors",
@@ -75,52 +114,6 @@ func NewDisplayConfig(name string) DisplayConfig {
 	}
 }
 
-func (displayConfig DisplayConfig) SetOff(off bool) DisplayConfig {
-	if off {
-		displayConfig.SetPrimary(false)
-		displayConfig.SetAuto(false)
-		displayConfig.Mode = ""
-		displayConfig.Position = ""
-	}
-	displayConfig.Off = off
-	return displayConfig
-}
-
-func (displayConfig DisplayConfig) SetPrimary(primary bool) DisplayConfig {
-	if primary {
-		displayConfig.SetOff(false)
-	}
-	displayConfig.Primary = primary
-	return displayConfig
-}
-
-func (displayConfig DisplayConfig) SetAuto(auto bool) DisplayConfig {
-	if auto {
-		displayConfig.SetOff(false)
-		displayConfig.Mode = ""
-		displayConfig.Position = ""
-	}
-	displayConfig.Auto = auto
-	return displayConfig
-}
-
-func (displayConfig DisplayConfig) SetMode(mode string) DisplayConfig {
-	if IsNotEmpty(mode) {
-		displayConfig.SetOff(false)
-		displayConfig.SetAuto(false)
-	}
-	displayConfig.Mode = mode
-	return displayConfig
-}
-
-func (displayConfig DisplayConfig) SetPosition(position string) DisplayConfig {
-	if IsNotEmpty(position) {
-		displayConfig.SetOff(false)
-	}
-	displayConfig.Position = position
-	return displayConfig
-}
-
 // SetDisplayConfig sets the display configuration for a single display.
 func SetDisplayConfig(displayConfig DisplayConfig) error {
 	return SetDisplayConfigs([]DisplayConfig{displayConfig})
@@ -128,38 +121,38 @@ func SetDisplayConfig(displayConfig DisplayConfig) error {
 
 // SetDisplayConfigs sets the display configuration for multiple displays.
 func SetDisplayConfigs(displayConfigs []DisplayConfig) error {
+	_, err := ExecCommand(xrandrExecutable, XrandrArgs(displayConfigs)...)
+	return err
+}
+
+// XrandrArgs builds the xrandr arguments that apply the given display configurations.
+func XrandrArgs(displayConfigs []DisplayConfig) []string {
 	args := []string{}
 
 	for _, displayConfig := range displayConfigs {
-		args = append(args, "--output")
-		args = append(args, displayConfig.Name)
+		args = append(args, "--output", displayConfig.Name)
 
 		if displayConfig.Off {
+			// all other options are meaningless for a disabled display
 			args = append(args, "--off")
+			continue
 		}
+
 		if displayConfig.Primary {
 			args = append(args, "--primary")
 		}
 		if displayConfig.Auto {
 			args = append(args, "--auto")
-		}
-		if IsNotEmpty(displayConfig.Mode) {
-			args = append(args, "--mode")
-			args = append(args, displayConfig.Mode)
+		} else if IsNotEmpty(displayConfig.Mode) {
+			args = append(args, "--mode", displayConfig.Mode)
 		}
 		if IsNotEmpty(displayConfig.Position) {
-			args = append(args, "--pos")
-			args = append(args, displayConfig.Position)
+			args = append(args, "--pos", displayConfig.Position)
 		}
 		if displayConfig.Rate > 0 {
-			args = append(args, "--rate")
-			args = append(args, strconv.Itoa(displayConfig.Rate))
+			args = append(args, "--rate", strconv.Itoa(displayConfig.Rate))
 		}
 	}
 
-	_, err := ExecCommand(xrandrExecutable, args...)
-	if err != nil {
-		return err
-	}
-	return nil
+	return args
 }

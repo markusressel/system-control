@@ -12,28 +12,15 @@ import (
 )
 
 const (
-	DisplayBacklightPath = "/sys/class/backlight"
-	LedsPath             = "/sys/class/leds"
-	MaxBrightness        = "max_brightness"
-	Brightness           = "brightness"
+	MaxBrightness = "max_brightness"
+	Brightness    = "brightness"
 )
 
-// FindOpenWindows returns a list of currently open windows
-func FindOpenWindows() ([]string, error) {
-	result, err := ExecCommand("wmctrl", "-l")
-	if err != nil {
-		return nil, err
-	}
-
-	hostname, err := os.Hostname()
-	if err != nil {
-		return nil, err
-	}
-
-	r := regexp.MustCompile("(0x[0-9a-f]+) +(\\d+) +(" + hostname + "|N/A) +(.*)")
-	matches := r.FindAllString(result, -1)
-	return matches, nil
-}
+// sysfs directories, variables for tests
+var (
+	DisplayBacklightPath = "/sys/class/backlight"
+	LedsPath             = "/sys/class/leds"
+)
 
 // RoundToTwoDecimals rounds a float to (at most) two decimal places
 func RoundToTwoDecimals(number float64) float64 {

@@ -1,6 +1,9 @@
 package fan
 
-import "github.com/spf13/cobra"
+import (
+	internalfan "github.com/markusressel/system-control/internal/fan"
+	"github.com/spf13/cobra"
+)
 
 var modeRotateCmd = &cobra.Command{
 	Use:   "rotate",
@@ -8,17 +11,10 @@ var modeRotateCmd = &cobra.Command{
 	Long:  ``,
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := ensureRoot(); err != nil {
+		if err := internalfan.EnsureRoot(); err != nil {
 			return err
 		}
-
-		currentMode, err := readFanMode()
-		if err != nil {
-			return err
-		}
-
-		nextMode := (currentMode + 1) % fanModeCount
-		return setFanMode(nextMode)
+		return internalfan.RotateMode()
 	},
 }
 

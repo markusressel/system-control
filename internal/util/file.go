@@ -1,7 +1,6 @@
 package util
 
 import (
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -55,7 +54,7 @@ func WriteFloatToFile(value float64, path string) error {
 	}
 	fileStat, err := os.Stat(path)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	return os.WriteFile(path, []byte(strconv.FormatFloat(value, 'f', -1, 64)), fileStat.Mode())

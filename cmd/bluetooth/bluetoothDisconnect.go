@@ -1,8 +1,6 @@
 package bluetooth
 
 import (
-	"fmt"
-
 	"github.com/markusressel/system-control/internal/bluetooth"
 	"github.com/spf13/cobra"
 )
@@ -13,27 +11,11 @@ var bluetoothDisconnectCmd = &cobra.Command{
 	Long:  ``,
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		deviceName := ""
+		name := ""
 		if len(args) > 0 {
-			deviceName = args[0]
+			name = args[0]
 		}
-
-		if deviceName == "" {
-			return bluetooth.DisconnectAllBluetoothDevices()
-		} else {
-			devices, err := bluetooth.GetBluetoothDevices()
-			if err != nil {
-				return err
-			}
-			for _, device := range devices {
-				if device.Name == deviceName || device.Address == deviceName {
-					err := bluetooth.DisconnectBluetoothDevice(device)
-					return err
-				}
-			}
-		}
-
-		return fmt.Errorf("device not found: %v", deviceName)
+		return bluetooth.DisconnectByName(name)
 	},
 }
 

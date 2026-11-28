@@ -39,6 +39,61 @@ If you like, generate shell completions for your shell:
 system-control completion fish > ~/.config/fish/completions/system-control.fish
 ```
 
+# Daemon (optional)
+
+system-control can run a small background daemon. It makes frequent commands (volume keys, status bar widgets) fast
+and serves `--watch`, which prints a new line whenever the value changes:
+
+```shell
+> system-control audio volume --watch
+28
+30
+```
+
+When the value can't be read (e.g. a watched device was unplugged), the error goes to stderr and the watch goes on:
+the value follows once it is back.
+
+Everything works without the daemon, it just takes longer. `make deploy` installs and starts it as a systemd
+user service:
+
+```shell
+> systemctl --user status system-control.service
+```
+
+`make deploy` also installs `sysctrl`, a tiny client for key bindings and status bars. It takes the same
+arguments as `system-control`, but starts in about 1 ms and uses very little memory, which adds up with many
+`--watch` widgets. If the daemon does not handle a command (or is not running) it runs `system-control` instead.
+
+```shell
+> sysctrl audio volume inc
+> sysctrl audio volume --watch
+```
+
+Commands the daemon handles today: `audio volume` (+ `inc`, `dec`, `set`, `mute`, `unmute`, `toggle-mute`,
+`muted`, `save`, `restore`), `audio sink` and `audio source` (`active`, `switch`, sinks also `next`, `previous`),
+`audio device profile`, `display backlight brightness` (+ `inc`, `dec`, `set`), `display redshift brightness`,
+`color-temperature` and `gamma` (+ `inc`, `dec`, `reset`), `keyboard brightness` (+ `inc`, `dec`), `touchpad`
+(`on`, `off`, `set`, `toggle`, `toggleVerticalScrollDirection`), `media` (`status`, `position`, `players`, `play`,
+`pause`, `togglePlayPause`, `stop`, `next`, `previous`), `battery remaining`, `mouse battery`, `session locked`,
+`bluetooth connected` and `fan mode`.
+
+```shell
+# what the daemon does right now
+> system-control daemon status
+
+# read the configuration file again (also done by `systemctl --user reload system-control`)
+> kill -HUP "$(pgrep -xo system-control)"
+```
+
+Optional settings in the [config file](system-control.yaml):
+
+```yaml
+daemon:
+  pollIntervals:
+    display: 5s
+    fan: 5s
+```
+
 # Usage
 
 system-control is a command-line-interface (CLI) tool. To use it simply open a terminal and type in one
@@ -56,18 +111,20 @@ Available Commands:
   battery     Control System Battery
   bluetooth   Control Bluetooth Devices
   completion  Generate the autocompletion script for the specified shell
+  config      Print the configuration of the system-control tool
   cpu         Control CPU settings
-  disk        Control disks
+  daemon      Start the system-control daemon
+  disk        Display Disk info
   display     Control Displays
   fan         Control fan settings
   help        Help about any command
   keyboard    Control Keyboards
   media       Control media players via playerctl
   mouse       Control Mouse
-  network     Control Network devices and networks
-  restart     Reboot the system gracefully
+  network     Control Network Devices and Networks
+  restart     Reboot the System gracefully
   session     Control desktop session state
-  shutdown    Shutdown the system gracefully
+  shutdown    Shutdown the System gracefully
   touchpad    Control Touchpads
   video       Control Video Inputs (cameras)
   wifi        Control WiFi devices and networks
@@ -141,6 +198,9 @@ spotify
 > system-control media position
 ```
 
+Without `--player`, `play` and `togglePlayPause` resume only the player that was playing last (as seen by the daemon),
+not every paused one. The other commands apply to all players.
+
 Filter/select a player with `-p` / `--player` (supports simple regex matching):
 
 ```shell
@@ -181,13 +241,19 @@ Sink #64
 > system-control audio sink active "NVIDIA"
 0
 
-// switch active sink to a sink which contains the given text
+// switch active sink to a sink which contains the given text: the running streams move along and keep following
+// the default, f.e. back to Bluetooth headphones that reconnect
 > system-control audio sink switch "Built-in"
 > system-control audio sink switch "X-Fi"
 > system-control audio sink switch "NVIDIA"
 
 > system-control audio sink next
 > system-control audio sink previous
+
+// the same for the default source (input, f.e. a microphone); switching moves the recording streams along
+> system-control audio source active -c name
+alsa_input.pci-0000_11_00.4.analog-stereo
+> system-control audio source switch "Headset"
 ```
 
 ## Battery
@@ -210,19 +276,32 @@ hidpp_battery_0
 
 > system-comtrol battery remaining
 
-> system-control battery threshold -name BAT0
+> system-control battery threshold --name BAT0
 100
-> system-control battery threshold -name BAT0 75
+> system-control battery threshold --name BAT0 75
 
-> system-control battery threshold -name BAT0 save       # run this after changing the threshold
-> system-control battery threshold -name BAT0 restore    # run this f.ex. right after boot
+> system-control battery threshold --name BAT0 save       # run this after changing the threshold
+> system-control battery threshold --name BAT0 restore    # run this f.ex. right after boot
+```
+
+### Mouse
+
+**Requirements:**
+
+* UPower (D-Bus)
+
+```shell
+> system-control mouse battery
+80%
+> system-control mouse battery --type number
+80
 ```
 
 ## Bluetooth
 
 **Requirements:**
 
-* `bluetoothctl`
+* BlueZ (`bluetoothd`), talked to over D-Bus
 
 ```shell
 > system-control bluetooth on
@@ -257,6 +336,15 @@ hidpp_battery_0
 > system-control bluetooth disconnect
 ```
 
+```shell
+# scan for nearby devices for 5 seconds (default)
+> system-control bluetooth scan
+> system-control bluetooth scan --duration 15s
+
+# yes/no, can be watched
+> system-control bluetooth connected "LG-TONE-FP9" --watch
+```
+
 ## Display / Screen
 
 #### List Screens
@@ -277,6 +365,19 @@ DisplayPort-1
 > system-control display sleep
 > system-control display wakeup
 > system-control display awake
+```
+
+#### Configuration
+
+**Requirements:**
+
+* `xrandr`
+
+Per display options are matched to `--display` by position:
+
+```shell
+> system-control display config -d DisplayPort-1 -d DisplayPort-2 -m 3840x2160 -m 2560x1440
+> system-control display config -d DisplayPort-2 --off true
 ```
 
 #### Backlight
@@ -342,6 +443,13 @@ Display: DisplayPort-1
 > system-control display redshift gamma reset
 ```
 
+## Disk
+
+```shell
+> system-control disk list
+> system-control disk list --all
+```
+
 ## Fan
 
 **Requirements:**
@@ -375,7 +483,7 @@ Default
 None
 
 ```shell
-> system-control keyboard brightness set 100
+> system-control keyboard brightness 100
 > system-control keyboard brightness inc
 > system-control keyboard brightness dec
 ```
@@ -391,6 +499,7 @@ None
 > system-control touchpad off
 > system-control touchpad set true
 > system-control touchpad toggle
+> system-control touchpad toggleVerticalScrollDirection
 ```
 
 ## Network
@@ -449,29 +558,52 @@ FRITZ!Box 6591 Cable NM
 
 #### Hotspot
 
-TODO: not yet implemented
-
 ```shell
-> system-control wifi hotspot on -n "MyHotspot"
+> system-control network wifi hotspot on
+> system-control network wifi hotspot on --ssid "MyHotspot" --password "secret123" --interface wlan0
 ```
 
 ```shell
-> system-control wifi hotspot off -n "MyHotspot"
+> system-control network wifi hotspot off
+> system-control network wifi hotspot off --force
 ```
 
 ```shell
-> system-control wifi hotspot clients
+> system-control network wifi hotspot clients
+```
+
+Without options the first WiFi device and the hostname are used, and NetworkManager generates a password.
+Defaults can be set in the [config file](system-control.yaml):
+
+```yaml
+hotspot:
+  interface: wlan0
+  ssid: MyHotspot
+  password: secret123
 ```
 
 ## Session
 
 **Requirements:**
 
-* `i3lock`
+* `i3lock`, or the locker set in `session.lock.command`
 * `pgrep` / `pkill`
 
 `session lock` runs in the current process by default. Use `--detached` when you want
 the command to return immediately while lock handling continues in a background process.
+
+The session of the user that invoked `sudo` (or the current user) on `$DISPLAY` (or `:0`) is controlled.
+Use `--user` and `--display` to select another one.
+
+The locker is configurable. It must stay in the foreground until the session is unlocked:
+
+```yaml
+session:
+  lock:
+    command: ["xsecurelock"]
+    environment:
+      - "XSECURELOCK_PAM_SERVICE=xsecurelock"
+```
 
 ```shell
 > system-control session lock
@@ -486,18 +618,16 @@ no
 
 ## Shutdown/Restart
 
-TODO: not yet fully working
+All windows are asked to close first. If one does not close within `--timeout` (default 30s, e.g. a
+"save changes?" dialog), nothing happens, unless `--force` is given.
 
 ```shell
 > system-control shutdown
+> system-control shutdown --timeout 10s --force
 ```
 
 ```shell
 > system-control restart
-```
-
-```shell
-> system-control lock
 ```
 
 ## Video (Webcam)

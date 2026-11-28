@@ -1,0 +1,415 @@
+package audio
+
+import (
+	"errors"
+	"fmt"
+	"math"
+	"sync"
+	"time"
+
+	"github.com/markusressel/system-control/internal/audio/pipewire"
+	"github.com/markusressel/system-control/internal/persistence"
+	"github.com/markusressel/system-control/internal/util"
+)
+
+// optimisticWindow is how long a value we wrote ourselves is trusted over the PipeWire graph.
+// The graph lags behind our own writes, so rapid scroll events must build on the value we just
+// set, and a query right after a change must not report the previous state.
+const optimisticWindow = 300 * time.Millisecond
+
+type written[T any] struct {
+	value T
+	at    time.Time
+}
+
+// Backend is everything the Service needs from the audio system.
+type Backend struct {
+	Graph      func() pipewire.GraphState
+	SetVolume  func(id int, volume float64) error
+	SetMute    func(id int, mute bool) error
+	ToggleMute func(id int) error
+}
+
+func pipewireBackend() Backend {
+	return Backend{
+		Graph:      pipewire.PwDump,
+		SetVolume:  pipewire.WpCtlSetVolume,
+		SetMute:    pipewire.WpCtlSetMute,
+		ToggleMute: pipewire.WpCtlToggleMute,
+	}
+}
+
+// Service implements the audio operations. All mutations are serialized by the Service,
+// which also owns the (short lived) optimistic volume state.
+type Service struct {
+	be Backend
+
+	// mu serializes mutations and guards the records of our own recent writes, by node id
+	mu         sync.Mutex
+	lastVolume map[int]written[float64]
+	lastMuted  map[int]written[bool]
+}
+
+func NewService(be Backend) *Service {
+	return &Service{
+		be:         be,
+		lastVolume: map[int]written[float64]{},
+		lastMuted:  map[int]written[bool]{},
+	}
+}
+
+// volumeNodeId returns the id of the node GetVolumeByName(device) reads, 0 if there is none.
+func volumeNodeId(state pipewire.GraphState, device string) int {
+	if device == "" {
+		if node, err := state.GetDefaultSinkNode(); err == nil {
+			return node.Id
+		}
+		return 0
+	}
+	if nodes := state.FindNodesByName(device); len(nodes) == 1 {
+		return nodes[0].Id
+	}
+	return 0
+}
+
+// currentVolume returns the volume of a stream (the first one that matches, like the other commands) or a device,
+// preferring our own recent write over the graph. Must be called with s.mu held.
+func (s *Service) currentVolume(state pipewire.GraphState, device string, stream string) (float64, error) {
+	var volume float64
+	var id int
+	if stream != "" {
+		streams := state.FindStreamNodes(stream)
+		if len(streams) == 0 {
+			return 0, errors.New("stream not found")
+		}
+		volume = streams[0].GetVolume()[0]
+		id = streams[0].Id
+	} else {
+		var err error
+		volume, err = state.GetVolumeByName(device)
+		if err != nil {
+			return 0, err
+		}
+		id = volumeNodeId(state, device)
+	}
+	volume = util.RoundToTwoDecimals(volume)
+
+	if id != 0 {
+		if w, ok := s.lastVolume[id]; ok && time.Since(w.at) < optimisticWindow {
+			return w.value, nil
+		}
+	}
+	return volume, nil
+}
+
+// ResolveTargets returns the nodes a command applies to: the given stream, the given device
+// or the default sink.
+func ResolveTargets(state pipewire.GraphState, device string, stream string) ([]pipewire.InterfaceNode, error) {
+	var targets []pipewire.InterfaceNode
+	if stream != "" {
+		targets = state.FindStreamNodes(stream)
+	} else if device != "" {
+		targets = state.FindNodesByName(device)
+	} else {
+		target, err := state.GetDefaultSinkNode()
+		if err != nil {
+			return nil, err
+		}
+		targets = append(targets, target)
+	}
+	return targets, nil
+}
+
+func volumeLine(volume float64) string {
+	return fmt.Sprintf("%d", int(math.Round(volume*100)))
+}
+
+func muteLine(muted bool) string {
+	if muted {
+		return "yes"
+	}
+	return "no"
+}
+
+// Volume returns the volume of the given stream or device (default sink if both are empty) in percent.
+func (s *Service) Volume(device string, stream string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	volume, err := s.currentVolume(s.be.Graph(), device, stream)
+	if err != nil {
+		return "", err
+	}
+	return volumeLine(volume), nil
+}
+
+// Muted returns "yes" or "no" for the first target of the given device/stream.
+func (s *Service) Muted(device string, stream string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state := s.be.Graph()
+	targets, err := ResolveTargets(state, device, stream)
+	if err != nil {
+		return "", err
+	}
+	if len(targets) == 0 {
+		return "", errors.New("no matching audio target found")
+	}
+
+	muted, err := s.currentMuted(state, targets[0].Id)
+	if err != nil {
+		return "", err
+	}
+	return muteLine(muted), nil
+}
+
+// currentMuted returns the mute state of a node, preferring our own recent write over the graph.
+// Must be called with s.mu held.
+func (s *Service) currentMuted(state pipewire.GraphState, id int) (bool, error) {
+	if w, ok := s.lastMuted[id]; ok && time.Since(w.at) < optimisticWindow {
+		return w.value, nil
+	}
+	return state.IsMuted(id)
+}
+
+// Step increases or decreases the volume by an appropriate amount.
+func (s *Service) Step(device string, stream string, increase bool) ([]string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state := s.be.Graph()
+
+	volume, err := s.currentVolume(state, device, stream)
+	if err != nil {
+		return nil, err
+	}
+
+	targets, err := ResolveTargets(state, device, stream)
+	if err != nil {
+		return nil, err
+	}
+
+	change := CalculateAppropriateVolumeChange(volume*100, increase) / 100.0
+	target := volume + change
+	if !increase {
+		target = volume - change
+	}
+	if target < 0.0 {
+		target = 0.0
+	}
+
+	return s.apply(targets, target)
+}
+
+// Set sets the volume to a percentage.
+func (s *Service) Set(device string, stream string, percent int) ([]string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	targets, err := ResolveTargets(s.be.Graph(), device, stream)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.apply(targets, math.Max(float64(percent)/100.0, 0))
+}
+
+// pruneWrites drops records that are not trusted anymore. Must be called with s.mu held.
+func (s *Service) pruneWrites() {
+	for id, w := range s.lastVolume {
+		if time.Since(w.at) >= optimisticWindow {
+			delete(s.lastVolume, id)
+		}
+	}
+	for id, w := range s.lastMuted {
+		if time.Since(w.at) >= optimisticWindow {
+			delete(s.lastMuted, id)
+		}
+	}
+}
+
+// apply must be called with s.mu held.
+func (s *Service) apply(targets []pipewire.InterfaceNode, volume float64) ([]string, error) {
+	s.pruneWrites()
+	rounded := util.RoundToTwoDecimals(volume)
+
+	var lines []string
+	for _, target := range targets {
+		if err := s.be.SetVolume(target.Id, volume); err != nil {
+			return nil, err
+		}
+		s.lastVolume[target.Id] = written[float64]{rounded, time.Now()}
+		lines = append(lines, volumeLine(rounded))
+	}
+	return lines, nil
+}
+
+type MuteAction int
+
+const (
+	MuteOn MuteAction = iota
+	MuteOff
+	MuteToggle
+)
+
+// Mute changes the mute state of all targets and returns the resulting state per target.
+func (s *Service) Mute(device string, stream string, action MuteAction) ([]string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state := s.be.Graph()
+	targets, err := ResolveTargets(state, device, stream)
+	if err != nil {
+		return nil, err
+	}
+
+	var lines []string
+	for _, target := range targets {
+		var muted bool
+		switch action {
+		case MuteOn:
+			muted = true
+			err = s.be.SetMute(target.Id, true)
+		case MuteOff:
+			muted = false
+			err = s.be.SetMute(target.Id, false)
+		case MuteToggle:
+			var initial bool
+			initial, err = s.currentMuted(state, target.Id)
+			if err != nil {
+				return nil, err
+			}
+			muted = !initial
+			err = s.be.ToggleMute(target.Id)
+		}
+		if err != nil {
+			return nil, err
+		}
+		s.lastMuted[target.Id] = written[bool]{muted, time.Now()}
+		lines = append(lines, muteLine(muted))
+	}
+	return lines, nil
+}
+
+type savedAudioState struct {
+	Device string
+	Volume float64
+	Muted  bool
+}
+
+func savedStateKey(deviceName string) string {
+	return "audio_state_" + deviceName
+}
+
+// Save persists volume and mute state of all targets, by node name: streams of one app share a name, and
+// Restore applies the saved state to all of them.
+func (s *Service) Save(device string, stream string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state := s.be.Graph()
+	targets, err := ResolveTargets(state, device, stream)
+	if err != nil {
+		return err
+	}
+
+	for _, target := range targets {
+		name, err := target.GetName()
+		if err != nil {
+			return err
+		}
+		volume, err := state.GetNodeVolume(target)
+		if err != nil {
+			return err
+		}
+		muted, err := state.IsMuted(target.Id)
+		if err != nil {
+			return err
+		}
+
+		data := savedAudioState{Device: name, Volume: volume, Muted: muted}
+		if err := persistence.SaveStruct(savedStateKey(name), &data); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Restore applies a previously saved state, returning mute and volume lines per restored target.
+func (s *Service) Restore(device string, stream string) ([]string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state := s.be.Graph()
+	targets, err := ResolveTargets(state, device, stream)
+	if err != nil {
+		return nil, err
+	}
+
+	var lines []string
+	for _, target := range targets {
+		name, _ := target.GetName()
+		data := savedAudioState{}
+		if err := persistence.ReadStruct(savedStateKey(name), &data); err != nil {
+			continue // nothing saved for this target
+		}
+
+		if err := s.be.SetMute(target.Id, data.Muted); err != nil {
+			return nil, err
+		}
+		if err := s.be.SetVolume(target.Id, data.Volume); err != nil {
+			return nil, err
+		}
+		rounded := util.RoundToTwoDecimals(data.Volume)
+		now := time.Now()
+		s.lastMuted[target.Id] = written[bool]{data.Muted, now}
+		s.lastVolume[target.Id] = written[float64]{rounded, now}
+		lines = append(lines, muteLine(data.Muted), volumeLine(rounded))
+	}
+	return lines, nil
+}
+
+// SwitchSink makes the single sink matching the search string the default sink.
+func SwitchSink(search string) error {
+	state := pipewire.PwDump()
+	sink, err := findSingleNode(state, search, pipewire.MediaClassAudioSink, "sink")
+	if err != nil {
+		return err
+	}
+	return state.SwitchSinkTo(sink)
+}
+
+// SwitchSource makes the single source matching the search string the default source.
+func SwitchSource(search string) error {
+	state := pipewire.PwDump()
+	source, err := findSingleNode(state, search, pipewire.MediaClassAudioSource, "source")
+	if err != nil {
+		return err
+	}
+	return state.SwitchSourceTo(source)
+}
+
+// findSingleNode returns the one node of the media class whose name or description contains the search string.
+func findSingleNode(state pipewire.GraphState, search string, mediaClass string, kind string) (pipewire.InterfaceNode, error) {
+	var found []pipewire.InterfaceNode
+	for _, node := range state.FindNodesByName(search) {
+		if class, _ := node.GetMediaClass(); class == mediaClass {
+			found = append(found, node)
+		}
+	}
+
+	if len(found) == 0 {
+		return pipewire.InterfaceNode{}, fmt.Errorf("no %s found", kind)
+	}
+	if len(found) > 1 {
+		names := make([]string, len(found))
+		for i, node := range found {
+			name, _ := node.GetName()
+			description, _ := node.GetDescription()
+			names[i] = fmt.Sprintf("%s (%s)", name, description)
+		}
+		return pipewire.InterfaceNode{}, fmt.Errorf("ambiguous %s name, found: %v", kind, names)
+	}
+	return found[0], nil
+}

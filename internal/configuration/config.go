@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/mitchellh/go-homedir"
@@ -14,7 +15,45 @@ import (
 )
 
 type Configuration struct {
+	Daemon   DaemonConfig   `mapstructure:"daemon" yaml:"daemon"`
 	Redshift RedshiftConfig `mapstructure:"redshift" yaml:"redshift"`
+	Hotspot  HotspotConfig  `mapstructure:"hotspot" yaml:"hotspot"`
+	Fan      FanConfig      `mapstructure:"fan" yaml:"fan"`
+	Session  SessionConfig  `mapstructure:"session" yaml:"session"`
+}
+
+// SessionConfig contains the settings of the desktop session commands.
+type SessionConfig struct {
+	Lock SessionLockConfig `mapstructure:"lock" yaml:"lock"`
+}
+
+// SessionLockConfig describes the screen locker. Empty values use i3lock.
+type SessionLockConfig struct {
+	// Command is the locker and its arguments. It must stay in the foreground until the session is unlocked.
+	Command []string `mapstructure:"command" yaml:"command"`
+	// Environment holds KEY=value entries for the locker. A list, because viper lowercases map keys.
+	Environment []string `mapstructure:"environment" yaml:"environment"`
+	// ProcessName identifies a running locker. Defaults to the base name of the command.
+	ProcessName string `mapstructure:"processName" yaml:"processName"`
+}
+
+// FanConfig describes where the fan policy of the laptop is controlled.
+type FanConfig struct {
+	// PolicyFileGlob is a glob matching the sysfs file(s) holding the fan mode (0, 1, 2).
+	// Defaults to the ASUS WMI policy file.
+	PolicyFileGlob string `mapstructure:"policyFileGlob" yaml:"policyFileGlob"`
+}
+
+// HotspotConfig contains the defaults of `network wifi hotspot`. Empty values are detected or
+// generated when the hotspot is turned on.
+type HotspotConfig struct {
+	Interface string `mapstructure:"interface" yaml:"interface"`
+	SSID      string `mapstructure:"ssid" yaml:"ssid"`
+	Password  string `mapstructure:"password" yaml:"password"`
+}
+
+type DaemonConfig struct {
+	PollIntervals map[string]time.Duration `mapstructure:"pollIntervals" yaml:"pollIntervals"`
 }
 
 type RedshiftConfig struct {
@@ -40,6 +79,89 @@ type RedshiftGammaConfig struct {
 }
 
 var CurrentConfig Configuration
+
+// configMu guards CurrentConfig and viper. A long running daemon reloads the file while
+// requests read the configuration.
+var configMu sync.RWMutex
+
+// fileCheckInterval limits how often Get looks at the modification time of the config file.
+const fileCheckInterval = time.Second
+
+var (
+	// fileStamp identifies the version of the config file CurrentConfig was read from.
+	fileStamp   fileVersion
+	lastChecked time.Time
+)
+
+type fileVersion struct {
+	modTime time.Time
+	size    int64
+}
+
+func statConfigFile() (fileVersion, bool) {
+	file := viper.ConfigFileUsed()
+	if file == "" {
+		return fileVersion{}, false
+	}
+	info, err := os.Stat(file)
+	if err != nil {
+		return fileVersion{}, false
+	}
+	return fileVersion{info.ModTime(), info.Size()}, true
+}
+
+// Get returns a snapshot of the current configuration.
+//
+// A long running process (the daemon) notices edits of the config file: it is read again when
+// its modification time changed. A file that fails to parse (e.g. saved half-way) keeps the
+// previous configuration.
+func Get() Configuration {
+	reloadIfChanged()
+
+	configMu.RLock()
+	defer configMu.RUnlock()
+	return CurrentConfig
+}
+
+func reloadIfChanged() {
+	configMu.Lock()
+	defer configMu.Unlock()
+
+	if time.Since(lastChecked) < fileCheckInterval {
+		return
+	}
+	lastChecked = time.Now()
+
+	stamp, ok := statConfigFile()
+	if !ok || stamp == fileStamp {
+		return
+	}
+	if err := reloadLocked(); err != nil {
+		log.Printf("Could not reload the configuration, keeping the previous one: %v", err)
+		// do not retry (and log) until the file changes again
+		fileStamp = stamp
+	}
+}
+
+// Reload reads the configuration file again, regardless of its modification time.
+func Reload() error {
+	configMu.Lock()
+	defer configMu.Unlock()
+	return reloadLocked()
+}
+
+func reloadLocked() error {
+	if err := readInConfig(); err != nil {
+		return err
+	}
+	next := Configuration{}
+	if err := viper.Unmarshal(&next); err != nil {
+		return err
+	}
+	CurrentConfig = next
+	fileStamp, _ = statConfigFile()
+	return nil
+}
 
 var currentUser, _ = user.Current()
 var BaseDir = path.Join(currentUser.HomeDir, ".config", "system-control")
@@ -106,9 +228,13 @@ func GetFilePath() string {
 }
 
 func LoadConfig() Configuration {
+	configMu.Lock()
+	defer configMu.Unlock()
+
 	// load default configuration values
 	CurrentConfig = Configuration{}
 	err := viper.Unmarshal(&CurrentConfig)
+	fileStamp, _ = statConfigFile()
 	if err != nil {
 		//ui.Fatal("unable to decode into struct, %v", err)
 	}
@@ -123,4 +249,16 @@ func PrintConfig() {
 	}
 
 	fmt.Println(string(configYaml))
+}
+
+// PollInterval returns the Op.Poll of watched state: the interval configured under
+// `daemon.pollIntervals.<name>`, or def. It is asked for again after every tick, so a reloaded
+// configuration applies to running watchers too. 0 disables polling.
+func PollInterval(name string, def time.Duration) func() time.Duration {
+	return func() time.Duration {
+		if configured := Get().Daemon.PollIntervals[name]; configured > 0 {
+			return configured
+		}
+		return def
+	}
 }

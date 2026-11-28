@@ -1,6 +1,7 @@
 package pipewire
 
 import (
+	"cmp"
 	"encoding/json"
 	"log"
 	"os/exec"
@@ -170,81 +171,77 @@ func monitorOnce() {
 			return
 		}
 
-		liveMu.Lock()
-		for _, obj := range chunk {
-			if string(obj.Info) == "null" || (obj.Info == nil && obj.Type == "") {
-				// Object removed
-				delete(liveObjects, obj.Id)
-				continue
-			}
-
-			// If type is missing (incremental update), inherit from existing
-			existing, exists := liveObjects[obj.Id]
-
-			objType := obj.Type
-			if !exists {
-				// New object
-			} else {
-				// Inherit missing fields
-				if objType == "" {
-					objType = existing.Type
-				}
-				if obj.Version == 0 {
-					obj.Version = existing.Version
-				}
-				if obj.Permissions == nil {
-					obj.Permissions = existing.Permissions
-				}
-			}
-
-			// Parse Info
-			var parsedInfo GraphObjectInfo
-			if obj.Info != nil {
-				parsedInfo = parseInfoMerge(objType, obj.Info, exists, existing.Info)
-			} else if exists {
-				parsedInfo = existing.Info
-			}
-
-			var mergedProps map[string]interface{}
-			if obj.Props != nil {
-				mergedProps = obj.Props // Note: simple overwrite, usually fine for top-level Props
-			} else if exists {
-				mergedProps = existing.Props
-			}
-
-			var mergedMetadata []map[string]interface{}
-			if obj.Metadata != nil {
-				if exists {
-					var stale bool
-					mergedMetadata, stale = mergeMetadata(existing.Metadata, obj.Metadata)
-					metadataStale = metadataStale || stale
-				} else {
-					mergedMetadata = obj.Metadata
-				}
-			} else if exists {
-				mergedMetadata = existing.Metadata
-			}
-
-			goObj := GraphObject{
-				CommonData: CommonData{
-					Id:          obj.Id,
-					Type:        objType,
-					Version:     obj.Version,
-					Permissions: obj.Permissions,
-					Props:       mergedProps,
-					Metadata:    mergedMetadata,
-				},
-				Info: parsedInfo,
-			}
-
-			liveObjects[obj.Id] = goObj
-		}
-
-		isStateDirty = true
-		liveMu.Unlock()
-
+		applyChunk(chunk)
 		notifyChanged()
 	}
+}
+
+// applyChunk applies one batch of changes of `pw-dump -m` to the live objects.
+func applyChunk(chunk []RawGraphObject) {
+	liveMu.Lock()
+	defer liveMu.Unlock()
+	for _, obj := range chunk {
+		if isRemoval(obj) {
+			delete(liveObjects, obj.Id)
+			continue
+		}
+		existing, exists := liveObjects[obj.Id]
+		merged, stale := mergeObject(obj, existing, exists)
+		liveObjects[obj.Id] = merged
+		metadataStale = metadataStale || stale
+	}
+	isStateDirty = true
+}
+
+// isRemoval tells whether pw-dump reports that the object went away.
+func isRemoval(obj RawGraphObject) bool {
+	return string(obj.Info) == "null" || (obj.Info == nil && obj.Type == "")
+}
+
+// mergeObject applies an incremental update of pw-dump to the object it knows already (if it
+// exists): fields the update leaves out keep their values. metadataStale is true if a
+// metadata update could not be merged, see mergeMetadata.
+func mergeObject(obj RawGraphObject, existing GraphObject, exists bool) (merged GraphObject, metadataStale bool) {
+	if !exists {
+		existing = GraphObject{}
+	}
+	objType := cmp.Or(obj.Type, existing.Type)
+
+	info := existing.Info
+	if obj.Info != nil {
+		info = parseInfoMerge(objType, obj.Info, exists, existing.Info)
+	}
+
+	// top level props are replaced as a whole
+	props := existing.Props
+	if obj.Props != nil {
+		props = obj.Props
+	}
+
+	metadata := existing.Metadata
+	if obj.Metadata != nil {
+		metadata = obj.Metadata
+		if exists {
+			metadata, metadataStale = mergeMetadata(existing.Metadata, obj.Metadata)
+		}
+	}
+
+	permissions := obj.Permissions
+	if permissions == nil {
+		permissions = existing.Permissions
+	}
+
+	return GraphObject{
+		CommonData: CommonData{
+			Id:          obj.Id,
+			Type:        objType,
+			Version:     cmp.Or(obj.Version, existing.Version),
+			Permissions: permissions,
+			Props:       props,
+			Metadata:    metadata,
+		},
+		Info: info,
+	}, metadataStale
 }
 
 // mergeMetadata applies an incremental metadata update. pw-dump only reports the changed

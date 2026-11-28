@@ -96,8 +96,7 @@ func (s *ipcServer) handle(ctx context.Context, conn net.Conn) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("panic while handling request: %v", r)
-			writeFrames(conn, 'E', "internal error")
-			writeFrames(conn, 'X', "1")
+			writeFailure(conn, "internal error")
 		}
 	}()
 
@@ -120,22 +119,7 @@ func (s *ipcServer) handle(ctx context.Context, conn net.Conn) {
 		writeFrames(conn, 'X', "0")
 
 	case "STATUS":
-		// `STATUS json` is answered with one O frame holding a StatusInfo, a plain `STATUS`
-		// (and clients that predate the structured form) with rendered text lines.
-		if len(fields) > 1 && fields[1] == "json" {
-			payload, err := json.Marshal(s.engine.statusInfo())
-			if err != nil {
-				writeFrames(conn, 'E', err.Error())
-				writeFrames(conn, 'X', "1")
-				return
-			}
-			writeFrames(conn, 'O', string(payload))
-		} else {
-			for _, line := range s.engine.status() {
-				writeFrames(conn, 'O', line)
-			}
-		}
-		writeFrames(conn, 'X', "0")
+		s.handleStatus(conn, len(fields) > 1 && fields[1] == "json")
 
 	case "ARGV":
 		n, err := strconv.Atoi(strings.Join(fields[1:], ""))
@@ -153,6 +137,25 @@ func (s *ipcServer) handle(ctx context.Context, conn net.Conn) {
 	default:
 		writeFrames(conn, 'U', "")
 	}
+}
+
+// handleStatus answers `STATUS json` with one O frame holding a StatusInfo, a plain `STATUS`
+// (and clients that predate the structured form) with rendered text lines.
+func (s *ipcServer) handleStatus(conn net.Conn, asJSON bool) {
+	if !asJSON {
+		for _, line := range s.engine.status() {
+			writeFrames(conn, 'O', line)
+		}
+		writeFrames(conn, 'X', "0")
+		return
+	}
+	payload, err := json.Marshal(s.engine.statusInfo())
+	if err != nil {
+		writeFailure(conn, err.Error())
+		return
+	}
+	writeFrames(conn, 'O', string(payload))
+	writeFrames(conn, 'X', "0")
 }
 
 func (s *ipcServer) handleArgv(ctx context.Context, conn net.Conn, r *bufio.Reader, argv []string, receivedAt time.Time) {
@@ -173,8 +176,7 @@ func (s *ipcServer) handleArgv(ctx context.Context, conn net.Conn, r *bufio.Read
 		return
 	}
 	if err != nil {
-		writeFrames(conn, 'E', err.Error())
-		writeFrames(conn, 'X', "1")
+		writeFailure(conn, err.Error())
 		return
 	}
 
@@ -217,19 +219,24 @@ func (s *ipcServer) serveWatch(ctx context.Context, conn net.Conn, r *bufio.Read
 		case <-ctx.Done():
 			return
 		case u := <-updates:
-			if u.err != nil {
-				if err := writeFrames(conn, 'E', u.err.Error()); err != nil {
-					return
-				}
-				continue
-			}
-			for _, line := range op.render(args, u.lines) {
-				if err := writeFrames(conn, 'O', line); err != nil {
-					return
-				}
+			if err := writeUpdate(conn, op, args, u); err != nil {
+				return
 			}
 		}
 	}
+}
+
+// writeUpdate sends a new value of a watch, or why there is none.
+func writeUpdate(conn net.Conn, op *Op, args Args, u update) error {
+	if u.err != nil {
+		return writeFrames(conn, 'E', u.err.Error())
+	}
+	for _, line := range op.render(args, u.lines) {
+		if err := writeFrames(conn, 'O', line); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func readArgs(r *bufio.Reader, n int) ([]string, error) {
@@ -250,6 +257,12 @@ func readArgs(r *bufio.Reader, n int) ([]string, error) {
 		argv = append(argv, string(buf))
 	}
 	return argv, nil
+}
+
+// writeFailure ends a request with an error message and exit code 1.
+func writeFailure(w io.Writer, message string) {
+	writeFrames(w, 'E', message)
+	writeFrames(w, 'X', "1")
 }
 
 // writeFrames writes text as one frame per line.

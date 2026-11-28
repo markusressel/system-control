@@ -135,20 +135,8 @@ func init() {
 	})
 
 	daemon.Register(daemon.Op{
-		Name: "audio.sink.active",
-		Run: func(ctx context.Context, a daemon.Args) ([]string, error) {
-			state := pipewire.PwDump()
-
-			if len(a.Pos) > 0 {
-				return []string{fmt.Sprint(state.ContainsActiveSink(a.Pos[0]))}, nil
-			}
-
-			node, err := state.GetDefaultSinkNode()
-			if err != nil {
-				return nil, err
-			}
-			return nodeColumns(node, a.List("columns"))
-		},
+		Name:  "audio.sink.active",
+		Run:   runSinkActive,
 		Watch: always,
 		Poll:  pollInterval("audio"),
 	})
@@ -180,33 +168,50 @@ func init() {
 	})
 
 	daemon.Register(daemon.Op{
-		Name: "audio.device.profile",
-		Run: func(ctx context.Context, a daemon.Args) ([]string, error) {
-			state := pipewire.PwDump()
-
-			device, err := state.FindDeviceByName(a.Flag("device"))
-			if err != nil {
-				return nil, err
-			}
-
-			if len(a.Pos) > 0 {
-				profile, err := device.GetProfileIdByName(a.Pos[0])
-				if err != nil {
-					return nil, err
-				}
-				return nil, device.SetProfileByName(profile.Name)
-			}
-
-			profile, err := device.GetActiveProfile()
-			if err != nil {
-				return nil, err
-			}
-			return []string{profile.Description}, nil
-		},
+		Name:        "audio.device.profile",
+		Run:         runDeviceProfile,
 		Watch:       func(a daemon.Args) bool { return len(a.Pos) == 0 },
 		Poll:        pollInterval("audio"),
 		Invalidates: []string{"audio."},
 	})
+}
+
+// runSinkActive prints the requested columns of the default sink, or with an argument whether
+// that sink is the default one.
+func runSinkActive(ctx context.Context, a daemon.Args) ([]string, error) {
+	state := pipewire.PwDump()
+	if len(a.Pos) > 0 {
+		return []string{fmt.Sprint(state.ContainsActiveSink(a.Pos[0]))}, nil
+	}
+	node, err := state.GetDefaultSinkNode()
+	if err != nil {
+		return nil, err
+	}
+	return nodeColumns(node, a.List("columns"))
+}
+
+// runDeviceProfile prints the active profile of the device, or with an argument activates the
+// profile of that name.
+func runDeviceProfile(ctx context.Context, a daemon.Args) ([]string, error) {
+	state := pipewire.PwDump()
+	device, err := state.FindDeviceByName(a.Flag("device"))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(a.Pos) > 0 {
+		profile, err := device.GetProfileIdByName(a.Pos[0])
+		if err != nil {
+			return nil, err
+		}
+		return nil, device.SetProfileByName(profile.Name)
+	}
+
+	profile, err := device.GetActiveProfile()
+	if err != nil {
+		return nil, err
+	}
+	return []string{profile.Description}, nil
 }
 
 // nodeColumns returns the requested columns (id, name, description) of a node, one per line.

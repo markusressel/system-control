@@ -70,8 +70,12 @@ arguments as `system-control`, but starts in about 1 ms and uses very little mem
 ```
 
 Commands the daemon handles today: `audio volume` (+ `inc`, `dec`, `set`, `mute`, `unmute`, `toggle-mute`,
-`muted`, `save`, `restore`), `audio sink` (`active`, `next`, `previous`, `switch`), `audio device profile`,
-`display redshift brightness` (+ `inc`, `dec`), `bluetooth connected` and `fan mode`.
+`muted`, `save`, `restore`), `audio sink` and `audio source` (`active`, `switch`, sinks also `next`, `previous`),
+`audio device profile`, `display backlight brightness` (+ `inc`, `dec`, `set`), `display redshift brightness`,
+`color-temperature` and `gamma` (+ `inc`, `dec`, `reset`), `keyboard brightness` (+ `inc`, `dec`), `touchpad`
+(`on`, `off`, `set`, `toggle`, `toggleVerticalScrollDirection`), `media` (`status`, `position`, `players`, `play`,
+`pause`, `togglePlayPause`, `stop`, `next`, `previous`), `battery remaining`, `mouse battery`, `session locked`,
+`bluetooth connected` and `fan mode`.
 
 ```shell
 # what the daemon does right now
@@ -107,18 +111,20 @@ Available Commands:
   battery     Control System Battery
   bluetooth   Control Bluetooth Devices
   completion  Generate the autocompletion script for the specified shell
+  config      Print the configuration of the system-control tool
   cpu         Control CPU settings
-  disk        Control disks
+  daemon      Start the system-control daemon
+  disk        Display Disk info
   display     Control Displays
   fan         Control fan settings
   help        Help about any command
   keyboard    Control Keyboards
   media       Control media players via playerctl
   mouse       Control Mouse
-  network     Control Network devices and networks
-  restart     Reboot the system gracefully
+  network     Control Network Devices and Networks
+  restart     Reboot the System gracefully
   session     Control desktop session state
-  shutdown    Shutdown the system gracefully
+  shutdown    Shutdown the System gracefully
   touchpad    Control Touchpads
   video       Control Video Inputs (cameras)
   wifi        Control WiFi devices and networks
@@ -270,12 +276,25 @@ hidpp_battery_0
 
 > system-comtrol battery remaining
 
-> system-control battery threshold -name BAT0
+> system-control battery threshold --name BAT0
 100
-> system-control battery threshold -name BAT0 75
+> system-control battery threshold --name BAT0 75
 
-> system-control battery threshold -name BAT0 save       # run this after changing the threshold
-> system-control battery threshold -name BAT0 restore    # run this f.ex. right after boot
+> system-control battery threshold --name BAT0 save       # run this after changing the threshold
+> system-control battery threshold --name BAT0 restore    # run this f.ex. right after boot
+```
+
+### Mouse
+
+**Requirements:**
+
+* UPower (D-Bus)
+
+```shell
+> system-control mouse battery
+80%
+> system-control mouse battery --type number
+80
 ```
 
 ## Bluetooth
@@ -348,6 +367,19 @@ DisplayPort-1
 > system-control display awake
 ```
 
+#### Configuration
+
+**Requirements:**
+
+* `xrandr`
+
+Per display options are matched to `--display` by position:
+
+```shell
+> system-control display config -d DisplayPort-1 -d DisplayPort-2 -m 3840x2160 -m 2560x1440
+> system-control display config -d DisplayPort-2 --off true
+```
+
 #### Backlight
 
 **Requirements:**
@@ -411,6 +443,13 @@ Display: DisplayPort-1
 > system-control display redshift gamma reset
 ```
 
+## Disk
+
+```shell
+> system-control disk list
+> system-control disk list --all
+```
+
 ## Fan
 
 **Requirements:**
@@ -444,7 +483,7 @@ Default
 None
 
 ```shell
-> system-control keyboard brightness set 100
+> system-control keyboard brightness 100
 > system-control keyboard brightness inc
 > system-control keyboard brightness dec
 ```
@@ -460,6 +499,7 @@ None
 > system-control touchpad off
 > system-control touchpad set true
 > system-control touchpad toggle
+> system-control touchpad toggleVerticalScrollDirection
 ```
 
 ## Network
@@ -588,10 +628,6 @@ All windows are asked to close first. If one does not close within `--timeout` (
 
 ```shell
 > system-control restart
-```
-
-```shell
-> system-control lock
 ```
 
 ## Video (Webcam)

@@ -55,7 +55,8 @@ Run the three CI checks before reporting a task done.
   silent daemon may already have executed a mutation.
 - **State:** the daemon owns published state, clients never push values. `--watch` subscribes to the engine store;
   refresh comes from event sources (`Engine.AddSource`, e.g. PipeWire monitor) and `Op.Invalidates`. `Op.Poll` is
-  only a fallback (media: `playerctl --follow` pushes status, polling drops to a minute while it runs). A CLI process that changes state itself calls `daemon.Notify(prefix)`.
+  only a fallback (media: `playerctl --all-players --follow` pushes status, polling drops to a minute while it runs;
+  it also records which player played last, so `media play`/`togglePlayPause` resume only that one). A CLI process that changes state itself calls `daemon.Notify(prefix)`.
 - **Output flags:** a flag that only changes printing (e.g. `--format`) is listed in `Op.OutputFlags` and applied by
   `Op.Render`, so watchers differing only in it share one query (`display.redshift.brightness`, `.gamma`).
 - **Mutations** hold `Op.Lock` (cross-process, shared with the CLI). Waiters beyond `daemon.MaxQueueWait` are dropped
@@ -91,7 +92,7 @@ Only what is not obvious from the tree:
 
 YAML, searched in `~/.system-control.yaml`, `~/.config/system-control/`, `/etc/system-control/` (example:
 `system-control.yaml`). Sections, all optional: `redshift` (brightness/color temperature/gamma ranges, transition
-duration), `daemon.pollIntervals`, `hotspot`, `fan.policyFileGlob`.
+duration), `daemon.pollIntervals`, `hotspot`, `fan.policyFileGlob`, `session.lock` (locker command and environment).
 
 ## Known gaps (do not "fix" unasked)
 

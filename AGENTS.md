@@ -83,6 +83,7 @@ Only what is not obvious from the tree:
 
 - `internal/daemon/` — op registry, engine/state store, unix socket server and client, locks.
 - `internal/commandutil/` — `OpRunE`, glue between cobra and ops.
+- `internal/supervise/` — `Loop`: keeps an event source running (backoff, logging, health).
 - `internal/audio/pipewire/` — parses `pw-dump` JSON; fixtures in `test/pipewire/`.
 - `internal/bluetooth/` — BlueZ D-Bus only (one `GetManagedObjects` per query, signals for `--watch`).
 - `internal/wifi/` — nmcli in terse mode, typed structs.

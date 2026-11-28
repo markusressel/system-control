@@ -5,8 +5,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var columns []string
-
 var activeCmd = &cobra.Command{
 	Use:   "active",
 	Short: "Show the default source",
@@ -19,8 +17,7 @@ alsa_input.pci-0000_11_00.4.analog-stereo`,
 }
 
 func init() {
-	activeCmd.Flags().StringSliceVarP(
-		&columns,
+	activeCmd.Flags().StringSliceP(
 		"columns", "c",
 		[]string{"id", "name", "description"},
 		"Columns to print (id,name,description)",

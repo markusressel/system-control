@@ -15,11 +15,10 @@ var redshiftBrightnessDecCmd = &cobra.Command{
 }
 
 func init() {
-	redshiftBrightnessDecCmd.PersistentFlags().Float64VarP(
-		&stepFloat,
+	redshiftBrightnessDecCmd.PersistentFlags().Float64P(
 		"step", "s",
 		0.1,
-		"Step size to increase the brightness by (between 0.1 and 1.0)",
+		"Step size to decrease the brightness by (between 0.1 and 1.0)",
 	)
 
 	brightnessCmd.AddCommand(redshiftBrightnessDecCmd)

@@ -5,9 +5,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var device string
-var stream string
-
 var VolumeCmd = &cobra.Command{
 	Use:   "volume",
 	Short: "Show the current volume",
@@ -17,15 +14,13 @@ var VolumeCmd = &cobra.Command{
 func init() {
 	commandutil.AddWatchFlag(VolumeCmd)
 
-	VolumeCmd.PersistentFlags().StringVarP(
-		&device,
+	VolumeCmd.PersistentFlags().StringP(
 		"device", "d",
 		"",
 		"Device Name/Description",
 	)
 
-	VolumeCmd.PersistentFlags().StringVarP(
-		&stream,
+	VolumeCmd.PersistentFlags().StringP(
 		"stream", "s",
 		"",
 		"Stream Name/Description",

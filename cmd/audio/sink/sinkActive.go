@@ -11,7 +11,6 @@ const (
 	ColumnDescription = "description"
 )
 
-var columns []string
 var defaultColumns = []string{ColumnID, ColumnName, ColumnDescription}
 
 var activeCmd = &cobra.Command{
@@ -29,8 +28,7 @@ var activeCmd = &cobra.Command{
 }
 
 func init() {
-	activeCmd.Flags().StringSliceVarP(
-		&columns,
+	activeCmd.Flags().StringSliceP(
 		"columns", "c",
 		defaultColumns,
 		"Columns to print (id,name,description)",

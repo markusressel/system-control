@@ -24,9 +24,6 @@ var (
 	colorTemperature int64
 	brightness       float64
 	gamma            float64
-
-	brightnessValue float64
-	stepFloat       = 0.1
 )
 
 var Command = &cobra.Command{

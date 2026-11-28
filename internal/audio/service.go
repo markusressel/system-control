@@ -275,7 +275,11 @@ func (s *Service) Mute(device string, stream string, action MuteAction) ([]strin
 			muted = false
 			err = s.be.SetMute(target.Id, false)
 		case MuteToggle:
-			initial, _ := s.currentMuted(state, target.Id)
+			var initial bool
+			initial, err = s.currentMuted(state, target.Id)
+			if err != nil {
+				return nil, err
+			}
 			muted = !initial
 			err = s.be.ToggleMute(target.Id)
 		}
@@ -298,7 +302,8 @@ func savedStateKey(deviceName string) string {
 	return "audio_state_" + deviceName
 }
 
-// Save persists volume and mute state of all targets.
+// Save persists volume and mute state of all targets, by node name: streams of one app share a name, and
+// Restore applies the saved state to all of them.
 func (s *Service) Save(device string, stream string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -310,9 +315,18 @@ func (s *Service) Save(device string, stream string) error {
 	}
 
 	for _, target := range targets {
-		name, _ := target.GetName()
-		volume, _ := state.GetVolumeByName(name)
-		muted, _ := state.IsMuted(target.Id)
+		name, err := target.GetName()
+		if err != nil {
+			return err
+		}
+		volume, err := state.GetNodeVolume(target)
+		if err != nil {
+			return err
+		}
+		muted, err := state.IsMuted(target.Id)
+		if err != nil {
+			return err
+		}
 
 		data := savedAudioState{Device: name, Volume: volume, Muted: muted}
 		if err := persistence.SaveStruct(savedStateKey(name), &data); err != nil {

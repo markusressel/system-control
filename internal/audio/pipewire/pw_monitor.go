@@ -281,81 +281,51 @@ func mergeMetadata(existing []map[string]interface{}, update []map[string]interf
 }
 
 func parseInfoMerge(objType string, rawInfo []byte, exists bool, existing GraphObjectInfo) GraphObjectInfo {
+	if !exists {
+		existing = nil
+	}
 	switch objType {
 	case TypeNode:
-		var info InterfaceNodeInfo
-		if exists && existing != nil {
-			info = existing.(InterfaceNodeInfo)
-		}
-		json.Unmarshal(rawInfo, &info)
-		return info
+		return mergeInfo[InterfaceNodeInfo](rawInfo, existing)
 	case TypeFactory:
-		var info InterfaceFactoryInfo
-		if exists && existing != nil {
-			info = existing.(InterfaceFactoryInfo)
-		}
-		json.Unmarshal(rawInfo, &info)
-		return info
+		return mergeInfo[InterfaceFactoryInfo](rawInfo, existing)
 	case TypeModule:
-		var info InterfaceModuleInfo
-		if exists && existing != nil {
-			info = existing.(InterfaceModuleInfo)
-		}
-		json.Unmarshal(rawInfo, &info)
-		return info
+		return mergeInfo[InterfaceModuleInfo](rawInfo, existing)
 	case TypeCore:
-		var info InterfaceCoreInfo
-		if exists && existing != nil {
-			info = existing.(InterfaceCoreInfo)
-		}
-		json.Unmarshal(rawInfo, &info)
-		return info
+		return mergeInfo[InterfaceCoreInfo](rawInfo, existing)
 	case TypeClient:
-		var info InterfaceClientInfo
-		if exists && existing != nil {
-			info = existing.(InterfaceClientInfo)
-		}
-		json.Unmarshal(rawInfo, &info)
-		return info
+		return mergeInfo[InterfaceClientInfo](rawInfo, existing)
 	case TypeLink:
-		var info InterfaceLinkInfo
-		if exists && existing != nil {
-			info = existing.(InterfaceLinkInfo)
-		}
-		json.Unmarshal(rawInfo, &info)
-		return info
+		return mergeInfo[InterfaceLinkInfo](rawInfo, existing)
 	case TypePort:
-		var info InterfacePortInfo
-		if exists && existing != nil {
-			info = existing.(InterfacePortInfo)
-		}
-		json.Unmarshal(rawInfo, &info)
-		return info
+		return mergeInfo[InterfacePortInfo](rawInfo, existing)
 	case TypeDevice:
-		var info InterfaceDeviceInfo
-		if exists && existing != nil {
-			info = existing.(InterfaceDeviceInfo)
-		}
-		json.Unmarshal(rawInfo, &info)
-		return info
+		return mergeInfo[InterfaceDeviceInfo](rawInfo, existing)
 	case TypeProfiler:
-		var info InterfaceProfilerInfo
-		if exists && existing != nil {
-			info = existing.(InterfaceProfilerInfo)
-		} else {
+		info := mergeInfo[InterfaceProfilerInfo](rawInfo, existing)
+		if info == nil {
 			info = InterfaceProfilerInfo(&map[string]interface{}{})
 		}
-		json.Unmarshal(rawInfo, &info)
 		return info
 	case TypeMetadata:
-		var info InterfaceMetadataInfo
-		if exists && existing != nil {
-			info = existing.(InterfaceMetadataInfo)
-		}
-		json.Unmarshal(rawInfo, &info)
-		return info
+		return mergeInfo[InterfaceMetadataInfo](rawInfo, existing)
 	}
 	return nil
+}
+
+// mergeInfo applies an incremental info update to a copy of the existing info. The existing
+// info must not be changed: its maps and slices are shared with published snapshots (PwDump),
+// which are read without liveMu, and json.Unmarshal writes into existing maps and slices in
+// place.
+func mergeInfo[T GraphObjectInfo](rawInfo []byte, existing GraphObjectInfo) T {
+	var info T
+	if previous, ok := existing.(T); ok {
+		if encoded, err := json.Marshal(previous); err == nil {
+			_ = json.Unmarshal(encoded, &info)
+		}
+	}
+	_ = json.Unmarshal(rawInfo, &info)
+	return info
 }
 
 // rebuildLiveState reconstitutes a typed GraphState from the raw objects map

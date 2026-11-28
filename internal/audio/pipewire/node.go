@@ -2,6 +2,7 @@ package pipewire
 
 import (
 	"errors"
+	"fmt"
 	"math"
 )
 
@@ -38,12 +39,21 @@ func (n *InterfaceNode) GetMediaClass() (string, error) {
 	return mediaClass, nil
 }
 
-func (n InterfaceNode) GetMuted() bool {
-	params := n.Info.Params
-	props := params["Props"].([]interface{})
-	firstProp := props[0].(map[string]interface{})
-	muted := firstProp["mute"].(bool)
-	return muted
+// GetMuted returns the mute state of the node, an error if the node has none (yet).
+func (n InterfaceNode) GetMuted() (bool, error) {
+	props, ok := n.Info.Params["Props"].([]interface{})
+	if !ok || len(props) == 0 {
+		return false, fmt.Errorf("node %d has no props", n.Id)
+	}
+	firstProp, ok := props[0].(map[string]interface{})
+	if !ok {
+		return false, fmt.Errorf("node %d has no props", n.Id)
+	}
+	muted, ok := firstProp["mute"].(bool)
+	if !ok {
+		return false, fmt.Errorf("node %d has no mute state", n.Id)
+	}
+	return muted, nil
 }
 
 func (n InterfaceNode) GetVolume() []float64 {

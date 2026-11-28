@@ -56,6 +56,9 @@ func OpRunE(opName string) func(cmd *cobra.Command, args []string) error {
 		daemon.Notify(op.Invalidates...)
 
 		if a.Watch {
+			if daemon.RemoteDeclined() {
+				return errors.New("the daemon did not handle this command, continuous watching is disabled")
+			}
 			return errors.New("daemon is not running, continuous watching is disabled")
 		}
 		return nil

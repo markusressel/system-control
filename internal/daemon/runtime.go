@@ -34,3 +34,19 @@ func RuntimeDir() string {
 func SocketPath() string {
 	return filepath.Join(RuntimeDir(), "ipc.sock")
 }
+
+// getuid is a variable for tests.
+var getuid = os.Getuid
+
+// notifySocketPath returns the socket of the daemon that has to learn about state a command
+// changed. Under sudo that is the daemon of the invoking user, not one of root: sudo resets
+// $XDG_RUNTIME_DIR. Only notifications go there, commands run as root are never handed to
+// the user's daemon.
+func notifySocketPath() string {
+	if os.Getenv(EnvRuntimeDir) == "" && getuid() == 0 {
+		if uid := os.Getenv("SUDO_UID"); uid != "" && uid != "0" {
+			return filepath.Join("/run/user", uid, "system-control", "ipc.sock")
+		}
+	}
+	return SocketPath()
+}

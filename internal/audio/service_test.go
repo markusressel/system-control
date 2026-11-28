@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/markusressel/system-control/internal/audio/pipewire"
+	"github.com/markusressel/system-control/internal/persistence"
 )
 
 func fakeNode(id int, name string, volume float64, muted bool) pipewire.InterfaceNode {
@@ -239,5 +240,44 @@ func TestFindSingleNode_OnlyOfTheMediaClass(t *testing.T) {
 	}
 	if _, err := findSingleNode(state, "Nothing", pipewire.MediaClassAudioSource, "source"); err == nil {
 		t.Error("a source that does not exist must be an error")
+	}
+}
+
+// Save stores the volume of each target itself, also when its name matches several nodes (two streams of one app).
+func TestSave_StoresTheVolumeOfEachTarget(t *testing.T) {
+	previous := persistence.BaseDir
+	persistence.BaseDir = t.TempDir()
+	t.Cleanup(func() { persistence.BaseDir = previous })
+
+	first := fakeNode(9, "Firefox", 0.40, false)
+	second := fakeNode(10, "Firefox", 0.40, false)
+	for _, n := range []pipewire.InterfaceNode{first, second} {
+		n.Info.Props["media.class"] = "Stream/Output/Audio"
+	}
+	graph := fakeGraph("sinkA", fakeNode(7, "sinkA", 0.50, false), first, second)
+	var calls []setCall
+	s := newFakeService(&graph, &calls)
+
+	if err := s.Save("", "firefox"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Restore("", "firefox"); err != nil {
+		t.Fatal(err)
+	}
+	if len(calls) != 2 || math.Abs(calls[0].volume-0.40) > 0.001 || math.Abs(calls[1].volume-0.40) > 0.001 {
+		t.Errorf("restored volumes = %v, want 0.40 for both streams", calls)
+	}
+}
+
+// Toggling must fail instead of guessing when the current mute state can't be read.
+func TestMute_ToggleWithoutState(t *testing.T) {
+	node := fakeNode(7, "sinkA", 0.5, false)
+	node.Info.Params = map[string]interface{}{}
+	graph := fakeGraph("sinkA", node)
+	var calls []setCall
+	s := newFakeService(&graph, &calls)
+
+	if lines, err := s.Mute("", "", MuteToggle); err == nil {
+		t.Errorf("toggle without a mute state = %v, want an error", lines)
 	}
 }

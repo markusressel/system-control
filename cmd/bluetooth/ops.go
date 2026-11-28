@@ -2,7 +2,7 @@ package bluetooth
 
 import (
 	"context"
-	"log"
+	"time"
 
 	"github.com/markusressel/system-control/internal/bluetooth"
 	"github.com/markusressel/system-control/internal/daemon"
@@ -13,6 +13,7 @@ func init() {
 		Name:  "bluetooth.connected",
 		Run:   runConnected,
 		Watch: func(daemon.Args) bool { return true },
+		Poll:  pollInterval,
 	})
 }
 
@@ -36,11 +37,20 @@ func runConnected(ctx context.Context, a daemon.Args) ([]string, error) {
 	return []string{"no"}, nil
 }
 
+// unwatchedPollInterval is how often watched bluetooth state is queried while BlueZ's
+// signals can't be received.
+const unwatchedPollInterval = 5 * time.Second
+
+// pollInterval polls only while changes are not delivered (0 disables polling).
+func pollInterval() time.Duration {
+	if bluetooth.Watching() {
+		return 0
+	}
+	return unwatchedPollInterval
+}
+
 // EventSource refreshes watched bluetooth state whenever BlueZ reports a change.
 // It is a daemon.Source.
 func EventSource(ctx context.Context, refresh func(prefixes ...string)) {
-	err := bluetooth.WatchChanges(ctx, func() { refresh("bluetooth.") })
-	if err != nil {
-		log.Printf("bluetooth: no change notifications, watched state will not update: %v", err)
-	}
+	go bluetooth.WatchChanges(ctx, func() { refresh("bluetooth.") })
 }

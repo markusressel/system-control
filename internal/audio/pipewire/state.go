@@ -128,8 +128,7 @@ func (state *GraphState) IsMuted(sinkId int) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	muted := node.GetMuted()
-	return muted, err
+	return node.GetMuted()
 }
 
 // SetMuted sets the given volume to the given sink using pipewire
@@ -459,7 +458,12 @@ func (state *GraphState) GetVolumeByName(name string) (float64, error) {
 		}
 		node = nodes[0]
 	}
+	return state.GetNodeVolume(node)
+}
 
+// GetNodeVolume returns the volume of the node: the volume of the route of its hardware device if it has one,
+// otherwise its own (left channel).
+func (state *GraphState) GetNodeVolume(node InterfaceNode) (float64, error) {
 	// Check if the node is linked to a route of a hardware device
 	deviceIDRaw, hasDevice := node.Info.Props["device.id"]
 	profileDeviceRaw, hasProfileDevice := node.Info.Props["card.profile.device"]

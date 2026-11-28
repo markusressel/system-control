@@ -220,3 +220,22 @@ func TestWatch_OutputFlagsShareOneQuery(t *testing.T) {
 		t.Errorf("%d queries for watchers that only differ in the format, want 1", n)
 	}
 }
+
+// A command run with sudo notifies the daemon of the user who ran sudo.
+func TestNotifySocketPath_UnderSudo(t *testing.T) {
+	t.Setenv(EnvRuntimeDir, "")
+	t.Setenv("XDG_RUNTIME_DIR", "/run/user/0")
+	t.Setenv("SUDO_UID", "1000")
+	previous := getuid
+	t.Cleanup(func() { getuid = previous })
+
+	getuid = func() int { return 0 }
+	if got := notifySocketPath(); got != "/run/user/1000/system-control/ipc.sock" {
+		t.Errorf("under sudo: %s", got)
+	}
+
+	getuid = func() int { return 1000 }
+	if got, want := notifySocketPath(), SocketPath(); got != want {
+		t.Errorf("without sudo: %s, want %s", got, want)
+	}
+}

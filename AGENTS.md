@@ -62,7 +62,8 @@ Run the three CI checks before reporting a task done.
 - **Mutations** hold `Op.Lock` (cross-process, shared with the CLI). Waiters beyond `daemon.MaxQueueWait` are dropped
   on purpose (scroll spam): a command waits for its lock at most `MaxQueueWait` in total. An op that queries and
   mutates by argument sets `Op.LockFor` instead of `Op.Lock`. Slow relative steps (inc/dec of redshift) are
-  summed with `daemon.Accumulator` and applied in one go instead of dropped, see `cmd/display/redshift/coalesce.go`.
+  summed with `daemon.Accumulator` and applied in one go by whoever gets the lock; a step that can't get it in time
+  withdraws itself and fails, see `cmd/display/redshift/coalesce.go`.
 - **Observability:** `system-control daemon status` (`-w` live view, `--json`) shows watchers with their current
   value, per-op calls/latency/drops/failures and source health. Add a source's health with `Engine.AddStatus`.
   The structured form is `StatusInfo` (`STATUS json`), `RenderStatus` draws it.

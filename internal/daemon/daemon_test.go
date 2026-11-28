@@ -181,6 +181,10 @@ func TestTryRemote(t *testing.T) {
 		t.Errorf("handled=%v code=%d stderr=%q", handled, code, stderr.String())
 	}
 
+	if RemoteDeclined() {
+		t.Error("RemoteDeclined() = true although the daemon handled everything")
+	}
+
 	// an op that can't serve the request right now hands it back to the caller, also for watches
 	for _, argv := range [][]string{{"test", "unhandled"}, {"test", "unhandled", "--watch"}} {
 		stdout.Reset()
@@ -189,6 +193,10 @@ func TestTryRemote(t *testing.T) {
 			t.Errorf("%v: ErrUnhandled must be answered with \"unhandled\"", argv)
 		}
 	}
+	if !RemoteDeclined() {
+		t.Error("RemoteDeclined() = false after the daemon declined")
+	}
+	remoteDeclined.Store(false)
 
 	// an error is an answer, only unknown commands go back to the caller
 	handled, _ = TryRemote([]string{"test", "nope"}, &stdout, &stderr)

@@ -277,6 +277,15 @@ const EnvNoDaemon = "SYSTEM_CONTROL_NO_DAEMON"
 // answerTimeout is how long the daemon may take to answer a one-shot request.
 const answerTimeout = 5 * time.Second
 
+// remoteDeclined is set when the daemon answered that it does not handle a command line.
+var remoteDeclined atomic.Bool
+
+// RemoteDeclined reports whether a running daemon declined the command line of TryRemote (as
+// opposed to there being no daemon).
+func RemoteDeclined() bool {
+	return remoteDeclined.Load()
+}
+
 // TryRemote lets the daemon run a command line. handled is false if the daemon is not
 // reachable or does not handle the command, in which case nothing was written to stdout/stderr
 // and the caller must run the command itself.
@@ -314,6 +323,7 @@ func TryRemote(argv []string, stdout, stderr io.Writer) (handled bool, exitCode 
 		line = strings.TrimSuffix(line, "\n")
 		switch {
 		case line == "U":
+			remoteDeclined.Store(true)
 			return false, 0
 		case line == "W":
 			_ = conn.SetReadDeadline(time.Time{})
@@ -392,7 +402,7 @@ func Notify(prefixes ...string) {
 		e.Refresh(prefixes...)
 		return
 	}
-	conn, err := net.DialTimeout("unix", SocketPath(), 100*time.Millisecond)
+	conn, err := net.DialTimeout("unix", notifySocketPath(), 100*time.Millisecond)
 	if err != nil {
 		return
 	}

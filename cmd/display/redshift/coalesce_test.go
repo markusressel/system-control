@@ -1,6 +1,7 @@
 package redshift
 
 import (
+	"errors"
 	"math"
 	"sync"
 	"testing"
@@ -55,7 +56,8 @@ func TestCoalescedStep_SumsStepsOfAJam(t *testing.T) {
 	}
 }
 
-func TestCoalescedStep_KeepsStepsWhenLockStaysBusy(t *testing.T) {
+// A step that can't get the lock is dropped with an error, not applied later as a surprise.
+func TestCoalescedStep_DropsAStepWhenTheLockStaysBusy(t *testing.T) {
 	t.Setenv(daemon.EnvRuntimeDir, t.TempDir())
 	previous := stepLockWait
 	stepLockWait = 50 * time.Millisecond
@@ -69,13 +71,13 @@ func TestCoalescedStep_KeepsStepsWhenLockStaysBusy(t *testing.T) {
 	applied := 0.0
 	apply := func(total float64) ([]string, error) { applied += total; return nil, nil }
 
-	if _, err := coalescedStep("busy", 0.3, apply); err != nil || applied != 0 {
-		t.Fatalf("applied=%v err=%v while the lock was held", applied, err)
+	if _, err := coalescedStep("busy", 0.3, apply); !errors.Is(err, ErrStepDropped) || applied != 0 {
+		t.Fatalf("applied=%v err=%v while the lock was held, want ErrStepDropped", applied, err)
 	}
 	unlock()
 
-	// the next step brings the earlier one along
-	if _, err := coalescedStep("busy", 0.1, apply); err != nil || math.Abs(applied-0.4) > 1e-9 {
-		t.Errorf("applied=%v err=%v, want 0.4", applied, err)
+	// the next step does not bring the dropped one along
+	if _, err := coalescedStep("busy", 0.1, apply); err != nil || math.Abs(applied-0.1) > 1e-9 {
+		t.Errorf("applied=%v err=%v, want 0.1", applied, err)
 	}
 }

@@ -25,11 +25,18 @@ type entry struct {
 	op   *Op
 	args Args
 
+	// queryMu serializes the queries of the entry: a query that started earlier must not
+	// publish its older result after a later one.
+	queryMu sync.Mutex
+
 	// mu guards the fields below
 	mu      sync.Mutex
 	last    []string
 	hasLast bool
 	subs    map[chan update]struct{}
+	// joining counts subscribers that found the entry but did not add their channel to subs
+	// yet. The entry must not be released while they join.
+	joining int
 
 	running bool
 	again   bool
@@ -68,12 +75,18 @@ func (s *store) subscribe(ctx context.Context, op *Op, a Args) (updates <-chan u
 		e = &entry{key: key, op: op, args: shared, subs: map[chan update]struct{}{}}
 		s.entries[key] = e
 	}
+	e.mu.Lock()
+	e.joining++
+	e.mu.Unlock()
 	s.mu.Unlock()
 
 	ch := make(chan update, 1)
 
 	err := e.refresh(ctx)
 	if errors.Is(err, ErrUnhandled) && !e.hasValue() {
+		e.mu.Lock()
+		e.joining--
+		e.mu.Unlock()
 		s.release(e, nil)
 		return nil, nil, err
 	}
@@ -82,6 +95,7 @@ func (s *store) subscribe(ctx context.Context, op *Op, a Args) (updates <-chan u
 	}
 
 	e.mu.Lock()
+	e.joining--
 	e.subs[ch] = struct{}{}
 	if e.hasLast {
 		ch <- update{lines: slices.Clone(e.last)}
@@ -100,7 +114,7 @@ func (s *store) release(e *entry, ch chan update) {
 	if ch != nil {
 		delete(e.subs, ch)
 	}
-	empty := len(e.subs) == 0
+	empty := len(e.subs) == 0 && e.joining == 0
 	e.mu.Unlock()
 
 	if !empty {
@@ -112,7 +126,7 @@ func (s *store) release(e *entry, ch chan update) {
 	// re-check under the store lock, a new subscriber may have joined in between
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if len(e.subs) == 0 && s.entries[e.key] == e {
+	if len(e.subs) == 0 && e.joining == 0 && s.entries[e.key] == e {
 		delete(s.entries, e.key)
 		if e.stopPoll != nil {
 			e.stopPoll()
@@ -227,8 +241,12 @@ func (e *entry) logRefresh(err error) {
 	}
 }
 
-// refresh queries the current value and notifies subscribers if it changed.
+// refresh queries the current value and notifies subscribers if it changed. Queries of the
+// same entry run one after the other (subscribe and trigger both refresh).
 func (e *entry) refresh(ctx context.Context) (err error) {
+	e.queryMu.Lock()
+	defer e.queryMu.Unlock()
+
 	// Run is arbitrary op code working on external state, it must not take the daemon down.
 	defer func() {
 		if r := recover(); r != nil {

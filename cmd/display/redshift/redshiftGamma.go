@@ -2,8 +2,6 @@ package redshift
 
 import (
 	"github.com/markusressel/system-control/internal/commandutil"
-	"github.com/markusressel/system-control/internal/configuration"
-	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -12,15 +10,6 @@ var gammaCmd = &cobra.Command{
 	Short: "Show current display gamma",
 	Long:  ``,
 	RunE:  commandutil.OpRunE("display.redshift.gamma"),
-}
-
-func clampGammaToConfig(value float64) float64 {
-	config := configuration.Get()
-	minG := config.Redshift.Gamma.MinimumGamma
-	maxG := config.Redshift.Gamma.MaximumGamma
-	newGammaValue := util.Clamp(value, minG, maxG)
-	newGammaValue = util.RoundTo2DP(newGammaValue)
-	return newGammaValue
 }
 
 func init() {

@@ -1,8 +1,6 @@
 package redshift
 
 import (
-	"fmt"
-
 	"github.com/markusressel/system-control/internal/commandutil"
 	"github.com/spf13/cobra"
 )
@@ -22,14 +20,4 @@ func init() {
 	)
 
 	brightnessCmd.AddCommand(redshiftBrightnessDecCmd)
-}
-
-func validateStep(step float64) error {
-	if step <= 0 {
-		return fmt.Errorf("step size must be a positive number (found: %f)", step)
-	}
-	if step > 1.0 {
-		return fmt.Errorf("step size cannot exceed 1.0 (found: %f)", step)
-	}
-	return nil
 }

@@ -3,12 +3,11 @@ package redshift
 import (
 	"errors"
 	"fmt"
-	"time"
+	internalredshift "github.com/markusressel/system-control/internal/redshift"
 
 	"github.com/markusressel/system-control/internal/configuration"
 	"github.com/markusressel/system-control/internal/daemon"
 	"github.com/markusressel/system-control/internal/util"
-	"github.com/nathan-osman/go-sunrise"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +16,7 @@ var redshiftUpdateCmd = &cobra.Command{
 	Short: "Update the currently applied redshift based on the current time of day.",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		unlock, err := daemon.AcquireLock(redshiftLockName)
+		unlock, err := daemon.AcquireLock(internalredshift.LockName)
 		if err != nil {
 			return err
 		}
@@ -30,30 +29,30 @@ var redshiftUpdateCmd = &cobra.Command{
 			return err
 		}
 
-		colorTemperature := CalculateTargetColorTemperature(
+		colorTemperature := internalredshift.CalculateTargetColorTemperature(
 			config.Redshift,
 			redshiftConfig,
 		)
 
-		if colorTemperature != -1 && (colorTemperature < 1000 || colorTemperature > 25000) {
+		if colorTemperature != -1 && (colorTemperature < internalredshift.MinColorTemperature || colorTemperature > internalredshift.MaxColorTemperature) {
 			return errors.New("color temperature must be between 1000 and 25000")
 		}
 
-		displays, err := parseDisplayParam(display)
+		displays, err := internalredshift.ParseDisplays(display)
 		if err != nil {
 			return err
 		}
 
 		for _, display := range displays {
-			err = ApplyRedshift(display, colorTemperature, -1, -1)
+			err = internalredshift.Apply(display, colorTemperature, -1, -1)
 			if err != nil {
 				return err
 			}
 
 			// print current values, if any of them were changed
-			lastSetColorTemperature := getLastSetColorTemperature(display)
-			lastSetBrightness := getLastSetBrightness(display)
-			lastSetGamma := getLastSetGamma(display)
+			lastSetColorTemperature := internalredshift.LastColorTemperature(display)
+			lastSetBrightness := internalredshift.LastBrightness(display)
+			lastSetGamma := internalredshift.LastGamma(display)
 
 			if colorTemperature != -1 && colorTemperature != lastSetColorTemperature {
 				fmt.Printf("Color Temperature: %d -> %d\n", lastSetColorTemperature, colorTemperature)
@@ -64,33 +63,6 @@ var redshiftUpdateCmd = &cobra.Command{
 
 		return nil
 	},
-}
-
-const (
-	// TransitionElevationThreshold is the sun's elevation threshold at which the color temperature should be fully transitioned.
-	TransitionElevationThreshold = 20
-)
-
-func CalculateTargetColorTemperature(
-	_redshiftConfig configuration.RedshiftConfig,
-	redshiftConfig util.RedshiftConfig,
-) int64 {
-	elevation := sunrise.Elevation(
-		redshiftConfig.Manual.Lat,
-		redshiftConfig.Manual.Lon,
-		time.Now(),
-	)
-
-	targetColor := redshiftConfig.Redshift.DayColorTemperature
-	if elevation < 0 {
-		targetColor = redshiftConfig.Redshift.NightColorTemperature
-	} else if elevation > TransitionElevationThreshold {
-		targetColor = redshiftConfig.Redshift.DayColorTemperature
-	} else {
-		targetColor = redshiftConfig.Redshift.NightColorTemperature + int64((float64(redshiftConfig.Redshift.DayColorTemperature)-float64(redshiftConfig.Redshift.NightColorTemperature))*(elevation/TransitionElevationThreshold))
-	}
-
-	return targetColor
 }
 
 func init() {

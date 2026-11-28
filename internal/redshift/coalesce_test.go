@@ -13,7 +13,7 @@ import (
 func TestCoalescedStep_SumsStepsOfAJam(t *testing.T) {
 	t.Setenv(daemon.EnvRuntimeDir, t.TempDir())
 
-	unlock, err := daemon.AcquireLock(redshiftLockName)
+	unlock, err := daemon.AcquireLock(LockName)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestCoalescedStep_DropsAStepWhenTheLockStaysBusy(t *testing.T) {
 	stepLockWait = 50 * time.Millisecond
 	t.Cleanup(func() { stepLockWait = previous })
 
-	unlock, err := daemon.AcquireLock(redshiftLockName)
+	unlock, err := daemon.AcquireLock(LockName)
 	if err != nil {
 		t.Fatal(err)
 	}

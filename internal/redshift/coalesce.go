@@ -26,7 +26,7 @@ var ErrStepDropped = errors.New("redshift is busy, step dropped")
 func coalescedStep(key string, delta float64, apply func(total float64) ([]string, error)) ([]string, error) {
 	ticket := stepAccumulator.Add(key, delta)
 
-	unlock, ok, err := daemon.AcquireLockWithin(redshiftLockName, stepLockWait)
+	unlock, ok, err := daemon.AcquireLockWithin(LockName, stepLockWait)
 	if err != nil || !ok {
 		if !stepAccumulator.Withdraw(ticket) {
 			// a lock holder applied it while we waited

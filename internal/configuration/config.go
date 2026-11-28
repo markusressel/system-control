@@ -250,3 +250,15 @@ func PrintConfig() {
 
 	fmt.Println(string(configYaml))
 }
+
+// PollInterval returns the Op.Poll of watched state: the interval configured under
+// `daemon.pollIntervals.<name>`, or def. It is asked for again after every tick, so a reloaded
+// configuration applies to running watchers too. 0 disables polling.
+func PollInterval(name string, def time.Duration) func() time.Duration {
+	return func() time.Duration {
+		if configured := Get().Daemon.PollIntervals[name]; configured > 0 {
+			return configured
+		}
+		return def
+	}
+}

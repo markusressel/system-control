@@ -43,7 +43,7 @@ func (r *Registry) Bind(root *cobra.Command) error {
 			collect(p.PersistentFlags())
 		}
 
-		if f := op.flagByName("watch"); op.Watch != nil && (f == nil || f.Kind != FlagBool) {
+		if f := op.flagByName(WatchFlag); op.Watch != nil && (f == nil || f.Kind != FlagBool) {
 			return fmt.Errorf("op %s is watchable, but %q has no boolean --watch flag", op.Name, cmd.CommandPath())
 		}
 

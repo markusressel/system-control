@@ -12,7 +12,7 @@ var mutedCmd = &cobra.Command{
 }
 
 func init() {
-	mutedCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(mutedCmd)
 
 	VolumeCmd.AddCommand(mutedCmd)
 }

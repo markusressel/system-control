@@ -12,14 +12,9 @@ func init() {
 	daemon.Register(daemon.Op{
 		Name:  "session.locked",
 		Run:   runLocked,
-		Watch: func(daemon.Args) bool { return true },
+		Watch: daemon.Always,
 		// the screen locker is started by anything, there is no event
-		Poll: func() time.Duration {
-			if configured := configuration.Get().Daemon.PollIntervals["session"]; configured > 0 {
-				return configured
-			}
-			return 2 * time.Second
-		},
+		Poll: configuration.PollInterval("session", 2*time.Second),
 	})
 }
 

@@ -43,7 +43,7 @@ var modeCmd = &cobra.Command{
 
 func init() {
 	modeCmd.Flags().String(fanModeTypeFlag, fanModeTypeText, "output format: text or number")
-	modeCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(modeCmd)
 }
 
 func ensureRoot() error {

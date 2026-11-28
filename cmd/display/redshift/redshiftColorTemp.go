@@ -22,7 +22,7 @@ func clampColorTemperatureToConfig(colorTemperature int64) int64 {
 }
 
 func init() {
-	colorTempCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(colorTempCmd)
 
 	colorTempCmd.Flags().Int64P(
 		"temperature", "t",

@@ -18,6 +18,8 @@ daemon:
     # battery: 10s
     # mouse: 1m
     # session: 2s
+    # bluetooth is driven by BlueZ signals (polled every 5s while they can't be received)
+    # bluetooth: 1m
     # fan mode can only be polled
     fan: 5s
 

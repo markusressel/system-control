@@ -14,6 +14,6 @@ var batteryRemainingCmd = &cobra.Command{
 }
 
 func init() {
-	batteryRemainingCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(batteryRemainingCmd)
 	Command.AddCommand(batteryRemainingCmd)
 }

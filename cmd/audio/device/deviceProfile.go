@@ -13,7 +13,7 @@ var profileCmd = &cobra.Command{
 }
 
 func init() {
-	profileCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(profileCmd)
 
 	DeviceCmd.AddCommand(profileCmd)
 }

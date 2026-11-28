@@ -25,7 +25,7 @@ func init() {
 		[]string{"id", "name", "description"},
 		"Columns to print (id,name,description)",
 	)
-	activeCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(activeCmd)
 
 	SourceCmd.AddCommand(activeCmd)
 }

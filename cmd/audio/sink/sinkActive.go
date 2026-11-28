@@ -35,7 +35,7 @@ func init() {
 		defaultColumns,
 		"Columns to print (id,name,description)",
 	)
-	activeCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(activeCmd)
 
 	SinkCmd.AddCommand(activeCmd)
 }

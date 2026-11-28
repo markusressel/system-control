@@ -212,7 +212,7 @@ func (op *Op) flagByShort(short string) *FlagDef {
 func (op *Op) defaultArgs() Args {
 	a := Args{Flags: make(map[string]string, len(op.flags))}
 	for _, f := range op.flags {
-		if f.Name != "watch" {
+		if f.Name != WatchFlag {
 			a.Flags[f.Name] = f.Default
 		}
 	}
@@ -308,6 +308,12 @@ func (r *Registry) Ops() []*Op {
 	sort.Slice(result, func(i, j int) bool { return result[i].Name < result[j].Name })
 	return result
 }
+
+// WatchFlag is the boolean flag that makes a command watch its value (Args.Watch).
+const WatchFlag = "watch"
+
+// Always is the Op.Watch of ops whose every invocation can be watched.
+func Always(Args) bool { return true }
 
 // MatchArgv resolves a raw command line (without the program name) to an op and its arguments.
 // ok is false for everything the registry does not fully understand; the caller must then
@@ -408,7 +414,7 @@ func applyFlag(a *Args, def *FlagDef, value string, hasValue bool, following []s
 		} else if value != "true" && value != "false" {
 			return 0, false
 		}
-		if def.Name == "watch" {
+		if def.Name == WatchFlag {
 			a.Watch = value == "true"
 		} else {
 			a.Flags[def.Name] = value

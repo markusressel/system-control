@@ -69,10 +69,10 @@ func OpRunE(opName string) func(cmd *cobra.Command, args []string) error {
 // Every flag of the command is included, ops pick the ones they know by name.
 func ArgsFromCommand(cmd *cobra.Command, args []string) daemon.Args {
 	a := daemon.Args{Flags: map[string]string{}, Pos: args}
-	a.Watch, _ = cmd.Flags().GetBool("watch")
+	a.Watch, _ = cmd.Flags().GetBool(daemon.WatchFlag)
 
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		if f.Name == "watch" {
+		if f.Name == daemon.WatchFlag {
 			return
 		}
 		if f.Value.Type() == "stringSlice" {
@@ -84,4 +84,9 @@ func ArgsFromCommand(cmd *cobra.Command, args []string) daemon.Args {
 		a.Flags[f.Name] = f.Value.String()
 	})
 	return a
+}
+
+// AddWatchFlag adds the --watch flag of a watchable command.
+func AddWatchFlag(cmd *cobra.Command) {
+	cmd.Flags().BoolP(daemon.WatchFlag, "w", false, "Continuously watch for changes")
 }

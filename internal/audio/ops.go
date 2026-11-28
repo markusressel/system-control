@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/markusressel/system-control/internal/audio/pipewire"
 	"github.com/markusressel/system-control/internal/configuration"
@@ -16,13 +15,8 @@ const volumeLock = "cmd-audio-volume"
 // service is the audio service of this process: the daemon's, or the one of a single CLI run.
 var service = NewService(pipewireBackend())
 
-func always(daemon.Args) bool { return true }
-
-func pollInterval(name string) func() time.Duration {
-	return func() time.Duration {
-		return configuration.Get().Daemon.PollIntervals[name]
-	}
-}
+// audio is driven by PipeWire events, polling is off unless configured as a safety net
+var pollAudio = configuration.PollInterval("audio", 0)
 
 func init() {
 	daemon.Register(daemon.Op{
@@ -31,8 +25,8 @@ func init() {
 			v, err := service.Volume(a.Flag("device"), a.Flag("stream"))
 			return []string{v}, err
 		},
-		Watch: always,
-		Poll:  pollInterval("audio"),
+		Watch: daemon.Always,
+		Poll:  pollAudio,
 	})
 
 	daemon.Register(daemon.Op{
@@ -41,8 +35,8 @@ func init() {
 			v, err := service.Muted(a.Flag("device"), a.Flag("stream"))
 			return []string{v}, err
 		},
-		Watch: always,
-		Poll:  pollInterval("audio"),
+		Watch: daemon.Always,
+		Poll:  pollAudio,
 	})
 
 	stepOp := func(name string, increase bool) daemon.Op {
@@ -137,8 +131,8 @@ func init() {
 	daemon.Register(daemon.Op{
 		Name:  "audio.sink.active",
 		Run:   runSinkActive,
-		Watch: always,
-		Poll:  pollInterval("audio"),
+		Watch: daemon.Always,
+		Poll:  pollAudio,
 	})
 
 	daemon.Register(daemon.Op{
@@ -163,15 +157,15 @@ func init() {
 			}
 			return nodeColumns(node, a.List("columns"))
 		},
-		Watch: always,
-		Poll:  pollInterval("audio"),
+		Watch: daemon.Always,
+		Poll:  pollAudio,
 	})
 
 	daemon.Register(daemon.Op{
 		Name:        "audio.device.profile",
 		Run:         runDeviceProfile,
 		Watch:       func(a daemon.Args) bool { return len(a.Pos) == 0 },
-		Poll:        pollInterval("audio"),
+		Poll:        pollAudio,
 		Invalidates: []string{"audio."},
 	})
 }

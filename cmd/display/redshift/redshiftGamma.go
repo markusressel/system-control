@@ -24,7 +24,7 @@ func clampGammaToConfig(value float64) float64 {
 }
 
 func init() {
-	gammaCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(gammaCmd)
 
 	gammaCmd.Flags().Float64P(
 		"gamma", "g",

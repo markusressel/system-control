@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/markusressel/system-control/internal/bluetooth"
+	"github.com/markusressel/system-control/internal/configuration"
 	"github.com/markusressel/system-control/internal/daemon"
 )
 
@@ -12,7 +13,7 @@ func init() {
 	daemon.Register(daemon.Op{
 		Name:  "bluetooth.connected",
 		Run:   runConnected,
-		Watch: func(daemon.Args) bool { return true },
+		Watch: daemon.Always,
 		Poll:  pollInterval,
 	})
 }
@@ -41,8 +42,14 @@ func runConnected(ctx context.Context, a daemon.Args) ([]string, error) {
 // signals can't be received.
 const unwatchedPollInterval = 5 * time.Second
 
-// pollInterval polls only while changes are not delivered (0 disables polling).
+var configuredPollInterval = configuration.PollInterval("bluetooth", 0)
+
+// pollInterval polls while changes are not delivered, and at a configured interval as a safety
+// net (0 disables polling).
 func pollInterval() time.Duration {
+	if configured := configuredPollInterval(); configured > 0 {
+		return configured
+	}
 	if bluetooth.Watching() {
 		return 0
 	}

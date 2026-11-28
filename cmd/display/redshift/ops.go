@@ -17,12 +17,7 @@ const (
 
 // displayPollInterval is how often watched display state is re-queried. Changes made through
 // this tool refresh the watchers right away, polling only catches the rest.
-func displayPollInterval() time.Duration {
-	if configured := configuration.Get().Daemon.PollIntervals["display"]; configured > 0 {
-		return configured
-	}
-	return defaultPollInterval
-}
+var displayPollInterval = configuration.PollInterval("display", defaultPollInterval)
 
 func init() {
 	daemon.Register(daemon.Op{

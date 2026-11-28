@@ -14,6 +14,6 @@ var lockedCmd = &cobra.Command{
 }
 
 func init() {
-	lockedCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(lockedCmd)
 	Command.AddCommand(lockedCmd)
 }

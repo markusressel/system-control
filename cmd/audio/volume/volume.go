@@ -15,7 +15,7 @@ var VolumeCmd = &cobra.Command{
 }
 
 func init() {
-	VolumeCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(VolumeCmd)
 
 	VolumeCmd.PersistentFlags().StringVarP(
 		&device,

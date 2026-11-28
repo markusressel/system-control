@@ -28,7 +28,7 @@ func clampBrightnessToConfig(value float64) float64 {
 }
 
 func init() {
-	brightnessCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(brightnessCmd)
 
 	brightnessCmd.Flags().Float64VarP(
 		&brightnessValue,

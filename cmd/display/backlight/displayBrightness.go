@@ -15,6 +15,6 @@ var brightnessCmd = &cobra.Command{
 }
 
 func init() {
-	brightnessCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(brightnessCmd)
 	Command.AddCommand(brightnessCmd)
 }

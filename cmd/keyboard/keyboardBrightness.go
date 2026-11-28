@@ -15,6 +15,6 @@ var keyboardBrightnessCmd = &cobra.Command{
 }
 
 func init() {
-	keyboardBrightnessCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(keyboardBrightnessCmd)
 	Command.AddCommand(keyboardBrightnessCmd)
 }

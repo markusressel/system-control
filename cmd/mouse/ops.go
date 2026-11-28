@@ -13,14 +13,9 @@ func init() {
 	daemon.Register(daemon.Op{
 		Name:  "mouse.battery",
 		Run:   runBattery,
-		Watch: func(daemon.Args) bool { return true },
+		Watch: daemon.Always,
 		// a battery level changes slowly, and asking costs a D-Bus round trip
-		Poll: func() time.Duration {
-			if configured := configuration.Get().Daemon.PollIntervals["mouse"]; configured > 0 {
-				return configured
-			}
-			return time.Minute
-		},
+		Poll: configuration.PollInterval("mouse", time.Minute),
 	})
 }
 

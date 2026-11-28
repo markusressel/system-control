@@ -76,7 +76,7 @@ func extractBatteryNumber(value string) string {
 }
 
 func init() {
-	getMouseBatteryCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(getMouseBatteryCmd)
 	getMouseBatteryCmd.Flags().String(mouseBatteryTypeFlag, mouseBatteryTypePercentage, "output format: percentage or number")
 	Command.AddCommand(getMouseBatteryCmd)
 }

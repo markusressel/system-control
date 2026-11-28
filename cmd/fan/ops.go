@@ -16,13 +16,8 @@ func init() {
 	daemon.Register(daemon.Op{
 		Name:  "fan.mode",
 		Run:   runMode,
-		Watch: func(daemon.Args) bool { return true },
-		Poll: func() time.Duration {
-			if configured := configuration.Get().Daemon.PollIntervals["fan"]; configured > 0 {
-				return configured
-			}
-			return defaultPollInterval
-		},
+		Watch: daemon.Always,
+		Poll:  configuration.PollInterval("fan", defaultPollInterval),
 	})
 }
 

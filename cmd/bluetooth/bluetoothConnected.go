@@ -16,5 +16,5 @@ var bluetoothConnectedCmd = &cobra.Command{
 func init() {
 	Command.AddCommand(bluetoothConnectedCmd)
 
-	bluetoothConnectedCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(bluetoothConnectedCmd)
 }

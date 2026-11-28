@@ -20,12 +20,7 @@ const (
 )
 
 func pollInterval(name string) func() time.Duration {
-	return func() time.Duration {
-		if configured := configuration.Get().Daemon.PollIntervals[name]; configured > 0 {
-			return configured
-		}
-		return defaultPollInterval
-	}
+	return configuration.PollInterval(name, defaultPollInterval)
 }
 
 func percentArg(a daemon.Args) (int, error) {
@@ -51,7 +46,7 @@ func init() {
 
 	daemon.Register(daemon.Op{
 		Name:  "display.backlight.brightness",
-		Watch: func(daemon.Args) bool { return true },
+		Watch: daemon.Always,
 		Poll:  pollInterval("backlight"),
 		Run: func(context.Context, daemon.Args) ([]string, error) {
 			p, err := displayPercent()

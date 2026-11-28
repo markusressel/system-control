@@ -47,21 +47,19 @@ func playerctl(command string) func(context.Context, daemon.Args) ([]string, err
 }
 
 func init() {
-	always := func(daemon.Args) bool { return true }
-
 	// `media` without a sub command shows the status
 	for _, name := range []string{"media", "media.status"} {
 		daemon.Register(daemon.Op{
 			Name:  name,
 			Run:   playerctl("status"),
-			Watch: always,
+			Watch: daemon.Always,
 			Poll:  pollInterval(2*time.Second, true),
 		})
 	}
 	daemon.Register(daemon.Op{
 		Name:  "media.position",
 		Run:   playerctl("position"),
-		Watch: always,
+		Watch: daemon.Always,
 		Poll:  pollInterval(time.Second, false),
 	})
 

@@ -13,6 +13,6 @@ var positionCmd = &cobra.Command{
 }
 
 func init() {
-	positionCmd.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(positionCmd)
 	Command.AddCommand(positionCmd)
 }

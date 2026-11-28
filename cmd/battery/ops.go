@@ -18,14 +18,9 @@ func init() {
 	daemon.Register(daemon.Op{
 		Name:  "battery.remaining",
 		Run:   runRemaining,
-		Watch: func(daemon.Args) bool { return true },
+		Watch: daemon.Always,
 		// the discharge rate is only known by asking for it
-		Poll: func() time.Duration {
-			if configured := configuration.Get().Daemon.PollIntervals["battery"]; configured > 0 {
-				return configured
-			}
-			return 10 * time.Second
-		},
+		Poll: configuration.PollInterval("battery", 10*time.Second),
 	})
 }
 

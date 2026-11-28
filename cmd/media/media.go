@@ -13,7 +13,7 @@ var Command = &cobra.Command{
 }
 
 func init() {
-	Command.Flags().BoolP("watch", "w", false, "Continuously watch for changes")
+	commandutil.AddWatchFlag(Command)
 	Command.PersistentFlags().StringP(
 		"player", "p",
 		"",

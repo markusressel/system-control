@@ -8,16 +8,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/markusressel/system-control/cmd/bluetooth"
-	"github.com/markusressel/system-control/cmd/media"
-	"github.com/markusressel/system-control/internal/audio"
 	"github.com/markusressel/system-control/internal/configuration"
 	"github.com/markusressel/system-control/internal/daemon"
 	"github.com/markusressel/system-control/internal/util"
 	"github.com/spf13/cobra"
 
-	// registers the display ops
+	// register their ops (and event sources), no command imports them
 	_ "github.com/markusressel/system-control/cmd/display/redshift"
+	_ "github.com/markusressel/system-control/internal/audio"
 	_ "github.com/markusressel/system-control/internal/backlight"
 )
 
@@ -39,10 +37,6 @@ every command works on its own.`,
 		util.EnableDisplayCache(2 * time.Second)
 
 		eng := daemon.NewEngine(daemon.Default)
-		eng.AddSource(audio.EventSource)
-		eng.AddSource(bluetooth.EventSource)
-		eng.AddSource(media.EventSource)
-		eng.AddStatus(audio.Status)
 
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()

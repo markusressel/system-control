@@ -239,3 +239,27 @@ func TestNotifySocketPath_UnderSudo(t *testing.T) {
 		t.Errorf("without sudo: %s, want %s", got, want)
 	}
 }
+
+// Sources registered with the registry are started by the engine, their status shows up.
+func TestRegisterSource(t *testing.T) {
+	t.Setenv(EnvRuntimeDir, t.TempDir())
+	r := NewRegistry()
+	started := make(chan struct{})
+	r.RegisterSource(func(ctx context.Context, refresh func(prefixes ...string)) { close(started) },
+		func() []string { return []string{"source: active"} })
+
+	eng := NewEngine(r)
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	if err := eng.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("source not started")
+	}
+	if status := RenderStatus(eng.statusInfo(), RenderOptions{}); !strings.Contains(status, "source: active") {
+		t.Errorf("status lacks the source:\n%s", status)
+	}
+}

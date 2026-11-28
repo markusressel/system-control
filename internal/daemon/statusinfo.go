@@ -19,7 +19,7 @@ type StatusInfo struct {
 
 	Watches    []WatchStatus `json:"watches"`
 	Executions []ExecStatus  `json:"executions"`
-	// Details are lines of event sources, see Engine.AddStatus.
+	// Details are lines of event sources, see RegisterSource.
 	Details []string `json:"details,omitempty"`
 }
 

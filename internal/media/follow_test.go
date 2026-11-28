@@ -10,10 +10,10 @@ import (
 
 func fakeFollow(t *testing.T, script string) {
 	t.Helper()
-	previous, delay := followCommand, followRestartDelay
+	previous, delay := followCommand, follower.InitialDelay
 	followCommand = func(ctx context.Context) *exec.Cmd { return exec.CommandContext(ctx, "sh", "-c", script) }
-	followRestartDelay = 10 * time.Millisecond
-	t.Cleanup(func() { followCommand, followRestartDelay = previous, delay })
+	follower.InitialDelay = 10 * time.Millisecond
+	t.Cleanup(func() { followCommand, follower.InitialDelay = previous, delay })
 }
 
 func waitFor(t *testing.T, what string, cond func() bool) {
@@ -64,10 +64,10 @@ func TestFollow_RestartsACommandThatEnded(t *testing.T) {
 }
 
 func TestFollow_SurvivesAMissingTool(t *testing.T) {
-	previous, delay := followCommand, followRestartDelay
+	previous, delay := followCommand, follower.InitialDelay
 	followCommand = func(ctx context.Context) *exec.Cmd { return exec.CommandContext(ctx, "/nonexistent/playerctl") }
-	followRestartDelay = 10 * time.Millisecond
-	defer func() { followCommand, followRestartDelay = previous, delay }()
+	follower.InitialDelay = 10 * time.Millisecond
+	defer func() { followCommand, follower.InitialDelay = previous, delay }()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()

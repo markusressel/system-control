@@ -27,6 +27,8 @@ func NewEngine(registry *Registry) *Engine {
 	e := &Engine{
 		registry: registry,
 		store:    newStore(),
+		sources:  append([]Source(nil), registry.sources...),
+		statuses: append([]func() []string(nil), registry.statuses...),
 	}
 	e.server = &ipcServer{engine: e}
 	return e

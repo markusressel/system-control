@@ -3,11 +3,10 @@ package media
 import (
 	"bufio"
 	"context"
-	"log"
 	"os/exec"
-	"sync/atomic"
 	"syscall"
-	"time"
+
+	"github.com/markusressel/system-control/internal/supervise"
 )
 
 // followFormat is the format of a line of the follow command, see parseFollowLine.
@@ -19,52 +18,29 @@ var followCommand = func(ctx context.Context) *exec.Cmd {
 	return exec.CommandContext(ctx, "playerctl", "--all-players", "--follow", "--format", followFormat, "status")
 }
 
-// restart delays of a follow command that ended, variables for tests
-var (
-	followRestartDelay = time.Second
-	followMaxDelay     = 30 * time.Second
-	followHealthyAfter = time.Minute
-)
+// follower keeps the follow command running.
+var follower = &supervise.Loop{Name: "media: following players"}
 
-var following atomic.Bool
+// FollowStatus describes the health of the follow command for `daemon status`.
+func FollowStatus() []string {
+	return follower.Status()
+}
 
 // Following reports whether changes are currently being followed, so that nothing has to poll.
 func Following() bool {
-	return following.Load()
+	return follower.Active()
 }
 
 // Follow calls onChange whenever the status of a player changes (or one appears or goes
-// away), until ctx is done. It records the status for LastPlayed. A follow command that ends is started again with a backoff.
+// away), until ctx is done. It records the status for LastPlayed. A follow command that ends
+// is started again with a backoff.
 func Follow(ctx context.Context, onChange func()) {
-	delay := followRestartDelay
-	loggedStartFailure := false
-
-	for ctx.Err() == nil {
-		started := time.Now()
-		err := followOnce(ctx, onChange)
-		following.Store(false)
-		if ctx.Err() != nil {
-			return
-		}
-
-		if err != nil && !loggedStartFailure {
-			log.Printf("media: can not follow players, status is polled: %v", err)
-			loggedStartFailure = true
-		}
-		if time.Since(started) > followHealthyAfter {
-			delay = followRestartDelay
-		}
-
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(delay):
-		}
-		delay = min(delay*2, followMaxDelay)
-	}
+	follower.Run(ctx, func(ctx context.Context, ready func()) error {
+		return followOnce(ctx, onChange, ready)
+	}, onChange)
 }
 
-func followOnce(ctx context.Context, onChange func()) error {
+func followOnce(ctx context.Context, onChange func(), ready func()) error {
 	cmd := followCommand(ctx)
 	// its own process group: canceling kills children too, which would otherwise keep stdout
 	// open and the scanner blocked
@@ -82,7 +58,7 @@ func followOnce(ctx context.Context, onChange func()) error {
 		_ = cmd.Wait()
 	}()
 
-	following.Store(true)
+	ready()
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		if player, status, ok := parseFollowLine(scanner.Text()); ok {

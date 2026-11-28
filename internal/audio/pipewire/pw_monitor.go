@@ -2,13 +2,16 @@ package pipewire
 
 import (
 	"cmp"
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os/exec"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/markusressel/system-control/internal/supervise"
 )
 
 var (
@@ -102,38 +105,33 @@ func debounceLoop() {
 	}
 }
 
-var monitorStarts atomic.Int64
+// monitor keeps a `pw-dump -m` process running.
+var monitor = &supervise.Loop{Name: "pipewire: pw-dump -m"}
 
-// MonitorRestarts is how often the `pw-dump -m` monitor had to be started again after it died.
-func MonitorRestarts() int64 {
-	return max(monitorStarts.Load()-1, 0)
+// MonitorStatus describes the health of the `pw-dump -m` monitor for `daemon status`.
+func MonitorStatus() []string {
+	return monitor.Status()
 }
 
 // runMonitorLoop keeps a `pw-dump -m` process running. When it dies (e.g. PipeWire restarts)
 // the live state is dropped, so PwDump falls back to direct queries, and the monitor is restarted.
 func runMonitorLoop() {
-	backoff := time.Second
-	for {
-		started := time.Now()
-		monitorStarts.Add(1)
-		monitorOnce()
+	monitor.Run(context.Background(), func(ctx context.Context, ready func()) error {
+		err := monitorOnce(ctx, ready)
+		dropLiveState()
+		return err
+	}, nil)
+}
 
-		liveMu.Lock()
-		liveObjects = make(map[int]GraphObject)
-		liveState = nil
-		isStateDirty = false
-		metadataStale = false
-		liveMu.Unlock()
-		notifyChanged()
-
-		if time.Since(started) > time.Minute {
-			backoff = time.Second
-		}
-		time.Sleep(backoff)
-		if backoff < 30*time.Second {
-			backoff *= 2
-		}
-	}
+// dropLiveState forgets the objects of a monitor that ended.
+func dropLiveState() {
+	liveMu.Lock()
+	liveObjects = make(map[int]GraphObject)
+	liveState = nil
+	isStateDirty = false
+	metadataStale = false
+	liveMu.Unlock()
+	notifyChanged()
 }
 
 func notifyChanged() {
@@ -144,33 +142,28 @@ func notifyChanged() {
 }
 
 // monitorOnce runs a single `pw-dump -m` process until it ends or its output cannot be decoded.
-func monitorOnce() {
-	cmd := exec.Command("pw-dump", "-m")
+func monitorOnce(ctx context.Context, ready func()) error {
+	cmd := exec.CommandContext(ctx, "pw-dump", "-m")
 	cmd.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGTERM}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Printf("Failed to get stdout pipe for pw-dump -m: %v", err)
-		return
+		return err
 	}
-
 	if err := cmd.Start(); err != nil {
-		log.Printf("Failed to start pw-dump -m: %v", err)
-		return
+		return err
 	}
 	defer func() {
 		_ = cmd.Process.Kill()
 		_ = cmd.Wait()
 	}()
+	ready()
 
 	decoder := json.NewDecoder(stdout)
-
 	for {
 		var chunk []RawGraphObject
 		if err := decoder.Decode(&chunk); err != nil {
-			log.Printf("pw-dump -m decoder error: %v", err)
-			return
+			return fmt.Errorf("decoding its output: %w", err)
 		}
-
 		applyChunk(chunk)
 		notifyChanged()
 	}

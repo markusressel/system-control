@@ -29,9 +29,8 @@ func pollInterval(def time.Duration, followed bool) func() time.Duration {
 	}
 }
 
-// EventSource refreshes watched media state whenever a player changes its status.
-// It is a daemon.Source.
-func EventSource(ctx context.Context, refresh func(prefixes ...string)) {
+// eventSource refreshes watched media state whenever a player changes its status.
+func eventSource(ctx context.Context, refresh func(prefixes ...string)) {
 	go internalmedia.Follow(ctx, func() { refresh("media") })
 }
 
@@ -47,6 +46,8 @@ func playerctl(command string) func(context.Context, daemon.Args) ([]string, err
 }
 
 func init() {
+	daemon.RegisterSource(eventSource, internalmedia.FollowStatus)
+
 	// `media` without a sub command shows the status
 	for _, name := range []string{"media", "media.status"} {
 		daemon.Register(daemon.Op{

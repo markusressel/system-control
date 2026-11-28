@@ -54,7 +54,8 @@ Run the three CI checks before reporting a task done.
 - **Never re-run after silence:** once a request was sent, run locally only on an explicit "unhandled" answer. A
   silent daemon may already have executed a mutation.
 - **State:** the daemon owns published state, clients never push values. `--watch` subscribes to the engine store;
-  refresh comes from event sources (`Engine.AddSource`, e.g. PipeWire monitor) and `Op.Invalidates`. `Op.Poll` is
+  refresh comes from event sources (`daemon.RegisterSource` from `init()` next to the ops, e.g. PipeWire monitor;
+  keep them alive with `supervise.Loop`) and `Op.Invalidates`. `Op.Poll` is
   only a fallback (media: `playerctl --all-players --follow` pushes status, polling drops to a minute while it runs;
   it also records which player played last, so `media play`/`togglePlayPause` resume only that one). A CLI process that changes state itself calls `daemon.Notify(prefix)`.
 - **Output flags:** a flag that only changes printing (e.g. `--format`) is listed in `Op.OutputFlags` and applied by
@@ -65,7 +66,7 @@ Run the three CI checks before reporting a task done.
   summed with `daemon.Accumulator` and applied in one go by whoever gets the lock; a step that can't get it in time
   withdraws itself and fails, see `cmd/display/redshift/coalesce.go`.
 - **Observability:** `system-control daemon status` (`-w` live view, `--json`) shows watchers with their current
-  value, per-op calls/latency/drops/failures and source health. Add a source's health with `Engine.AddStatus`.
+  value, per-op calls/latency/drops/failures and source health. A source's health is the status func of `RegisterSource`.
   The structured form is `StatusInfo` (`STATUS json`), `RenderStatus` draws it.
 - **Configuration is a snapshot:** read it with `configuration.Get()` for every use, never keep it. `Get()` reloads
   the file when its mtime changed (checked once per second), a broken file keeps the old values. SIGHUP forces it.

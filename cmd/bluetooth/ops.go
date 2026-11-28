@@ -10,6 +10,8 @@ import (
 )
 
 func init() {
+	daemon.RegisterSource(eventSource, bluetooth.WatchStatus)
+
 	daemon.Register(daemon.Op{
 		Name:  "bluetooth.connected",
 		Run:   runConnected,
@@ -56,8 +58,7 @@ func pollInterval() time.Duration {
 	return unwatchedPollInterval
 }
 
-// EventSource refreshes watched bluetooth state whenever BlueZ reports a change.
-// It is a daemon.Source.
-func EventSource(ctx context.Context, refresh func(prefixes ...string)) {
+// eventSource refreshes watched bluetooth state whenever BlueZ reports a change.
+func eventSource(ctx context.Context, refresh func(prefixes ...string)) {
 	go bluetooth.WatchChanges(ctx, func() { refresh("bluetooth.") })
 }

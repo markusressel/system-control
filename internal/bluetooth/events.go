@@ -3,67 +3,38 @@ package bluetooth
 import (
 	"context"
 	"errors"
-	"log"
-	"sync/atomic"
 	"time"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/markusressel/system-control/internal/supervise"
 )
 
 // debounce merges the burst of signals BlueZ emits for one change.
 const debounce = 50 * time.Millisecond
 
-// restart delays of a lost subscription, variables for tests
-var (
-	watchRestartDelay = time.Second
-	watchMaxDelay     = 30 * time.Second
-	watchHealthyAfter = time.Minute
-)
-
 // watchOnce is the subscription WatchChanges keeps alive, a variable for tests.
 var watchOnce = subscribeOnce
 
-var watching atomic.Bool
+// watcher keeps the subscription alive.
+var watcher = &supervise.Loop{Name: "bluetooth: change notifications"}
+
+// WatchStatus describes the health of the subscription for `daemon status`.
+func WatchStatus() []string {
+	return watcher.Status()
+}
 
 // Watching reports whether changes are currently delivered, so that nothing has to poll.
 func Watching() bool {
-	return watching.Load()
+	return watcher.Active()
 }
 
 // WatchChanges calls onChange whenever a device or adapter of BlueZ changed (connected,
 // paired, battery level, ...), until ctx is done. A lost connection to the system bus is
 // established again with a backoff, followed by an onChange for what changed in between.
 func WatchChanges(ctx context.Context, onChange func()) {
-	delay := watchRestartDelay
-	loggedFailure := false
-	for ctx.Err() == nil {
-		started := time.Now()
-		err := watchOnce(ctx, onChange, func() {
-			watching.Store(true)
-			if loggedFailure {
-				log.Printf("bluetooth: watching changes again")
-				loggedFailure = false
-				onChange()
-			}
-		})
-		watching.Store(false)
-		if ctx.Err() != nil {
-			return
-		}
-		if !loggedFailure {
-			log.Printf("bluetooth: no change notifications, watched state is polled: %v", err)
-			loggedFailure = true
-		}
-		if time.Since(started) > watchHealthyAfter {
-			delay = watchRestartDelay
-		}
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(delay):
-		}
-		delay = min(delay*2, watchMaxDelay)
-	}
+	watcher.Run(ctx, func(ctx context.Context, ready func()) error {
+		return watchOnce(ctx, onChange, ready)
+	}, onChange)
 }
 
 // subscribeOnce subscribes to the signals of BlueZ, calls started once that worked and

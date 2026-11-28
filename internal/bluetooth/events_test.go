@@ -25,9 +25,9 @@ func TestIsRelevant(t *testing.T) {
 
 // A lost connection is established again, and what changed in between is picked up.
 func TestWatchChanges_ReconnectsAfterALostConnection(t *testing.T) {
-	previous, delay := watchOnce, watchRestartDelay
-	watchRestartDelay = 10 * time.Millisecond
-	t.Cleanup(func() { watchOnce, watchRestartDelay = previous, delay })
+	previous, delay := watchOnce, watcher.InitialDelay
+	watcher.InitialDelay = 10 * time.Millisecond
+	t.Cleanup(func() { watchOnce, watcher.InitialDelay = previous, delay })
 
 	var runs atomic.Int64
 	reconnected := make(chan struct{})

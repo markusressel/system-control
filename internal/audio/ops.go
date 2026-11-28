@@ -19,6 +19,8 @@ var service = NewService(pipewireBackend())
 var pollAudio = configuration.PollInterval("audio", 0)
 
 func init() {
+	daemon.RegisterSource(eventSource, pipewire.MonitorStatus)
+
 	daemon.Register(daemon.Op{
 		Name: "audio.volume",
 		Run: func(ctx context.Context, a daemon.Args) ([]string, error) {
@@ -234,14 +236,8 @@ func nodeColumns(node pipewire.InterfaceNode, columns []string) ([]string, error
 	return lines, nil
 }
 
-// Status describes the health of the PipeWire monitor for `daemon status`.
-func Status() []string {
-	return []string{fmt.Sprintf("pipewire monitor restarts: %d", pipewire.MonitorRestarts())}
-}
-
-// EventSource refreshes watched audio state whenever the PipeWire graph changes.
-// It is a daemon.Source.
-func EventSource(ctx context.Context, refresh func(prefixes ...string)) {
+// eventSource refreshes watched audio state whenever the PipeWire graph changes.
+func eventSource(ctx context.Context, refresh func(prefixes ...string)) {
 	pipewire.StartMonitor()
 	pipewire.RegisterUpdateCallback(func() {
 		refresh("audio.")

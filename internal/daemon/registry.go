@@ -13,6 +13,9 @@ type node struct {
 type Registry struct {
 	ops  map[string]*Op
 	root *node
+
+	sources  []Source
+	statuses []func() []string
 }
 
 func NewRegistry() *Registry {
@@ -45,6 +48,20 @@ func (r *Registry) Register(op Op) {
 		n = child
 	}
 	n.op = &o
+}
+
+// RegisterSource adds an event source that refreshes watched state of the default registry, and
+// optionally (status may be nil) the lines it adds to `daemon status`, e.g. its health.
+// Intended to be called from init(), next to the ops the source refreshes.
+func RegisterSource(source Source, status func() []string) {
+	Default.RegisterSource(source, status)
+}
+
+func (r *Registry) RegisterSource(source Source, status func() []string) {
+	r.sources = append(r.sources, source)
+	if status != nil {
+		r.statuses = append(r.statuses, status)
+	}
 }
 
 // Lookup finds an op by name.

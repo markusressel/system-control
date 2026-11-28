@@ -119,7 +119,7 @@ func (s *ipcServer) handle(ctx context.Context, conn net.Conn) {
 		writeFrames(conn, 'X', "0")
 
 	case "STATUS":
-		s.handleStatus(conn, len(fields) > 1 && fields[1] == "json")
+		s.handleStatus(conn)
 
 	case "ARGV":
 		n, err := strconv.Atoi(strings.Join(fields[1:], ""))
@@ -139,16 +139,8 @@ func (s *ipcServer) handle(ctx context.Context, conn net.Conn) {
 	}
 }
 
-// handleStatus answers `STATUS json` with one O frame holding a StatusInfo, a plain `STATUS`
-// (and clients that predate the structured form) with rendered text lines.
-func (s *ipcServer) handleStatus(conn net.Conn, asJSON bool) {
-	if !asJSON {
-		for _, line := range s.engine.status() {
-			writeFrames(conn, 'O', line)
-		}
-		writeFrames(conn, 'X', "0")
-		return
-	}
+// handleStatus answers `STATUS json` with one O frame holding a StatusInfo.
+func (s *ipcServer) handleStatus(conn net.Conn) {
 	payload, err := json.Marshal(s.engine.statusInfo())
 	if err != nil {
 		writeFailure(conn, err.Error())
@@ -351,26 +343,20 @@ func TryRemote(argv []string, stdout, stderr io.Writer) (handled bool, exitCode 
 	}
 }
 
-// Status asks the running daemon to describe itself.
-func Status() ([]string, error) {
-	lines, err := requestStatus("STATUS\n")
-	return lines, err
-}
-
-// FetchStatus asks the running daemon to describe itself. A daemon that predates the structured
-// answer returns its text lines as legacy instead.
-func FetchStatus() (info *StatusInfo, legacy []string, err error) {
+// FetchStatus asks the running daemon to describe itself.
+func FetchStatus() (*StatusInfo, error) {
 	lines, err := requestStatus("STATUS json\n")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	if len(lines) == 1 && strings.HasPrefix(lines[0], "{") {
-		var decoded StatusInfo
-		if err := json.Unmarshal([]byte(lines[0]), &decoded); err == nil {
-			return &decoded, nil, nil
-		}
+	if len(lines) != 1 {
+		return nil, fmt.Errorf("unexpected status answer of %d lines", len(lines))
 	}
-	return nil, lines, nil
+	var info StatusInfo
+	if err := json.Unmarshal([]byte(lines[0]), &info); err != nil {
+		return nil, fmt.Errorf("invalid status answer: %w", err)
+	}
+	return &info, nil
 }
 
 func requestStatus(request string) ([]string, error) {
@@ -399,7 +385,7 @@ func requestStatus(request string) ([]string, error) {
 		case strings.HasPrefix(line, "X "):
 			return lines, nil
 		case line == "U":
-			return nil, errors.New("daemon does not know the status request, it is older than this binary")
+			return nil, errors.New("daemon did not handle the status request")
 		}
 	}
 }

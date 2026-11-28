@@ -73,20 +73,13 @@ func TestRenderStatus_FitsWidth(t *testing.T) {
 
 func TestFetchStatus(t *testing.T) {
 	var counter atomic.Int64
-	eng := startTestEngine(t, &counter)
-	_ = eng
+	startTestEngine(t, &counter)
 
-	info, legacy, err := FetchStatus()
-	if err != nil || info == nil || legacy != nil {
-		t.Fatalf("info=%v legacy=%v err=%v", info, legacy, err)
+	info, err := FetchStatus()
+	if err != nil || info == nil {
+		t.Fatalf("info=%v err=%v", info, err)
 	}
 	if info.Ops == 0 || info.PID == 0 || info.Socket == "" {
 		t.Errorf("incomplete status: %+v", info)
-	}
-
-	// the plain request still gets text
-	lines, err := Status()
-	if err != nil || len(lines) == 0 || strings.HasPrefix(lines[0], "{") {
-		t.Errorf("lines=%v err=%v", lines, err)
 	}
 }

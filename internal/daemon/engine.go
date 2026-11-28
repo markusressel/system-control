@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -73,10 +72,4 @@ func (e *Engine) Start(ctx context.Context) error {
 		s(ctx, e.Refresh)
 	}
 	return nil
-}
-
-// status describes the engine as plain text, for clients that do not ask for the structured
-// form (`STATUS json`).
-func (e *Engine) status() []string {
-	return strings.Split(strings.TrimRight(RenderStatus(e.statusInfo(), RenderOptions{}), "\n"), "\n")
 }

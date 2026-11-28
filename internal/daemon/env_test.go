@@ -146,7 +146,7 @@ func TestStatus_ReportsExecutions(t *testing.T) {
 		t.Fatalf("handled=%v code=%d", handled, code)
 	}
 
-	joined := strings.Join(eng.status(), "\n")
+	joined := RenderStatus(eng.statusInfo(), RenderOptions{})
 	for _, want := range []string{"Executions", "test.echo", "last error", "boom", "extra: 1"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("status lacks %q:\n%s", want, joined)

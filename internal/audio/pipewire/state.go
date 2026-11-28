@@ -157,12 +157,6 @@ func metadataNodeName(value interface{}) string {
 	return name
 }
 
-// defaultSinkCandidates returns the names that may identify the default "audio.sink", best first (see
-// defaultNodeCandidates).
-func (state *GraphState) defaultSinkCandidates() []string {
-	return state.defaultNodeCandidates("sink")
-}
-
 // defaultNodeCandidates returns the names that may identify the default "audio.<kind>" ("sink" or "source"), best
 // first:
 //

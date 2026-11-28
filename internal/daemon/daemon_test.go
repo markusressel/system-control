@@ -370,12 +370,12 @@ func TestStatus(t *testing.T) {
 	counter.Store(1)
 	startTestEngine(t, &counter)
 
-	lines, err := Status()
+	info, err := FetchStatus()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	joined := strings.Join(lines, "\n")
+	joined := RenderStatus(*info, RenderOptions{})
 	for _, want := range []string{"running", "pid ", "socket ", "5 ops", "Watchers (0)"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("status lacks %q:\n%s", want, joined)
@@ -386,7 +386,7 @@ func TestStatus(t *testing.T) {
 func TestStatus_NoDaemon(t *testing.T) {
 	t.Setenv(EnvRuntimeDir, t.TempDir())
 
-	if _, err := Status(); err == nil {
+	if _, err := FetchStatus(); err == nil {
 		t.Error("expected an error without a running daemon")
 	}
 }

@@ -57,13 +57,6 @@ func truncate(s string, width int) string {
 	return string(r[:width-1]) + "…"
 }
 
-func widest(min int, values ...string) int {
-	for _, v := range values {
-		min = max(min, utf8.RuneCountInString(v))
-	}
-	return min
-}
-
 func formatDuration(d time.Duration) string {
 	switch {
 	case d <= 0:

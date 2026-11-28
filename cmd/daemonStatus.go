@@ -45,16 +45,11 @@ With --watch the view is interactive and updates continuously, press q to leave 
 			return runLiveStatus(max(interval, 100*time.Millisecond), color)
 		}
 
-		info, legacy, err := daemon.FetchStatus()
+		info, err := daemon.FetchStatus()
 		if err != nil {
 			return err
 		}
 		switch {
-		case info == nil:
-			// a daemon that predates the structured status
-			for _, line := range legacy {
-				fmt.Println(line)
-			}
 		case asJSON:
 			encoder := json.NewEncoder(os.Stdout)
 			encoder.SetIndent("", "  ")
@@ -171,15 +166,13 @@ func draw(interval time.Duration, color bool) {
 	}
 
 	var body string
-	info, legacy, err := daemon.FetchStatus()
+	info, err := daemon.FetchStatus()
 	switch {
 	case err != nil:
 		body = "\x1b[31m● daemon is not running\x1b[0m\n\x1b[2m" + err.Error() + "\x1b[0m\n"
 		if !color {
 			body = "● daemon is not running\n" + err.Error() + "\n"
 		}
-	case info == nil:
-		body = strings.Join(legacy, "\n") + "\n"
 	default:
 		body = daemon.RenderStatus(*info, daemon.RenderOptions{Color: color, Width: cols})
 	}

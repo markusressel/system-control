@@ -1,6 +1,9 @@
 package pipewire
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // An update must not change the info it is merged into: that info is shared with snapshots
 // that other goroutines read without a lock.
@@ -64,5 +67,33 @@ func TestIsRemoval(t *testing.T) {
 	}
 	if isRemoval(RawGraphObject{Id: 1, Type: TypeNode}) {
 		t.Error("a new object without info is no removal")
+	}
+}
+
+// The monitored graph follows the chunks of `pw-dump -m`: new objects, incremental updates and removals.
+func TestLiveGraph_FollowsTheMonitorOutput(t *testing.T) {
+	g := newLiveGraph()
+	g.started = true
+	g.queryMetadata = func() ([]InterfaceMetadata, error) { t.Error("metadata queried"); return nil, nil }
+
+	output := `[{"id": 5, "type": "` + TypeNode + `", "info": {"state": "idle", "props": {"node.name": "sink"}}},
+	            {"id": 6, "type": "` + TypeNode + `", "info": {"state": "idle", "props": {"node.name": "other"}}}]
+	           [{"id": 5, "info": {"state": "running"}}]
+	           [{"id": 6, "info": null}]`
+	if err := g.consume(strings.NewReader(output)); err == nil {
+		t.Fatal("consume must report the end of the output")
+	}
+
+	state, ok := g.snapshot()
+	if !ok || len(state.Nodes) != 1 {
+		t.Fatalf("ok=%v nodes=%+v, want the one remaining node", ok, state.Nodes)
+	}
+	if node := state.Nodes[0]; node.Id != 5 || node.Info.State != "running" || node.Info.Props["node.name"] != "sink" {
+		t.Errorf("node = %+v", node)
+	}
+
+	g.drop()
+	if _, ok := g.snapshot(); ok {
+		t.Error("a snapshot after the monitor ended")
 	}
 }

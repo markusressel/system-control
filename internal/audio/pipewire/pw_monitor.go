@@ -5,34 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os/exec"
+	"slices"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/markusressel/system-control/internal/supervise"
 )
-
-var (
-	liveState       *GraphState
-	liveObjects     map[int]GraphObject
-	liveMu          sync.RWMutex
-	monitorStarted  bool
-	updateCallbacks []func()
-
-	isStateDirty bool
-	// metadataStale is set when a metadata update cannot be merged incrementally
-	metadataStale bool
-	debounceChan  chan struct{}
-)
-
-// RegisterUpdateCallback allows the daemon to subscribe to PipeWire graph changes
-func RegisterUpdateCallback(cb func()) {
-	liveMu.Lock()
-	defer liveMu.Unlock()
-	updateCallbacks = append(updateCallbacks, cb)
-}
 
 // RawGraphObject captures the raw JSON of an object to merge incremental diffs properly.
 type RawGraphObject struct {
@@ -45,39 +27,68 @@ type RawGraphObject struct {
 	Info        json.RawMessage          `json:"info,omitempty"`
 }
 
-func StartMonitor() {
-	liveMu.Lock()
-	if !monitorStarted {
-		monitorStarted = true
-		liveObjects = make(map[int]GraphObject)
-		debounceChan = make(chan struct{}, 1)
-		go runMonitorLoop()
-		go debounceLoop()
-	}
-	liveMu.Unlock()
+// liveGraph is the PipeWire graph kept up to date by a `pw-dump -m` monitor, so that queries
+// don't have to run pw-dump.
+type liveGraph struct {
+	// monitorCommand starts the monitor, queryMetadata reads the metadata again when an update
+	// can't be merged. Variables for tests.
+	monitorCommand func(ctx context.Context) *exec.Cmd
+	queryMetadata  func() ([]InterfaceMetadata, error)
+
+	monitor *supervise.Loop
+	changed chan struct{}
+
+	// mu guards the fields below
+	mu        sync.RWMutex
+	started   bool
+	callbacks []func()
+	objects   map[int]GraphObject
+	// state is built from objects on demand (dirty), nil while there is no monitor
+	state *GraphState
+	dirty bool
+	// metadataStale is set when a metadata update cannot be merged incrementally
+	metadataStale bool
 }
 
+func newLiveGraph() *liveGraph {
+	return &liveGraph{
+		monitorCommand: func(ctx context.Context) *exec.Cmd { return exec.CommandContext(ctx, "pw-dump", "-m") },
+		queryMetadata: func() ([]InterfaceMetadata, error) {
+			state, err := pwDumpDirect()
+			return state.Metadatas, err
+		},
+		monitor: &supervise.Loop{Name: "pipewire: pw-dump -m"},
+		changed: make(chan struct{}, 1),
+		objects: map[int]GraphObject{},
+	}
+}
+
+// live is the graph of this process, monitored only in the daemon (StartMonitor).
+var live = newLiveGraph()
+
+// RegisterUpdateCallback allows the daemon to subscribe to PipeWire graph changes
+func RegisterUpdateCallback(cb func()) {
+	live.mu.Lock()
+	defer live.mu.Unlock()
+	live.callbacks = append(live.callbacks, cb)
+}
+
+// StartMonitor keeps the graph up to date with a `pw-dump -m` process, so that PwDump does not
+// have to query PipeWire.
+func StartMonitor() {
+	live.start()
+}
+
+// MonitorStatus describes the health of the `pw-dump -m` monitor for `daemon status`.
+func MonitorStatus() []string {
+	return live.monitor.Status()
+}
+
+// PwDump returns the current graph: the monitored one, or a fresh query without a monitor.
 func PwDump() GraphState {
-	liveMu.RLock()
-	dirty := isStateDirty
-	liveMu.RUnlock()
-
-	if dirty {
-		liveMu.Lock()
-		if isStateDirty {
-			rebuildLiveState()
-			isStateDirty = false
-		}
-		liveMu.Unlock()
+	if state, ok := live.snapshot(); ok {
+		return state
 	}
-
-	liveMu.RLock()
-	if monitorStarted && liveState != nil {
-		defer liveMu.RUnlock()
-		return *liveState
-	}
-	liveMu.RUnlock()
-
 	state, err := pwDumpDirect()
 	if err != nil {
 		// callers see an empty graph, a long running daemon must survive PipeWire being unavailable
@@ -87,63 +98,80 @@ func PwDump() GraphState {
 	return state
 }
 
-func debounceLoop() {
-	coolDown := time.Millisecond * 50
-	for range debounceChan {
-		// Fire callbacks immediately for 0ms delay
-		var callbacks []func()
-		liveMu.RLock()
-		callbacks = append(callbacks, updateCallbacks...)
-		liveMu.RUnlock()
+func (g *liveGraph) start() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.started {
+		return
+	}
+	g.started = true
+	go g.monitor.Run(context.Background(), func(ctx context.Context, ready func()) error {
+		err := g.monitorOnce(ctx, ready)
+		g.drop()
+		return err
+	}, nil)
+	go g.notifyLoop()
+}
+
+// snapshot returns the monitored graph, ok is false while there is none.
+func (g *liveGraph) snapshot() (GraphState, bool) {
+	g.mu.RLock()
+	dirty := g.dirty
+	g.mu.RUnlock()
+
+	if dirty {
+		g.mu.Lock()
+		if g.dirty {
+			g.rebuild()
+			g.dirty = false
+		}
+		g.mu.Unlock()
+	}
+
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	if !g.started || g.state == nil {
+		return GraphState{}, false
+	}
+	return *g.state, true
+}
+
+// notifyLoop calls the callbacks on changes: right away, but at most 20 times a second.
+func (g *liveGraph) notifyLoop() {
+	const coolDown = 50 * time.Millisecond
+	for range g.changed {
+		g.mu.RLock()
+		callbacks := slices.Clone(g.callbacks)
+		g.mu.RUnlock()
 
 		for _, cb := range callbacks {
 			cb()
 		}
-
-		// Then sleep to throttle subsequent spam (max 20 FPS)
 		time.Sleep(coolDown)
 	}
 }
 
-// monitor keeps a `pw-dump -m` process running.
-var monitor = &supervise.Loop{Name: "pipewire: pw-dump -m"}
-
-// MonitorStatus describes the health of the `pw-dump -m` monitor for `daemon status`.
-func MonitorStatus() []string {
-	return monitor.Status()
-}
-
-// runMonitorLoop keeps a `pw-dump -m` process running. When it dies (e.g. PipeWire restarts)
-// the live state is dropped, so PwDump falls back to direct queries, and the monitor is restarted.
-func runMonitorLoop() {
-	monitor.Run(context.Background(), func(ctx context.Context, ready func()) error {
-		err := monitorOnce(ctx, ready)
-		dropLiveState()
-		return err
-	}, nil)
-}
-
-// dropLiveState forgets the objects of a monitor that ended.
-func dropLiveState() {
-	liveMu.Lock()
-	liveObjects = make(map[int]GraphObject)
-	liveState = nil
-	isStateDirty = false
-	metadataStale = false
-	liveMu.Unlock()
-	notifyChanged()
-}
-
-func notifyChanged() {
+func (g *liveGraph) notifyChanged() {
 	select {
-	case debounceChan <- struct{}{}:
+	case g.changed <- struct{}{}:
 	default:
 	}
 }
 
+// drop forgets the objects of a monitor that ended, so PwDump falls back to direct queries.
+func (g *liveGraph) drop() {
+	g.mu.Lock()
+	g.objects = map[int]GraphObject{}
+	g.state = nil
+	g.dirty = false
+	g.metadataStale = false
+	g.mu.Unlock()
+	g.notifyChanged()
+}
+
 // monitorOnce runs a single `pw-dump -m` process until it ends or its output cannot be decoded.
-func monitorOnce(ctx context.Context, ready func()) error {
-	cmd := exec.CommandContext(ctx, "pw-dump", "-m")
+func (g *liveGraph) monitorOnce(ctx context.Context, ready func()) error {
+	cmd := g.monitorCommand(ctx)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGTERM}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -157,33 +185,37 @@ func monitorOnce(ctx context.Context, ready func()) error {
 		_ = cmd.Wait()
 	}()
 	ready()
+	return g.consume(stdout)
+}
 
-	decoder := json.NewDecoder(stdout)
+// consume applies the output of `pw-dump -m` until it ends or can't be decoded.
+func (g *liveGraph) consume(r io.Reader) error {
+	decoder := json.NewDecoder(r)
 	for {
 		var chunk []RawGraphObject
 		if err := decoder.Decode(&chunk); err != nil {
 			return fmt.Errorf("decoding its output: %w", err)
 		}
-		applyChunk(chunk)
-		notifyChanged()
+		g.applyChunk(chunk)
+		g.notifyChanged()
 	}
 }
 
 // applyChunk applies one batch of changes of `pw-dump -m` to the live objects.
-func applyChunk(chunk []RawGraphObject) {
-	liveMu.Lock()
-	defer liveMu.Unlock()
+func (g *liveGraph) applyChunk(chunk []RawGraphObject) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	for _, obj := range chunk {
 		if isRemoval(obj) {
-			delete(liveObjects, obj.Id)
+			delete(g.objects, obj.Id)
 			continue
 		}
-		existing, exists := liveObjects[obj.Id]
+		existing, exists := g.objects[obj.Id]
 		merged, stale := mergeObject(obj, existing, exists)
-		liveObjects[obj.Id] = merged
-		metadataStale = metadataStale || stale
+		g.objects[obj.Id] = merged
+		g.metadataStale = g.metadataStale || stale
 	}
-	isStateDirty = true
+	g.dirty = true
 }
 
 // isRemoval tells whether pw-dump reports that the object went away.
@@ -318,11 +350,10 @@ func mergeInfo[T GraphObjectInfo](rawInfo []byte, existing GraphObjectInfo) T {
 	return info
 }
 
-// rebuildLiveState reconstitutes a typed GraphState from the raw objects map
-// Must be called with liveMu Write Lock held.
-func rebuildLiveState() {
+// rebuild reconstitutes a typed GraphState from the raw objects. g.mu must be held for writing.
+func (g *liveGraph) rebuild() {
 	newState := &GraphState{}
-	for _, object := range liveObjects {
+	for _, object := range g.objects {
 		switch object.CommonData.Type {
 		case TypeNode:
 			if info, ok := object.Info.(InterfaceNodeInfo); ok {
@@ -363,11 +394,11 @@ func rebuildLiveState() {
 		}
 	}
 
-	if metadataStale {
-		if fresh, err := pwDumpDirect(); err == nil {
-			newState.Metadatas = fresh.Metadatas
-			metadataStale = false
+	if g.metadataStale {
+		if fresh, err := g.queryMetadata(); err == nil {
+			newState.Metadatas = fresh
+			g.metadataStale = false
 		}
 	}
-	liveState = newState
+	g.state = newState
 }
